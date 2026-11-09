@@ -205,10 +205,9 @@ local function refreshSpotPads(plot, profile)
 	local open = profile and maxSpots(profile) or 0
 	for i, spot in ipairs(plot.Spots) do
 		local unlocked = i <= open
-		spot.Pad.Transparency = unlocked and 0 or 0.6
-		spot.Pad.Color = unlocked and Color3.fromRGB(30, 32, 40) or Color3.fromRGB(90, 92, 102)
+		spot.Pad.Transparency = unlocked and 0 or 1
 		for _, trim in ipairs(spot.Trims or {}) do
-			trim.Transparency = unlocked and 0 or 1
+			trim.Transparency = unlocked and 0 or 0.75
 		end
 	end
 end
@@ -473,12 +472,13 @@ local function startWash(plot, carId)
 			return
 		end
 		taken[key] = true
-		local s = rng:NextNumber(1.8, 2.6)
+		-- a flat mud splat lying on the paint
+		local s = rng:NextNumber(1.3, 2.1)
 		local p = Instance.new("Part")
 		p.Name = "Dirt"
-		p.Shape = Enum.PartType.Ball
-		p.Size = Vector3.new(s, s, s)
-		p.CFrame = CFrame.new(pos + hit.Normal * (s * 0.2))
+		p.Shape = Enum.PartType.Cylinder
+		p.Size = Vector3.new(0.18, s, s)
+		p.CFrame = CFrame.lookAt(pos + hit.Normal * 0.06, pos + hit.Normal * 2) * CFrame.Angles(0, math.rad(90), 0) * CFrame.Angles(rng:NextNumber(0, 6.28), 0, 0)
 		p.Anchored = true
 		p.CanCollide = false
 		p.CanTouch = false
@@ -489,7 +489,7 @@ local function startWash(plot, carId)
 		table.insert(blobs, { Part = p, Health = health, StartSize = s })
 	end
 	-- shoot rays at the car from above and from all four sides; dirt sticks where they land
-	local spacing = 1.7
+	local spacing = 1.25
 	local reach = 2 * math.max(hx, hy, hz) + 4
 	for x = -hx + 0.6, hx - 0.6, spacing do
 		for z = -hz + 0.6, hz - 0.6, spacing do
@@ -554,6 +554,12 @@ sendToWash = function(player, plot, slot, entry)
 	state[plot.Index].Yard[slot] = nil
 	entry.Model:Destroy()
 	startWash(plot, entry.Id)
+	-- bring the player to the wash bay so they can start scrubbing right away
+	local char = player.Character
+	if char then
+		local stand = plot.WashCFrame.Position + Vector3.new(10.5, 3, 0)
+		char:PivotTo(CFrame.lookAt(stand, Vector3.new(plot.WashCFrame.X, stand.Y, plot.WashCFrame.Z)))
+	end
 	notify(player, "Hold the mouse (or your finger) over the dirt to scrub it off!", Color3.fromRGB(150, 220, 255))
 end
 
@@ -589,7 +595,7 @@ ScrubEvent.OnServerEvent:Connect(function(player, hitPosition)
 				table.remove(wash.Blobs, i)
 			else
 				local sz = b.StartSize * (0.5 + 0.5 * b.Health / wash.Health)
-				b.Part.Size = Vector3.new(sz, sz, sz)
+				b.Part.Size = Vector3.new(0.18, sz, sz)
 			end
 		end
 	end
@@ -953,6 +959,56 @@ local function buildNPC()
 	return model, body
 end
 
+-- Real Roblox characters as customers (R15 rig with random skin and clothes colors).
+-- Falls back to the simple block customer if the rig can't be made.
+local WALK_ANIM = "rbxassetid://507777826" -- Roblox's default R15 walk
+local IDLE_ANIM = "rbxassetid://507766388" -- Roblox's default R15 idle
+local function buildRigNPC()
+	local desc = Instance.new("HumanoidDescription")
+	local skins = { Color3.fromRGB(255, 214, 170), Color3.fromRGB(234, 184, 146), Color3.fromRGB(196, 140, 100), Color3.fromRGB(124, 84, 60) }
+	local skin = skins[rng:NextInteger(1, #skins)]
+	local shirt = Color3.fromHSV(rng:NextNumber(), rng:NextNumber(0.35, 0.7), rng:NextNumber(0.6, 0.95))
+	local pants = Color3.fromHSV(rng:NextNumber(), rng:NextNumber(0.2, 0.5), rng:NextNumber(0.2, 0.45))
+	desc.HeadColor = skin
+	desc.LeftArmColor = skin
+	desc.RightArmColor = skin
+	desc.TorsoColor = shirt
+	desc.LeftLegColor = pants
+	desc.RightLegColor = pants
+	local model = Players:CreateHumanoidModelFromDescription(desc, Enum.HumanoidRigType.R15)
+	model.Name = "Customer"
+	local root = model:FindFirstChild("HumanoidRootPart")
+	local hum = model:FindFirstChildOfClass("Humanoid")
+	for _, d in ipairs(model:GetDescendants()) do
+		if d:IsA("BasePart") then
+			d.CanCollide = false
+			d.CanQuery = false
+			d.CanTouch = false
+			d.Massless = true
+		end
+	end
+	root.Anchored = true
+	hum.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
+	hum.HealthDisplayType = Enum.HumanoidHealthDisplayType.AlwaysOff
+	model.PrimaryPart = root
+	local animator = hum:FindFirstChildOfClass("Animator") or Instance.new("Animator", hum)
+	local tracks = {}
+	for name, id in pairs({ Walk = WALK_ANIM, Idle = IDLE_ANIM }) do
+		local anim = Instance.new("Animation")
+		anim.AnimationId = id
+		local ok, track = pcall(function()
+			return animator:LoadAnimation(anim)
+		end)
+		if ok then
+			track.Looped = true
+			tracks[name] = track
+		end
+	end
+	model:SetAttribute("Rig", true)
+	local height = hum.HipHeight + root.Size.Y / 2
+	return model, root, tracks, height
+end
+
 local function walk(body, target, speed)
 	local from = body.Position
 	local dist = (target - from).Magnitude
@@ -977,16 +1033,36 @@ local function runCustomer(plot)
 		return
 	end
 	local pick = spots[rng:NextInteger(1, #spots)]
-	local model, body = buildNPC()
-	local y = plot.DoorOutside.Y + 0.55
+	local model, body, tracks, height
+	local ok0 = pcall(function()
+		model, body, tracks, height = buildRigNPC()
+	end)
+	if not ok0 or not model then
+		model, body = buildNPC()
+		tracks, height = {}, 2.95
+	end
+	local y = 1 + height
+	local function play(name)
+		for n, t in pairs(tracks) do
+			if n == name then
+				if not t.IsPlaying then
+					t:Play(0.2)
+				end
+			else
+				t:Stop(0.2)
+			end
+		end
+	end
 	body.CFrame = CFrame.new(plot.DoorOutside.X + rng:NextNumber(-4, 4), y, plot.DoorOutside.Z)
 	model.Parent = npcFolder
 	state[plot.Index].NPCs = state[plot.Index].NPCs + 1
 	local ok = pcall(function()
 		local inside = Vector3.new(plot.DoorInside.X, y, plot.DoorInside.Z)
 		local front = plot.Spots[pick.Index].Front.Position
+		play("Walk")
 		walk(body, inside, 9)
 		walk(body, Vector3.new(front.X + rng:NextNumber(-2, 2), y, front.Z), 9)
+		play("Idle")
 		-- admire the car and pay
 		local entry = state[plot.Index].Spots[pick.Index]
 		if entry then
@@ -998,6 +1074,7 @@ local function runCustomer(plot)
 		else
 			task.wait(1)
 		end
+		play("Walk")
 		walk(body, inside, 9)
 		walk(body, Vector3.new(plot.DoorOutside.X + rng:NextNumber(-6, 6), y, plot.DoorOutside.Z), 9)
 	end)

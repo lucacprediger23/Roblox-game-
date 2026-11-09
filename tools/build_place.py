@@ -63,6 +63,37 @@ def service(class_name, inner="", props=""):
     )
 
 
+import re
+import glob
+
+SHARED = []
+
+
+def assets_folder():
+    """Merges every assets/*.rbxmx (models saved from Studio) into ReplicatedStorage.Assets."""
+    files = sorted(glob.glob(os.path.join(ROOT, "assets", "**", "*.rbxmx"), recursive=True))
+    if not files:
+        return ""
+    items = []
+    for n, path in enumerate(files):
+        with open(path, encoding="utf-8") as f:
+            xml = f.read()
+        # shared strings (mesh data) go at the top level of the place
+        m = re.search(r"<SharedStrings>(.*?)</SharedStrings>", xml, re.S)
+        if m:
+            SHARED.append(m.group(1))
+            xml = xml[: m.start()] + xml[m.end():]
+        # keep only the <Item> elements inside <roblox>
+        start = xml.find("<Item")
+        end = xml.rfind("</roblox>")
+        body = xml[start:end]
+        # make referents unique per file
+        body = re.sub(r'referent="([^"]+)"', lambda m: 'referent="A%d_%s"' % (n, m.group(1)), body)
+        body = re.sub(r"<Ref name=\"([^\"]+)\">(RBX[^<]+)</Ref>", lambda m: '<Ref name="%s">A%d_%s</Ref>' % (m.group(1), n, m.group(2)), body)
+        items.append(body)
+    return '<Item class="Folder" referent="%s"><Properties><string name="Name">Assets</string></Properties>%s</Item>' % (ref(), "".join(items))
+
+
 def main():
     src = os.path.join(ROOT, "src")
     body = "".join(
@@ -70,7 +101,7 @@ def main():
             service("Workspace", props='<bool name="StreamingEnabled">false</bool>'),
             # Future lighting: real light from lamps and neon, shiny reflections
             service("Lighting", props='<token name="Technology">4</token>'),
-            service("ReplicatedStorage", folder_of_scripts("Folder", "Shared", os.path.join(src, "shared"))),
+            service("ReplicatedStorage", folder_of_scripts("Folder", "Shared", os.path.join(src, "shared")) + assets_folder()),
             service("ServerScriptService", folder_of_scripts("Folder", "Server", os.path.join(src, "server"))),
             service(
                 "StarterPlayer",
@@ -82,7 +113,7 @@ def main():
         '<roblox xmlns:xmime="http://www.w3.org/2005/05/xmlmime" '
         'xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" '
         'xsi:noNamespaceSchemaLocation="http://www.roblox.com/roblox.xsd" version="4">'
-        "%s</roblox>" % body
+        "%s%s</roblox>" % (body, ("<SharedStrings>%s</SharedStrings>" % "".join(SHARED)) if SHARED else "")
     )
     os.makedirs(os.path.dirname(OUT), exist_ok=True)
     with open(OUT, "w", encoding="utf-8") as f:

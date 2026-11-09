@@ -1,4 +1,5 @@
--- D2D client: HUD, truck timer, scrubbing, engine screen, Index and messages.
+-- D2D client: HUD, delivery timer, wash view (scrubbing), engine view, Index and messages.
+-- UI style: cream panels with brown borders, chunky colored buttons, icon buttons on the left.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -6,6 +7,8 @@ local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 local CollectionService = game:GetService("CollectionService")
+local GuiService = game:GetService("GuiService")
+local SoundService = game:GetService("SoundService")
 
 local player = Players.LocalPlayer
 local Shared = ReplicatedStorage:WaitForChild("Shared")
@@ -21,11 +24,24 @@ local EngineAction = remotes:WaitForChild("EngineAction")
 local ClaimToken = remotes:WaitForChild("ClaimToken")
 
 ---------------------------------------------------------------------
--- UI helpers (comic-garage style: chunky, dark plates, bold outlines)
+-- Theme
 ---------------------------------------------------------------------
-local DARK = Color3.fromRGB(28, 30, 38)
-local YELLOW = Color3.fromRGB(255, 205, 40)
+local CREAM = Color3.fromRGB(255, 244, 222)
+local CREAM_DARK = Color3.fromRGB(246, 226, 190)
+local BROWN = Color3.fromRGB(128, 82, 46)
+local TEXT_DARK = Color3.fromRGB(92, 58, 32)
+local GREEN_TEXT = Color3.fromRGB(40, 150, 60)
 local WHITE = Color3.new(1, 1, 1)
+local BLACK = Color3.fromRGB(25, 20, 18)
+local GOLD = Color3.fromRGB(255, 205, 60)
+local BTN = {
+	Green = Color3.fromRGB(90, 200, 90),
+	Orange = Color3.fromRGB(255, 150, 50),
+	Red = Color3.fromRGB(240, 85, 75),
+	Blue = Color3.fromRGB(80, 160, 255),
+	Yellow = Color3.fromRGB(255, 205, 60),
+	Cream = CREAM_DARK,
+}
 
 local function corner(p, r)
 	local c = Instance.new("UICorner")
@@ -34,25 +50,56 @@ local function corner(p, r)
 end
 local function stroke(p, color, t)
 	local s = Instance.new("UIStroke")
-	s.Color = color or Color3.new(0, 0, 0)
+	s.Color = color or BLACK
 	s.Thickness = t or 3
 	s.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 	s.Parent = p
+	return s
 end
+local function textStroke(l, t)
+	local s = Instance.new("UIStroke")
+	s.Color = BLACK
+	s.Thickness = t or 2
+	s.Parent = l
+	return s
+end
+local function shine(p, amount)
+	local g = Instance.new("UIGradient")
+	local a = amount or 0.2
+	g.Color = ColorSequence.new(Color3.new(1, 1, 1), Color3.new(1 - a, 1 - a, 1 - a))
+	g.Rotation = 90
+	g.Parent = p
+	return g
+end
+-- outlined white text (for text over the 3D world)
 local function text(parent, props)
 	local l = Instance.new("TextLabel")
 	l.BackgroundTransparency = 1
 	l.Font = Enum.Font.FredokaOne
 	l.TextColor3 = WHITE
 	l.TextScaled = true
-	l.TextStrokeTransparency = 0.3
+	textStroke(l, props.StrokeThickness or 2)
+	props.StrokeThickness = nil
 	for k, v in pairs(props) do
 		l[k] = v
 	end
 	l.Parent = parent
 	return l
 end
-local SoundService = game:GetService("SoundService")
+-- flat dark-brown text (for text on cream panels)
+local function inkText(parent, props)
+	local l = Instance.new("TextLabel")
+	l.BackgroundTransparency = 1
+	l.Font = Enum.Font.FredokaOne
+	l.TextColor3 = TEXT_DARK
+	l.TextScaled = true
+	for k, v in pairs(props) do
+		l[k] = v
+	end
+	l.Parent = parent
+	return l
+end
+
 local function playSound(id, volume)
 	if id == "" then
 		return
@@ -66,40 +113,10 @@ local function playSound(id, volume)
 		snd:Destroy()
 	end)
 end
--- sound ids: fill these in with sounds from the Creator Store (Toolbox > Audio) that the game is allowed to use
-local SOUND_CLICK = ""
-local SOUND_PING = ""
-local SOUND_SWOOSH = ""
+-- sound ids: fill these with sounds from the Creator Store (Toolbox > Audio) that the game may use
+local SOUND_CLICK, SOUND_PING, SOUND_SWOOSH = "", "", ""
 
--- glossy shine: lighter at the top, darker at the bottom
-local function shine(p, amount)
-	local g = Instance.new("UIGradient")
-	local a = amount or 0.25
-	g.Color = ColorSequence.new(Color3.new(1, 1, 1), Color3.new(1 - a, 1 - a, 1 - a))
-	g.Rotation = 90
-	g.Parent = p
-end
-
-local function button(parent, props)
-	local b = Instance.new("TextButton")
-	b.Font = Enum.Font.FredokaOne
-	b.TextColor3 = WHITE
-	b.TextScaled = true
-	b.TextStrokeTransparency = 0.4
-	b.AutoButtonColor = true
-	for k, v in pairs(props) do
-		b[k] = v
-	end
-	corner(b, 12)
-	stroke(b, Color3.new(0, 0, 0), 3)
-	local pad = Instance.new("UIPadding")
-	pad.PaddingTop = UDim.new(0, 5)
-	pad.PaddingBottom = UDim.new(0, 5)
-	pad.PaddingLeft = UDim.new(0, 8)
-	pad.PaddingRight = UDim.new(0, 8)
-	pad.Parent = b
-	shine(b, 0.3)
-	-- juicy feel: grow on hover, squish on press, click sound
+local function juicy(b)
 	local scale = Instance.new("UIScale")
 	scale.Parent = b
 	local function to(v)
@@ -120,19 +137,61 @@ local function button(parent, props)
 	b.Activated:Connect(function()
 		playSound(SOUND_CLICK, 0.4)
 	end)
+end
+
+-- chunky colored button with a dark outline, like the big buttons in Clean a Painting
+local function button(parent, props, color)
+	local b = Instance.new("TextButton")
+	b.Font = Enum.Font.FredokaOne
+	b.TextColor3 = WHITE
+	b.TextScaled = true
+	b.AutoButtonColor = false
+	b.BackgroundColor3 = color or BTN.Green
+	textStroke(b, 2)
+	for k, v in pairs(props) do
+		b[k] = v
+	end
+	corner(b, 14)
+	stroke(b, BLACK, 3)
+	shine(b, 0.22)
+	local pad = Instance.new("UIPadding")
+	pad.PaddingTop = UDim.new(0.18, 0)
+	pad.PaddingBottom = UDim.new(0.18, 0)
+	pad.PaddingLeft = UDim.new(0, 10)
+	pad.PaddingRight = UDim.new(0, 10)
+	pad.Parent = b
+	juicy(b)
 	b.Parent = parent
 	return b
 end
+
+-- the little white key badge ("E", "Q") on a button
+local function keyBadge(b, key)
+	local k = Instance.new("TextLabel")
+	k.AnchorPoint = Vector2.new(0, 0.5)
+	k.Position = UDim2.new(0, -2, 0.5, 0)
+	k.Size = UDim2.new(0, 34, 0, 34)
+	k.BackgroundColor3 = WHITE
+	k.Font = Enum.Font.FredokaOne
+	k.TextScaled = true
+	k.TextColor3 = BLACK
+	k.Text = key
+	corner(k, 8)
+	stroke(k, BLACK, 2)
+	k.Parent = b
+	return k
+end
+
+-- cream panel with a brown border
 local function panel(parent, props)
 	local f = Instance.new("Frame")
-	f.BackgroundColor3 = DARK
+	f.BackgroundColor3 = CREAM
 	f.BorderSizePixel = 0
 	for k, v in pairs(props) do
 		f[k] = v
 	end
-	corner(f, 16)
-	stroke(f, YELLOW, 4)
-	shine(f, 0.35)
+	corner(f, 18)
+	stroke(f, BROWN, 5)
 	f.Parent = parent
 	return f
 end
@@ -145,34 +204,72 @@ gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 gui.Parent = player:WaitForChild("PlayerGui")
 
 ---------------------------------------------------------------------
--- HUD
+-- HUD: cash and tokens (top left), delivery timer (top center), icon buttons (left)
 ---------------------------------------------------------------------
-local cashBox = panel(gui, { AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 12, 1, -62), Size = UDim2.new(0, 260, 0, 54) })
-local cashLabel = text(cashBox, { Position = UDim2.new(0, 10, 0, 4), Size = UDim2.new(1, -20, 1, -8), Text = "$0", TextColor3 = Color3.fromRGB(120, 255, 130), TextXAlignment = Enum.TextXAlignment.Left })
-local tokenBox = panel(gui, { AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 12, 1, -12), Size = UDim2.new(0, 170, 0, 40) })
-local tokenLabel = text(tokenBox, { Position = UDim2.new(0, 10, 0, 4), Size = UDim2.new(1, -20, 1, -8), Text = "Tokens: 0", TextColor3 = YELLOW, TextXAlignment = Enum.TextXAlignment.Left })
-local incomeLabel = text(gui, { Position = UDim2.new(0, 16, 1, -150), Size = UDim2.new(0, 220, 0, 24), Text = "$0/s", TextColor3 = Color3.fromRGB(180, 255, 180), TextXAlignment = Enum.TextXAlignment.Left })
+local hud = Instance.new("Frame")
+hud.BackgroundTransparency = 1
+hud.Size = UDim2.new(1, 0, 1, 0)
+hud.Parent = gui
 
-local timerBox = panel(gui, { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 12), Size = UDim2.new(0, 300, 0, 64) })
-text(timerBox, { Position = UDim2.new(0, 0, 0, 4), Size = UDim2.new(1, 0, 0.38, 0), Text = "TRUCK ARRIVING", TextColor3 = YELLOW })
-local timerLabel = text(timerBox, { Position = UDim2.new(0, 0, 0.4, 0), Size = UDim2.new(1, 0, 0.55, 0), Text = "--:--" })
+local function pill(y, width, icon, color)
+	local f = Instance.new("Frame")
+	f.Position = UDim2.new(0, 34, 0, y)
+	f.Size = UDim2.new(0, width, 0, 42)
+	f.BackgroundColor3 = CREAM
+	corner(f, 21)
+	stroke(f, BROWN, 3)
+	f.Parent = hud
+	local i = Instance.new("TextLabel")
+	i.BackgroundTransparency = 1
+	i.AnchorPoint = Vector2.new(0.5, 0.5)
+	i.Position = UDim2.new(0, 0, 0.5, 0)
+	i.Size = UDim2.new(0, 56, 0, 56)
+	i.Text = icon
+	i.TextScaled = true
+	i.Font = Enum.Font.FredokaOne
+	i.Parent = f
+	local l = inkText(f, { Position = UDim2.new(0, 32, 0, 4), Size = UDim2.new(1, -44, 1, -8), Text = "0", TextColor3 = color, TextXAlignment = Enum.TextXAlignment.Center })
+	return f, l
+end
+local cashPill, cashLabel = pill(62, 220, "💵", GREEN_TEXT)
+local _, tokenLabel = pill(112, 140, "🪙", TEXT_DARK)
+local incomeLabel = text(hud, { Position = UDim2.new(0, 262, 0, 70), Size = UDim2.new(0, 200, 0, 26), Text = "", TextColor3 = Color3.fromRGB(130, 255, 140), TextXAlignment = Enum.TextXAlignment.Left })
 
-local leftColumn = Instance.new("Frame")
-leftColumn.BackgroundTransparency = 1
-leftColumn.Position = UDim2.new(0, 12, 0.5, -70)
-leftColumn.Size = UDim2.new(0, 120, 0, 150)
-leftColumn.Parent = gui
-local list = Instance.new("UIListLayout")
-list.Padding = UDim.new(0, 10)
-list.Parent = leftColumn
-local indexButton = button(leftColumn, { Size = UDim2.new(1, 0, 0, 64), Text = "INDEX", BackgroundColor3 = Color3.fromRGB(60, 120, 230) })
-local homeButton = button(leftColumn, { Size = UDim2.new(1, 0, 0, 64), Text = "HOME", BackgroundColor3 = Color3.fromRGB(230, 120, 40) })
-local indexDot = Instance.new("Frame")
-indexDot.Size = UDim2.new(0, 18, 0, 18)
-indexDot.Position = UDim2.new(1, -10, 0, -6)
-indexDot.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
+text(hud, { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 14), Size = UDim2.new(0, 260, 0, 18), Text = "CONTAINER DELIVERY", StrokeThickness = 1.5 })
+local timerLabel = text(hud, { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 34), Size = UDim2.new(0, 200, 0, 36), Text = "--:--", StrokeThickness = 2.5 })
+
+-- left icon buttons
+local function iconButton(y, icon, caption)
+	local b = Instance.new("TextButton")
+	b.BackgroundTransparency = 1
+	b.Text = ""
+	b.Position = UDim2.new(0, 14, 0.5, y)
+	b.Size = UDim2.new(0, 96, 0, 100)
+	b.Parent = hud
+	local i = Instance.new("TextLabel")
+	i.BackgroundTransparency = 1
+	i.Size = UDim2.new(1, 0, 0, 76)
+	i.Text = icon
+	i.TextScaled = true
+	i.Font = Enum.Font.FredokaOne
+	i.Parent = b
+	text(b, { Position = UDim2.new(0, -10, 0, 70), Size = UDim2.new(1, 20, 0, 26), Text = caption, StrokeThickness = 2.5 })
+	juicy(b)
+	return b
+end
+local indexButton = iconButton(-120, "📖", "Index")
+local homeButton = iconButton(-10, "🏠", "Home")
+local indexDot = Instance.new("TextLabel")
+indexDot.Size = UDim2.new(0, 26, 0, 26)
+indexDot.Position = UDim2.new(1, -24, 0, 2)
+indexDot.BackgroundColor3 = Color3.fromRGB(240, 60, 60)
+indexDot.Text = "!"
+indexDot.TextScaled = true
+indexDot.Font = Enum.Font.FredokaOne
+indexDot.TextColor3 = WHITE
 indexDot.Visible = false
-corner(indexDot, 9)
+corner(indexDot, 13)
+stroke(indexDot, WHITE, 2)
 indexDot.Parent = indexButton
 
 homeButton.MouseButton1Click:Connect(function()
@@ -182,16 +279,15 @@ end)
 -- cash counter with a floating "+$X"
 local lastCash = 0
 local function floatGain(amount)
-	local l = text(gui, { Position = UDim2.new(0, 280, 1, -110), Size = UDim2.new(0, 200, 0, 34), Text = "+$" .. Config.FormatNumber(amount), TextColor3 = Color3.fromRGB(120, 255, 130), TextXAlignment = Enum.TextXAlignment.Left })
-	local tw = TweenService:Create(l, TweenInfo.new(1.2), { Position = UDim2.new(0, 280, 1, -150), TextTransparency = 1, TextStrokeTransparency = 1 })
+	local l = text(hud, { Position = UDim2.new(0, 262, 0, 40), Size = UDim2.new(0, 220, 0, 32), Text = "+$" .. Config.FormatNumber(amount), TextColor3 = Color3.fromRGB(130, 255, 140), TextXAlignment = Enum.TextXAlignment.Left })
+	local tw = TweenService:Create(l, TweenInfo.new(1.2), { Position = UDim2.new(0, 262, 0, 10), TextTransparency = 1 })
 	tw:Play()
 	tw.Completed:Connect(function()
 		l:Destroy()
 	end)
 end
 task.spawn(function()
-	local ls = player:WaitForChild("leaderstats")
-	local cash = ls:WaitForChild("Cash")
+	local cash = player:WaitForChild("leaderstats"):WaitForChild("Cash")
 	local function update()
 		cashLabel.Text = "$" .. Config.FormatNumber(cash.Value)
 		local diff = cash.Value - lastCash
@@ -204,23 +300,25 @@ task.spawn(function()
 	update()
 end)
 
-local function unclaimedCount()
-	local claimed = {}
-	for id in string.gmatch(player:GetAttribute("Claimed") or "", "[^,]+") do
-		claimed[id] = true
+local function idSet(attr)
+	local set, n = {}, 0
+	for id in string.gmatch(player:GetAttribute(attr) or "", "[^,]+") do
+		set[id] = true
+		n = n + 1
 	end
-	local n = 0
-	for id in string.gmatch(player:GetAttribute("Discovered") or "", "[^,]+") do
+	return set, n
+end
+local function refreshTokens()
+	tokenLabel.Text = tostring(player:GetAttribute("Tokens") or 0)
+	local claimed = idSet("Claimed")
+	local discovered = idSet("Discovered")
+	local unclaimed = 0
+	for id in pairs(discovered) do
 		if not claimed[id] then
-			n = n + 1
+			unclaimed = unclaimed + 1
 		end
 	end
-	return n
-end
-
-local function refreshTokens()
-	tokenLabel.Text = "Tokens: " .. (player:GetAttribute("Tokens") or 0)
-	indexDot.Visible = unclaimedCount() > 0
+	indexDot.Visible = unclaimed > 0
 end
 player:GetAttributeChangedSignal("Tokens"):Connect(refreshTokens)
 player:GetAttributeChangedSignal("Claimed"):Connect(refreshTokens)
@@ -231,10 +329,13 @@ RunService.Heartbeat:Connect(function()
 	local nextAt = player:GetAttribute("NextDelivery")
 	if player:GetAttribute("YardFull") then
 		timerLabel.Text = "YARD FULL!"
+		timerLabel.TextColor3 = Color3.fromRGB(255, 120, 110)
 	elseif nextAt then
 		timerLabel.Text = Config.FormatTime(nextAt - workspace:GetServerTimeNow())
+		timerLabel.TextColor3 = WHITE
 	end
-	incomeLabel.Text = "$" .. Config.FormatNumber(player:GetAttribute("IncomeRate") or 0) .. "/s"
+	local rate = player:GetAttribute("IncomeRate") or 0
+	incomeLabel.Text = rate > 0 and ("$" .. Config.FormatNumber(rate) .. "/s") or ""
 end)
 
 ---------------------------------------------------------------------
@@ -243,8 +344,8 @@ end)
 local notifyList = Instance.new("Frame")
 notifyList.BackgroundTransparency = 1
 notifyList.AnchorPoint = Vector2.new(0.5, 0)
-notifyList.Position = UDim2.new(0.5, 0, 0, 84)
-notifyList.Size = UDim2.new(0, 620, 0, 200)
+notifyList.Position = UDim2.new(0.5, 0, 0, 80)
+notifyList.Size = UDim2.new(0, 640, 0, 200)
 notifyList.Parent = gui
 local nl = Instance.new("UIListLayout")
 nl.Padding = UDim.new(0, 4)
@@ -254,14 +355,14 @@ nl.Parent = notifyList
 local notifyCount = 0
 local function showNotification(message, color)
 	notifyCount = notifyCount + 1
-	local l = text(notifyList, { Size = UDim2.new(1, 0, 0, 30), Text = message, TextColor3 = color or WHITE, TextStrokeTransparency = 0, LayoutOrder = notifyCount })
+	local l = text(notifyList, { Size = UDim2.new(1, 0, 0, 28), Text = message, TextColor3 = color or WHITE, LayoutOrder = notifyCount })
 	local labels = {}
 	for _, c in ipairs(notifyList:GetChildren()) do
 		if c:IsA("TextLabel") then
 			table.insert(labels, c)
 		end
 	end
-	if #labels > 5 then
+	if #labels > 4 then
 		table.sort(labels, function(a, b)
 			return a.LayoutOrder < b.LayoutOrder
 		end)
@@ -269,7 +370,7 @@ local function showNotification(message, color)
 	end
 	task.delay(4, function()
 		if l.Parent then
-			local tw = TweenService:Create(l, TweenInfo.new(0.5), { TextTransparency = 1, TextStrokeTransparency = 1 })
+			local tw = TweenService:Create(l, TweenInfo.new(0.5), { TextTransparency = 1 })
 			tw:Play()
 			tw.Completed:Wait()
 			l:Destroy()
@@ -288,12 +389,12 @@ local function reveal(carId, isNew)
 	local f = Instance.new("Frame")
 	f.BackgroundTransparency = 1
 	f.AnchorPoint = Vector2.new(0.5, 0.5)
-	f.Position = UDim2.new(0.5, 0, 0.42, 0)
-	f.Size = UDim2.new(0, 640, 0, 190)
+	f.Position = UDim2.new(0.5, 0, 0.4, 0)
+	f.Size = UDim2.new(0, 680, 0, 200)
 	f.Parent = gui
-	text(f, { Size = UDim2.new(1, 0, 0.32, 0), Text = isNew and "NEW CAR!" or "YOU GOT", TextColor3 = YELLOW, TextStrokeTransparency = 0 })
-	text(f, { Position = UDim2.new(0, 0, 0.32, 0), Size = UDim2.new(1, 0, 0.4, 0), Text = car.Name, TextColor3 = rarity.Color, TextStrokeTransparency = 0 })
-	text(f, { Position = UDim2.new(0, 0, 0.72, 0), Size = UDim2.new(1, 0, 0.26, 0), Text = string.upper(rarity.Name) .. "  ·  " .. Config.GetOddsText(carId), TextStrokeTransparency = 0 })
+	text(f, { Size = UDim2.new(1, 0, 0.3, 0), Text = isNew and "✨ NEW CAR! ✨" or "YOU GOT", TextColor3 = GOLD, StrokeThickness = 3 })
+	text(f, { Position = UDim2.new(0, 0, 0.3, 0), Size = UDim2.new(1, 0, 0.42, 0), Text = car.Name, TextColor3 = rarity.Color, StrokeThickness = 4 })
+	text(f, { Position = UDim2.new(0, 0, 0.74, 0), Size = UDim2.new(1, 0, 0.24, 0), Text = string.upper(rarity.Name) .. "  ·  " .. Config.GetOddsText(carId), StrokeThickness = 2.5 })
 	local scale = Instance.new("UIScale")
 	scale.Scale = 0.2
 	scale.Parent = f
@@ -308,31 +409,172 @@ end
 RevealEvent.OnClientEvent:Connect(reveal)
 
 ---------------------------------------------------------------------
--- Washing: progress bar and scrubbing
+-- Camera views (wash and engine), like the close-up screens in Clean a Painting
 ---------------------------------------------------------------------
-local washBox = panel(gui, { AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -24), Size = UDim2.new(0, 420, 0, 70), Visible = false })
+local camera = workspace.CurrentCamera
+local currentView = nil -- "Wash" | "Engine" | nil
+
+local function plotCenterX()
+	local index = player:GetAttribute("PlotIndex")
+	if not index then
+		return nil
+	end
+	return -((Config.MaxPlots - 1) * 110) / 2 + (index - 1) * 110
+end
+
+-- hide floating world labels while a close-up view is open
+local hiddenLabels = {}
+local function hideWorldLabels(hidden)
+	if hidden then
+		for _, g in ipairs(workspace:GetDescendants()) do
+			if g:IsA("BillboardGui") and g.Enabled then
+				g.Enabled = false
+				table.insert(hiddenLabels, g)
+			end
+		end
+	else
+		for _, g in ipairs(hiddenLabels) do
+			if g.Parent then
+				g.Enabled = true
+			end
+		end
+		hiddenLabels = {}
+	end
+end
+
+local function hideMyCharacter(hidden)
+	local char = player.Character
+	if not char then
+		return
+	end
+	for _, d in ipairs(char:GetDescendants()) do
+		if d:IsA("BasePart") or d:IsA("Decal") then
+			d.LocalTransparencyModifier = hidden and 1 or 0
+		end
+	end
+end
+
+local function setCamera(cf, focus, instant)
+	hideMyCharacter(true)
+	if #hiddenLabels == 0 then
+		hideWorldLabels(true)
+	end
+	camera.CameraType = Enum.CameraType.Scriptable
+	local target = CFrame.lookAt(cf, focus)
+	if instant then
+		camera.CFrame = target
+	else
+		TweenService:Create(camera, TweenInfo.new(0.6, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { CFrame = target }):Play()
+	end
+end
+
+local function restoreCamera()
+	currentView = nil
+	hideMyCharacter(false)
+	hideWorldLabels(false)
+	camera.CameraType = Enum.CameraType.Custom
+	local char = player.Character
+	local hum = char and char:FindFirstChildOfClass("Humanoid")
+	if hum then
+		camera.CameraSubject = hum
+	end
+	hud.Visible = true
+end
+
+---------------------------------------------------------------------
+-- Wash view: orbit the car in the wash bay and scrub the dirt off
+---------------------------------------------------------------------
+local washUi = Instance.new("Frame")
+washUi.BackgroundTransparency = 1
+washUi.Size = UDim2.new(1, 0, 1, 0)
+washUi.Visible = false
+washUi.Parent = gui
+local washPercent = text(washUi, { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 22), Size = UDim2.new(0, 260, 0, 46), Text = "0.0%", StrokeThickness = 3 })
+local washBar = Instance.new("Frame")
+washBar.AnchorPoint = Vector2.new(0.5, 0)
+washBar.Position = UDim2.new(0.5, 0, 0, 74)
+washBar.Size = UDim2.new(0, 360, 0, 16)
+washBar.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+corner(washBar, 8)
+stroke(washBar, BLACK, 2)
+washBar.Parent = washUi
 local washFill = Instance.new("Frame")
-washFill.BackgroundColor3 = Color3.fromRGB(70, 190, 255)
-washFill.BorderSizePixel = 0
-washFill.Position = UDim2.new(0, 8, 0, 8)
-washFill.Size = UDim2.new(0, 0, 0, 30)
+washFill.Size = UDim2.new(0, 0, 1, 0)
+washFill.BackgroundColor3 = Color3.fromRGB(110, 210, 255)
 corner(washFill, 8)
-washFill.Parent = washBox
-local washText = text(washBox, { Position = UDim2.new(0, 8, 0, 8), Size = UDim2.new(1, -16, 0, 30), Text = "0% CLEAN", ZIndex = 2 })
-text(washBox, { Position = UDim2.new(0, 8, 0, 42), Size = UDim2.new(1, -16, 0, 22), Text = "Hold the mouse over the dirt and drag", TextColor3 = Color3.fromRGB(200, 200, 210) })
+washFill.Parent = washBar
+text(washUi, { AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -110), Size = UDim2.new(0, 520, 0, 26), Text = "Hold the mouse and drag over the dirt", TextColor3 = Color3.fromRGB(220, 240, 255) })
+local turnLeft = button(washUi, { AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, -70, 1, -28), Size = UDim2.new(0, 120, 0, 66), Text = "◀ TURN" }, BTN.Blue)
+local turnRight = button(washUi, { AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 70, 1, -28), Size = UDim2.new(0, 120, 0, 66), Text = "TURN ▶" }, BTN.Blue)
+local washCancel = button(washUi, { AnchorPoint = Vector2.new(1, 1), Position = UDim2.new(1, -40, 1, -28), Size = UDim2.new(0, 230, 0, 70), Text = "      CANCEL" }, BTN.Red)
+keyBadge(washCancel, "Q")
+local continueWash = button(hud, { AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -30), Size = UDim2.new(0, 280, 0, 68), Text = "🧽 KEEP WASHING", Visible = false }, BTN.Blue)
+
+local washAngle = 0
+local function washFocus()
+	local cx = plotCenterX()
+	if not cx then
+		return nil
+	end
+	return Vector3.new(cx - 15, 3, 10)
+end
+local function updateWashCamera(instant)
+	local focus = washFocus()
+	if not focus then
+		return
+	end
+	local offset = CFrame.Angles(0, math.rad(washAngle), 0) * Vector3.new(11, 7.5, -6)
+	setCamera(focus + offset, focus, instant)
+end
+local function enterWashView()
+	if currentView == "Wash" or not washFocus() then
+		return
+	end
+	currentView = "Wash"
+	washAngle = 0
+	hud.Visible = false
+	washUi.Visible = true
+	updateWashCamera(false)
+	playSound(SOUND_SWOOSH, 0.5)
+end
+local function exitWashView()
+	if currentView ~= "Wash" then
+		return
+	end
+	washUi.Visible = false
+	restoreCamera()
+end
+turnLeft.MouseButton1Click:Connect(function()
+	washAngle = washAngle - 90
+	updateWashCamera(false)
+end)
+turnRight.MouseButton1Click:Connect(function()
+	washAngle = washAngle + 90
+	updateWashCamera(false)
+end)
+washCancel.MouseButton1Click:Connect(exitWashView)
+continueWash.MouseButton1Click:Connect(enterWashView)
 
 local function refreshWash()
 	local p = player:GetAttribute("WashProgress")
-	washBox.Visible = p ~= nil
 	if p then
-		washFill.Size = UDim2.new(0, math.floor((420 - 16) * p), 0, 30)
-		washText.Text = math.floor(p * 100) .. "% CLEAN"
+		washPercent.Text = string.format("%.1f%%", p * 100)
+		washFill.Size = UDim2.new(math.clamp(p, 0, 1), 0, 1, 0)
+		if currentView == nil then
+			enterWashView()
+		end
+	else
+		if currentView == "Wash" then
+			washPercent.Text = "100%"
+			washFill.Size = UDim2.new(1, 0, 1, 0)
+			task.delay(0.6, exitWashView)
+		end
 	end
+	continueWash.Visible = p ~= nil and currentView ~= "Wash"
 end
 player:GetAttributeChangedSignal("WashProgress"):Connect(refreshWash)
-refreshWash()
 
-local GuiService = game:GetService("GuiService")
+-- scrubbing input: mouse held down or a finger on the screen
 local touchHolding = false
 local touchPos = Vector2.new()
 UserInputService.InputBegan:Connect(function(input, processed)
@@ -351,23 +593,17 @@ UserInputService.InputEnded:Connect(function(input)
 		touchHolding = false
 	end
 end)
-
--- true when one of our solid panels or buttons is under this screen point
 local function overOurGui(x, y)
-	local inset = GuiService:GetGuiInset()
-	for _, obj in ipairs(player.PlayerGui:GetGuiObjectsAtPosition(x, y - inset.Y)) do
+	for _, obj in ipairs(player.PlayerGui:GetGuiObjectsAtPosition(x, y - GuiService:GetGuiInset().Y)) do
 		if obj:IsDescendantOf(gui) and obj.Visible and (obj:IsA("GuiButton") or obj.BackgroundTransparency < 1) then
 			return true
 		end
 	end
 	return false
 end
-
--- returns the screen point (with the top bar inset included) being scrubbed, or nil
 local function scrubPoint()
 	if touchHolding then
-		local inset = GuiService:GetGuiInset()
-		return Vector2.new(touchPos.X, touchPos.Y + inset.Y)
+		return Vector2.new(touchPos.X, touchPos.Y + GuiService:GetGuiInset().Y)
 	end
 	if UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) then
 		local m = UserInputService:GetMouseLocation()
@@ -378,6 +614,16 @@ local function scrubPoint()
 	return nil
 end
 
+-- a sponge ring that follows the mouse in wash view
+local sponge = Instance.new("Frame")
+sponge.AnchorPoint = Vector2.new(0.5, 0.5)
+sponge.Size = UDim2.new(0, 70, 0, 70)
+sponge.BackgroundTransparency = 1
+corner(sponge, 35)
+stroke(sponge, WHITE, 2)
+sponge.Visible = false
+sponge.Parent = gui
+
 local function bubbles(position)
 	for _ = 1, 3 do
 		local b = Instance.new("Part")
@@ -385,7 +631,7 @@ local function bubbles(position)
 		b.Size = Vector3.new(0.5, 0.5, 0.5)
 		b.Material = Enum.Material.Glass
 		b.Transparency = 0.3
-		b.Color = Color3.fromRGB(220, 240, 255)
+		b.Color = Color3.fromRGB(225, 245, 255)
 		b.Anchored = true
 		b.CanCollide = false
 		b.CanQuery = false
@@ -401,7 +647,16 @@ end
 
 local lastSent = 0
 RunService.RenderStepped:Connect(function()
-	if player:GetAttribute("WashProgress") == nil then
+	if currentView then
+		hideMyCharacter(true)
+	end
+	local washing = player:GetAttribute("WashProgress") ~= nil
+	sponge.Visible = washing and currentView == "Wash"
+	if sponge.Visible then
+		local m = UserInputService:GetMouseLocation()
+		sponge.Position = UDim2.new(0, m.X, 0, m.Y)
+	end
+	if not washing then
 		return
 	end
 	local point = scrubPoint()
@@ -416,12 +671,11 @@ RunService.RenderStepped:Connect(function()
 	if not dirt then
 		return
 	end
-	local camera = workspace.CurrentCamera
 	local ray = camera:ViewportPointToRay(point.X, point.Y)
 	local params = RaycastParams.new()
 	params.FilterType = Enum.RaycastFilterType.Include
 	params.FilterDescendantsInstances = { dirt }
-	local result = workspace:Raycast(ray.Origin, ray.Direction * 200, params)
+	local result = workspace:Raycast(ray.Origin, ray.Direction * 300, params)
 	if result then
 		lastSent = t
 		ScrubEvent:FireServer(result.Position)
@@ -430,24 +684,51 @@ RunService.RenderStepped:Connect(function()
 end)
 
 ---------------------------------------------------------------------
--- Engine screen
+-- Engine view: the car on the lift with its hood open, roll for an engine
 ---------------------------------------------------------------------
-local engineFrame = panel(gui, { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0.5, 0), Size = UDim2.new(0, 640, 0, 420), Visible = false })
-local engineTitle = text(engineFrame, { Position = UDim2.new(0, 16, 0, 10), Size = UDim2.new(1, -80, 0, 40), Text = "Choose your engine", TextColor3 = YELLOW })
-local engineCar = text(engineFrame, { Position = UDim2.new(0, 16, 0, 52), Size = UDim2.new(0.5, -16, 0, 30), Text = "" })
-local engineValue = text(engineFrame, { Position = UDim2.new(0, 16, 0, 86), Size = UDim2.new(0.5, -16, 0, 40), Text = "$0/s -> ?", TextColor3 = Color3.fromRGB(120, 255, 130) })
-local engineCurrent = text(engineFrame, { Position = UDim2.new(0, 16, 0, 130), Size = UDim2.new(0.5, -16, 0, 34), Text = "No engine yet" })
-text(engineFrame, { Position = UDim2.new(0.5, 10, 0, 52), Size = UDim2.new(0.5, -26, 0, 28), Text = "ENGINE CHANCES", TextColor3 = YELLOW })
+local engineUi = Instance.new("Frame")
+engineUi.BackgroundTransparency = 1
+engineUi.Size = UDim2.new(1, 0, 1, 0)
+engineUi.Visible = false
+engineUi.Parent = gui
+text(engineUi, { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 20), Size = UDim2.new(0, 420, 0, 36), Text = "Choose your engine", TextColor3 = Color3.fromRGB(170, 220, 255), StrokeThickness = 2.5 })
+local engineCar = text(engineUi, { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 58), Size = UDim2.new(0, 520, 0, 30), Text = "" })
+local engineValue = text(engineUi, { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 92), Size = UDim2.new(0, 420, 0, 30), Text = "$0/s -> ?", TextColor3 = Color3.fromRGB(140, 255, 150) })
+local engineCurrent = text(engineUi, { AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -128), Size = UDim2.new(0, 520, 0, 40), Text = "", StrokeThickness = 3 })
+text(engineUi, { Position = UDim2.new(0, 40, 0.5, -170), Size = UDim2.new(0, 280, 0, 30), Text = "ENGINE CHANCES", TextColor3 = GOLD })
 local chanceRows = {}
 for i, engine in ipairs(Config.Engines) do
-	local row = text(engineFrame, { Position = UDim2.new(0.5, 10, 0, 84 + (i - 1) * 30), Size = UDim2.new(0.5, -26, 0, 26), Text = engine.Name, TextColor3 = engine.Color:Lerp(WHITE, 0.3), TextXAlignment = Enum.TextXAlignment.Left })
-	chanceRows[i] = row
+	local y = -130 + (i - 1) * 40
+	local swatch = Instance.new("Frame")
+	swatch.Position = UDim2.new(0, 40, 0.5, y)
+	swatch.Size = UDim2.new(0, 30, 0, 30)
+	swatch.BackgroundColor3 = engine.Color
+	corner(swatch, 6)
+	stroke(swatch, BLACK, 2)
+	swatch.Parent = engineUi
+	local name = text(engineUi, { Position = UDim2.new(0, 82, 0.5, y + 3), Size = UDim2.new(0, 170, 0, 24), Text = engine.Name, TextXAlignment = Enum.TextXAlignment.Left })
+	local pct = text(engineUi, { Position = UDim2.new(0, 250, 0.5, y + 3), Size = UDim2.new(0, 80, 0, 24), Text = "", TextXAlignment = Enum.TextXAlignment.Right })
+	chanceRows[i] = { Name = name, Pct = pct }
 end
-local rollButton = button(engineFrame, { Position = UDim2.new(0, 16, 1, -130), Size = UDim2.new(0.5, -24, 0, 54), Text = "ROLL ENGINE (E)", BackgroundColor3 = Color3.fromRGB(240, 140, 30) })
-local luckyButton = button(engineFrame, { Position = UDim2.new(0.5, 8, 1, -130), Size = UDim2.new(0.5, -24, 0, 54), Text = "LUCKY ROLL (1 token)", BackgroundColor3 = Color3.fromRGB(170, 80, 230) })
-local doneButton = button(engineFrame, { Position = UDim2.new(0, 16, 1, -68), Size = UDim2.new(0.5, -24, 0, 54), Text = "DONE - DISPLAY (Q)", BackgroundColor3 = Color3.fromRGB(60, 190, 90) })
-local sellButton = button(engineFrame, { Position = UDim2.new(0.5, 8, 1, -68), Size = UDim2.new(0.5, -24, 0, 54), Text = "SELL", BackgroundColor3 = Color3.fromRGB(200, 60, 60) })
-local closeButton = button(engineFrame, { Position = UDim2.new(1, -56, 0, 10), Size = UDim2.new(0, 44, 0, 44), Text = "X", BackgroundColor3 = Color3.fromRGB(200, 60, 60) })
+local rollButton = button(engineUi, { AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, -150, 1, -40), Size = UDim2.new(0, 260, 0, 70), Text = "      ROLL ENGINE" }, BTN.Orange)
+keyBadge(rollButton, "E")
+local luckyButton = button(engineUi, { AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 150, 1, -40), Size = UDim2.new(0, 260, 0, 70), Text = "🪙 LUCKY ROLL" }, WHITE)
+do
+	-- rainbow like the Lucky Roll in Clean a Painting
+	local g = luckyButton:FindFirstChildOfClass("UIGradient")
+	g.Rotation = 0
+	g.Color = ColorSequence.new({
+		ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 150, 60)),
+		ColorSequenceKeypoint.new(0.35, Color3.fromRGB(240, 110, 200)),
+		ColorSequenceKeypoint.new(0.7, Color3.fromRGB(120, 170, 255)),
+		ColorSequenceKeypoint.new(1, Color3.fromRGB(120, 230, 120)),
+	})
+end
+local luckyInfo = text(engineUi, { AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 150, 1, -12), Size = UDim2.new(0, 260, 0, 24), Text = "" })
+local doneButton = button(engineUi, { AnchorPoint = Vector2.new(1, 1), Position = UDim2.new(1, -40, 1, -40), Size = UDim2.new(0, 230, 0, 70), Text = "      DONE" }, BTN.Green)
+keyBadge(doneButton, "Q")
+local sellButton = button(engineUi, { AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -100, 0, 24), Size = UDim2.new(0, 190, 0, 52), Text = "SELL" }, BTN.Red)
+local closeButton = button(engineUi, { AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -30, 0, 24), Size = UDim2.new(0, 56, 0, 52), Text = "X" }, BTN.Red)
 
 local engineCarId, engineIndex = nil, nil
 local busy = false
@@ -458,33 +739,62 @@ local function refreshEngineScreen()
 	end
 	local car = Config.CarsById[engineCarId]
 	local base = Config.GetCarIncome(engineCarId, 1)
-	engineCar.Text = car.Name
+	engineCar.Text = car.Name .. "  ·  " .. Config.Rarities[car.Rarity].Name
 	engineCar.TextColor3 = Config.Rarities[car.Rarity].Color
 	if engineIndex then
 		local e = Config.Engines[engineIndex]
-		engineValue.Text = "$" .. Config.FormatNumber(base) .. "/s -> $" .. Config.FormatNumber(Config.GetCarIncome(engineCarId, engineIndex)) .. "/s"
-		engineCurrent.Text = "Engine: " .. e.Name .. "  (x" .. e.Mult .. ")"
-		engineCurrent.TextColor3 = e.Color:Lerp(WHITE, 0.3)
+		engineValue.Text = "$" .. Config.FormatNumber(base) .. "/s  ->  $" .. Config.FormatNumber(Config.GetCarIncome(engineCarId, engineIndex)) .. "/s"
+		engineCurrent.Text = e.Name .. "  (x" .. e.Mult .. ")"
+		engineCurrent.TextColor3 = e.Color:Lerp(WHITE, 0.35)
 		sellButton.Text = "SELL $" .. Config.FormatNumber(Config.GetCarIncome(engineCarId, engineIndex) * Config.SellSeconds)
 	else
-		engineValue.Text = "$" .. Config.FormatNumber(base) .. "/s -> ?"
-		engineCurrent.Text = "No engine yet - roll one!"
+		engineValue.Text = "$" .. Config.FormatNumber(base) .. "/s  ->  ?"
+		engineCurrent.Text = "Roll an engine!"
 		engineCurrent.TextColor3 = WHITE
 		sellButton.Text = "SELL $" .. Config.FormatNumber(base * Config.SellSeconds)
 	end
 	local chances = Config.GetEngineChances(player:GetAttribute("EngineLuck") or 0, false)
 	for i, row in ipairs(chanceRows) do
-		row.Text = string.format("%s   %.2f%%", Config.Engines[i].Name, chances[i])
+		row.Pct.Text = string.format("%.2f%%", chances[i])
+		row.Name.TextColor3 = (i == engineIndex) and GOLD or WHITE
 	end
-	luckyButton.Text = "LUCKY ROLL (1 of " .. (player:GetAttribute("Tokens") or 0) .. " tokens)"
+	luckyInfo.Text = (player:GetAttribute("Tokens") or 0) .. " tokens · Turbo or better"
+end
+
+local function liftFocus()
+	local cx = plotCenterX()
+	if not cx then
+		return nil
+	end
+	return Vector3.new(cx + 15, 4.5, 10)
+end
+local function enterEngineView()
+	local focus = liftFocus()
+	if not focus then
+		return
+	end
+	if currentView == "Wash" then
+		washUi.Visible = false
+	end
+	if currentView ~= "Engine" then
+		playSound(SOUND_SWOOSH, 0.5)
+	end
+	currentView = "Engine"
+	hud.Visible = false
+	engineUi.Visible = true
+	setCamera(focus + Vector3.new(-5.5, 5, -10.5), focus + Vector3.new(0, -0.6, -2), false)
+end
+local function exitEngineView()
+	engineUi.Visible = false
+	engineCarId, engineIndex = nil, nil
+	if currentView == "Engine" then
+		restoreCamera()
+	end
 end
 
 OpenEngineEvent.OnClientEvent:Connect(function(carId, current)
 	engineCarId, engineIndex = carId, current
-	if not engineFrame.Visible then
-		playSound(SOUND_SWOOSH, 0.5)
-	end
-	engineFrame.Visible = true
+	enterEngineView()
 	refreshEngineScreen()
 end)
 
@@ -494,27 +804,25 @@ local function doAction(action)
 	end
 	busy = true
 	if action == "Roll" or action == "Lucky" then
-		-- short spin through engine names while the server rolls
-		for _ = 1, 8 do
+		for _ = 1, 9 do
 			local i = math.random(1, #Config.Engines)
 			engineCurrent.Text = Config.Engines[i].Name .. "..."
-			engineCurrent.TextColor3 = Config.Engines[i].Color
+			engineCurrent.TextColor3 = Config.Engines[i].Color:Lerp(WHITE, 0.3)
 			task.wait(0.07)
 		end
 	end
 	local result = EngineAction:InvokeServer(action)
 	if result and result.Ok then
 		if result.Done then
-			engineFrame.Visible = false
-			engineCarId, engineIndex = nil, nil
+			exitEngineView()
 		elseif result.Engine then
 			engineIndex = result.Engine
 			refreshEngineScreen()
 			local e = Config.Engines[engineIndex]
-			showNotification("You got: " .. e.Name .. "!", e.Color:Lerp(WHITE, 0.3))
+			showNotification("You got: " .. e.Name .. "!", e.Color:Lerp(WHITE, 0.35))
 		end
 	elseif result and result.Message then
-		showNotification(result.Message, Color3.fromRGB(255, 120, 120))
+		showNotification(result.Message, Color3.fromRGB(255, 130, 120))
 		refreshEngineScreen()
 	end
 	busy = false
@@ -531,17 +839,19 @@ end)
 sellButton.MouseButton1Click:Connect(function()
 	doAction("Sell")
 end)
-closeButton.MouseButton1Click:Connect(function()
-	engineFrame.Visible = false
-end)
+closeButton.MouseButton1Click:Connect(exitEngineView)
 UserInputService.InputBegan:Connect(function(input, processed)
-	if processed or not engineFrame.Visible then
+	if processed then
 		return
 	end
-	if input.KeyCode == Enum.KeyCode.E then
-		doAction("Roll")
-	elseif input.KeyCode == Enum.KeyCode.Q then
-		doAction("Done")
+	if currentView == "Engine" then
+		if input.KeyCode == Enum.KeyCode.E then
+			doAction("Roll")
+		elseif input.KeyCode == Enum.KeyCode.Q then
+			doAction("Done")
+		end
+	elseif currentView == "Wash" and input.KeyCode == Enum.KeyCode.Q then
+		exitWashView()
 	end
 end)
 player:GetAttributeChangedSignal("Tokens"):Connect(refreshEngineScreen)
@@ -549,81 +859,106 @@ player:GetAttributeChangedSignal("Tokens"):Connect(refreshEngineScreen)
 ---------------------------------------------------------------------
 -- Index (collection book)
 ---------------------------------------------------------------------
-local indexFrame = panel(gui, { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0.5, 0), Size = UDim2.new(0, 860, 0, 540), Visible = false })
-text(indexFrame, { Position = UDim2.new(0, 20, 0, 10), Size = UDim2.new(0, 300, 0, 50), Text = "CAR INDEX", TextColor3 = YELLOW, TextXAlignment = Enum.TextXAlignment.Left })
-local indexTotal = text(indexFrame, { Position = UDim2.new(0, 330, 0, 18), Size = UDim2.new(0, 400, 0, 34), Text = "" })
-local indexClose = button(indexFrame, { Position = UDim2.new(1, -60, 0, 12), Size = UDim2.new(0, 46, 0, 46), Text = "X", BackgroundColor3 = Color3.fromRGB(200, 60, 60) })
+local indexFrame = panel(gui, { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0.5, 10), Size = UDim2.new(0, 900, 0, 560), Visible = false })
+local indexIcon = Instance.new("TextLabel")
+indexIcon.BackgroundTransparency = 1
+indexIcon.Position = UDim2.new(0, 22, 0, 8)
+indexIcon.Size = UDim2.new(0, 64, 0, 64)
+indexIcon.Text = "📖"
+indexIcon.TextScaled = true
+indexIcon.Parent = indexFrame
+inkText(indexFrame, { Position = UDim2.new(0, 94, 0, 18), Size = UDim2.new(0, 200, 0, 44), Text = "INDEX", TextXAlignment = Enum.TextXAlignment.Left })
+local indexTotal = inkText(indexFrame, { AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -96, 0, 28), Size = UDim2.new(0, 320, 0, 26), Text = "", TextXAlignment = Enum.TextXAlignment.Right })
+local indexClose = button(indexFrame, { AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 18, 0, -18), Size = UDim2.new(0, 64, 0, 64), Text = "X" }, BTN.Red)
+inkText(indexFrame, { Position = UDim2.new(0, 34, 0, 84), Size = UDim2.new(0, 180, 0, 20), Text = "CONTAINERS", TextXAlignment = Enum.TextXAlignment.Left })
 local containerList = Instance.new("ScrollingFrame")
 containerList.BackgroundTransparency = 1
-containerList.Position = UDim2.new(0, 16, 0, 70)
-containerList.Size = UDim2.new(0, 200, 1, -86)
-containerList.CanvasSize = UDim2.new(0, 0, 0, #Config.Containers * 52)
+containerList.Position = UDim2.new(0, 24, 0, 110)
+containerList.Size = UDim2.new(0, 200, 1, -130)
+containerList.CanvasSize = UDim2.new(0, 0, 0, #Config.Containers * 64)
 containerList.ScrollBarThickness = 6
+containerList.ScrollBarImageColor3 = BROWN
 containerList.Parent = indexFrame
 local cl = Instance.new("UIListLayout")
-cl.Padding = UDim.new(0, 6)
+cl.Padding = UDim.new(0, 8)
 cl.Parent = containerList
-local headerLabel = text(indexFrame, { Position = UDim2.new(0, 232, 0, 68), Size = UDim2.new(1, -250, 0, 30), Text = "", TextColor3 = YELLOW, TextXAlignment = Enum.TextXAlignment.Left })
-local grid = Instance.new("Frame")
+local clPad = Instance.new("UIPadding")
+clPad.PaddingLeft = UDim.new(0, 4)
+clPad.PaddingTop = UDim.new(0, 4)
+clPad.Parent = containerList
+
+local page = Instance.new("Frame")
+page.Position = UDim2.new(0, 240, 0, 84)
+page.Size = UDim2.new(1, -264, 1, -104)
+page.BackgroundColor3 = CREAM_DARK
+corner(page, 14)
+stroke(page, BROWN, 3)
+page.Parent = indexFrame
+local headerLabel = inkText(page, { Position = UDim2.new(0, 16, 0, 10), Size = UDim2.new(0.6, 0, 0, 26), Text = "", TextColor3 = Color3.fromRGB(40, 90, 170), TextXAlignment = Enum.TextXAlignment.Left })
+local bonusLabel = inkText(page, { AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -16, 0, 12), Size = UDim2.new(0.38, 0, 0, 22), Text = "", TextXAlignment = Enum.TextXAlignment.Right })
+local grid = Instance.new("ScrollingFrame")
 grid.BackgroundTransparency = 1
-grid.Position = UDim2.new(0, 232, 0, 104)
-grid.Size = UDim2.new(1, -250, 1, -120)
-grid.Parent = indexFrame
+grid.Position = UDim2.new(0, 10, 0, 44)
+grid.Size = UDim2.new(1, -20, 1, -54)
+grid.ScrollBarThickness = 6
+grid.ScrollBarImageColor3 = BROWN
+grid.Parent = page
 local gl = Instance.new("UIGridLayout")
-gl.CellSize = UDim2.new(0.25, -8, 0.333, -8)
-gl.CellPadding = UDim2.new(0, 8, 0, 8)
+gl.CellSize = UDim2.new(0.25, -10, 0, 200)
+gl.CellPadding = UDim2.new(0, 10, 0, 10)
 gl.SortOrder = Enum.SortOrder.LayoutOrder
 gl.Parent = grid
+gl:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+	grid.CanvasSize = UDim2.new(0, 0, 0, gl.AbsoluteContentSize.Y + 10)
+end)
 
 local selectedContainer = 1
 local containerButtons = {}
-
-local function discoveredSet()
-	local d, c = {}, {}
-	for id in string.gmatch(player:GetAttribute("Discovered") or "", "[^,]+") do
-		d[id] = true
-	end
-	for id in string.gmatch(player:GetAttribute("Claimed") or "", "[^,]+") do
-		c[id] = true
-	end
-	return d, c
-end
 
 local function makeCard(carId, discovered, claimed, order)
 	local car = Config.CarsById[carId]
 	local rarity = Config.Rarities[car.Rarity]
 	local card = Instance.new("Frame")
-	card.BackgroundColor3 = Color3.fromRGB(45, 48, 60)
+	card.BackgroundColor3 = CREAM
 	card.LayoutOrder = order
-	corner(card, 10)
-	stroke(card, discovered and rarity.Color or Color3.fromRGB(70, 70, 80), 3)
+	corner(card, 12)
+	stroke(card, discovered and rarity.Color:Lerp(BROWN, 0.3) or BROWN, 3)
 	card.Parent = grid
+	local photo = Instance.new("Frame")
+	photo.Position = UDim2.new(0, 8, 0, 8)
+	photo.Size = UDim2.new(1, -16, 0, 92)
+	photo.BackgroundColor3 = discovered and Color3.fromRGB(205, 225, 245) or Color3.fromRGB(200, 190, 175)
+	corner(photo, 8)
+	stroke(photo, BROWN, 2)
+	photo.Parent = card
 	local vp = Instance.new("ViewportFrame")
 	vp.BackgroundTransparency = 1
-	vp.Size = UDim2.new(1, 0, 0.55, 0)
-	vp.Parent = card
+	vp.Size = UDim2.new(1, 0, 1, 0)
+	vp.Ambient = Color3.fromRGB(200, 200, 210)
+	vp.LightColor = Color3.fromRGB(255, 250, 240)
+	vp.Parent = photo
 	local model = CarBuilder.BuildCar(carId, { Silhouette = not discovered })
 	model:PivotTo(CFrame.new(0, 0, 0) * CFrame.Angles(0, math.rad(35), 0))
 	model.Parent = vp
 	local cam = Instance.new("Camera")
-	local _, size = model:GetBoundingBox()
 	cam.FieldOfView = 30
-	local dist = math.max(size.X, size.Z) * 1.55 + 2
-	cam.CFrame = CFrame.lookAt(Vector3.new(dist * 0.55, dist * 0.4, -dist * 0.75), Vector3.new(0, size.Y * 0.4, 0))
+	local _, size = model:GetBoundingBox()
+	local dist = math.max(size.X, size.Z) * 1.5 + 2
+	cam.CFrame = CFrame.lookAt(Vector3.new(dist * 0.55, dist * 0.38, -dist * 0.75), Vector3.new(0, size.Y * 0.4, 0))
 	cam.Parent = vp
 	vp.CurrentCamera = cam
-	text(card, { Position = UDim2.new(0, 4, 0.55, 0), Size = UDim2.new(1, -8, 0.15, 0), Text = discovered and car.Name or "???", TextColor3 = discovered and rarity.Color or Color3.fromRGB(150, 150, 160) })
-	text(card, { Position = UDim2.new(0, 4, 0.70, 0), Size = UDim2.new(1, -8, 0.12, 0), Text = rarity.Name .. " · " .. Config.GetOddsText(carId), TextColor3 = Color3.fromRGB(210, 210, 220) })
+	inkText(card, { Position = UDim2.new(0, 6, 0, 104), Size = UDim2.new(1, -12, 0, 22), Text = discovered and car.Name or "???" })
+	inkText(card, { Position = UDim2.new(0, 6, 0, 128), Size = UDim2.new(1, -12, 0, 18), Text = rarity.Name .. " · " .. Config.GetOddsText(carId), TextColor3 = rarity.Color:Lerp(Color3.new(0, 0, 0), 0.25) })
 	if discovered and not claimed then
-		local b = button(card, { Position = UDim2.new(0, 6, 0.83, 0), Size = UDim2.new(1, -12, 0.15, 0), Text = "COLLECT TOKEN", BackgroundColor3 = YELLOW, TextColor3 = Color3.new(0, 0, 0) })
+		local b = button(card, { AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -8), Size = UDim2.new(1, -16, 0, 38), Text = "🪙 COLLECT" }, BTN.Yellow)
 		b.MouseButton1Click:Connect(function()
 			b.Active = false
 			if ClaimToken:InvokeServer(carId) then
-				showNotification("+1 token!", YELLOW)
+				showNotification("+1 token!", GOLD)
 			end
 		end)
 	else
-		text(card, { Position = UDim2.new(0, 4, 0.84, 0), Size = UDim2.new(1, -8, 0.13, 0), Text = "$" .. Config.FormatNumber(car.BaseIncome) .. "/s", TextColor3 = Color3.fromRGB(120, 255, 130) })
+		inkText(card, { Position = UDim2.new(0, 6, 0, 152), Size = UDim2.new(1, -12, 0, 22), Text = "$" .. Config.FormatNumber(car.BaseIncome) .. "/s", TextColor3 = GREEN_TEXT })
 	end
 end
 
@@ -631,12 +966,9 @@ local function refreshIndex()
 	if not indexFrame.Visible then
 		return
 	end
-	local discovered, claimed = discoveredSet()
-	local total = 0
-	for _ in pairs(discovered) do
-		total = total + 1
-	end
-	indexTotal.Text = total .. " / " .. #Config.Cars .. " discovered · Tokens: " .. (player:GetAttribute("Tokens") or 0)
+	local discovered, total = idSet("Discovered")
+	local claimed = idSet("Claimed")
+	indexTotal.Text = total .. " / " .. #Config.Cars .. " discovered"
 	for c, b in ipairs(containerButtons) do
 		local n = 0
 		for _, id in ipairs(Config.Containers[c].CarIds) do
@@ -644,8 +976,9 @@ local function refreshIndex()
 				n = n + 1
 			end
 		end
-		b.Text = "Container " .. c .. "  " .. n .. "/12"
-		b.BackgroundColor3 = (c == selectedContainer) and Color3.fromRGB(90, 200, 100) or Color3.fromRGB(70, 74, 90)
+		b.Text = "Container " .. c .. "\n" .. n .. " / 12"
+		b.BackgroundColor3 = (c == selectedContainer) and BTN.Green or Color3.fromRGB(255, 225, 170)
+		b.TextColor3 = (c == selectedContainer) and WHITE or TEXT_DARK
 	end
 	for _, child in ipairs(grid:GetChildren()) do
 		if child:IsA("Frame") then
@@ -660,11 +993,29 @@ local function refreshIndex()
 		end
 		makeCard(id, discovered[id], claimed[id], slot)
 	end
-	headerLabel.Text = "CONTAINER " .. selectedContainer .. ": " .. string.upper(container.Name) .. (found == 12 and "  ·  COMPLETE: +5% income" or "  ·  complete it for +5% income")
+	headerLabel.Text = "CONTAINER " .. selectedContainer .. " · " .. string.upper(container.Name)
+	bonusLabel.Text = found == 12 and "COMPLETE: +5% income ✅" or (found .. " / 12 · complete for +5% income")
 end
 
 for c = 1, #Config.Containers do
-	local b = button(containerList, { Size = UDim2.new(1, -10, 0, 46), Text = "Container " .. c, BackgroundColor3 = Color3.fromRGB(70, 74, 90), LayoutOrder = c })
+	local b = Instance.new("TextButton")
+	b.Size = UDim2.new(1, -14, 0, 56)
+	b.Font = Enum.Font.FredokaOne
+	b.TextScaled = true
+	b.TextColor3 = TEXT_DARK
+	b.BackgroundColor3 = Color3.fromRGB(255, 225, 170)
+	b.AutoButtonColor = false
+	b.LayoutOrder = c
+	b.Text = "Container " .. c
+	corner(b, 12)
+	stroke(b, BROWN, 3)
+	shine(b, 0.12)
+	local pad = Instance.new("UIPadding")
+	pad.PaddingTop = UDim.new(0, 6)
+	pad.PaddingBottom = UDim.new(0, 6)
+	pad.Parent = b
+	juicy(b)
+	b.Parent = containerList
 	b.MouseButton1Click:Connect(function()
 		selectedContainer = c
 		refreshIndex()
@@ -672,16 +1023,39 @@ for c = 1, #Config.Containers do
 	containerButtons[c] = b
 end
 
+local indexScale = Instance.new("UIScale")
+indexScale.Parent = indexFrame
+local baseScale = 1
+local function setIndexOpen(open)
+	if open then
+		indexFrame.Visible = true
+		indexScale.Scale = baseScale * 0.6
+		TweenService:Create(indexScale, TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = baseScale }):Play()
+		refreshIndex()
+		playSound(SOUND_SWOOSH, 0.5)
+	else
+		indexFrame.Visible = false
+	end
+end
 indexButton.MouseButton1Click:Connect(function()
-	indexFrame.Visible = not indexFrame.Visible
-	playSound(SOUND_SWOOSH, 0.5)
-	refreshIndex()
+	setIndexOpen(not indexFrame.Visible)
 end)
 indexClose.MouseButton1Click:Connect(function()
-	indexFrame.Visible = false
+	setIndexOpen(false)
 end)
 player:GetAttributeChangedSignal("Claimed"):Connect(refreshIndex)
 player:GetAttributeChangedSignal("Discovered"):Connect(refreshIndex)
+
+-- keep the Index readable on small screens
+local function fitIndex()
+	local vs = camera.ViewportSize
+	baseScale = math.min(1, (vs.X - 40) / 900, (vs.Y - 60) / 560)
+	if indexFrame.Visible then
+		indexScale.Scale = baseScale
+	end
+end
+camera:GetPropertyChangedSignal("ViewportSize"):Connect(fitIndex)
+fitIndex()
 
 ---------------------------------------------------------------------
 -- Only the owner sees prompts on their own cars and containers
@@ -697,6 +1071,15 @@ for _, p in ipairs(CollectionService:GetTagged("OwnerPrompt")) do
 end
 CollectionService:GetInstanceAddedSignal("OwnerPrompt"):Connect(checkPrompt)
 
+player.CharacterAdded:Connect(function()
+	if currentView then
+		task.wait()
+		restoreCamera()
+		washUi.Visible = false
+		engineUi.Visible = false
+	end
+end)
+
 task.delay(2, function()
-	showNotification("Welcome to D2D! Your first container is landing in your backyard.", YELLOW)
+	showNotification("Welcome to D2D! Your first container is landing in your backyard.", GOLD)
 end)

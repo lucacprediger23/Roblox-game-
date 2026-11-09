@@ -104,9 +104,207 @@ end
 
 -- Builds a car. Front of the car faces -Z. Pivot = ground center.
 -- opts.Engine = engine index to show under an open hood; opts.Silhouette = all black
+---------------------------------------------------------------------
+-- AI-generated car models (ReplicatedStorage.Assets.Cars.<name>)
+-- Each generated model has sub-models "body", "hood" and four wheels, each holding a MeshPart.
+---------------------------------------------------------------------
+-- which generated model each body shape uses, in order of preference
+local ASSET_FOR_SHAPE = {
+	mini = { "mini", "hatch" },
+	hatch = { "hatch" },
+	sedan = { "sedan", "hatch" },
+	wagon = { "wagon", "sedan", "hatch" },
+	van = { "van", "suv", "hatch" },
+	truck = { "truck", "suv", "hatch" },
+	suv = { "suv", "hatch" },
+	bus = { "bus", "van", "suv", "hatch" },
+	classic = { "classic", "sedan", "hatch" },
+	muscle = { "muscle", "sedan", "hatch" },
+	coupe = { "coupe", "muscle", "sedan", "hatch" },
+	racer = { "racer", "super", "muscle", "hatch" },
+	super = { "super", "muscle", "hatch" },
+	hyper = { "hyper", "super", "muscle", "hatch" },
+	limo = { "limo", "sedan", "hatch" },
+	open = { "open", "super", "muscle", "hatch" },
+}
+
+local function findAsset(car)
+	local assets = ReplicatedStorage:FindFirstChild("Assets")
+	local cars = assets and assets:FindFirstChild("Cars")
+	if not cars then
+		return nil
+	end
+	-- a model made for this exact car wins, then one for its body shape
+	local exact = cars:FindFirstChild(car.Id)
+	if exact then
+		return exact
+	end
+	for _, name in ipairs(ASSET_FOR_SHAPE[car.Shape] or { "hatch" }) do
+		local m = cars:FindFirstChild(name)
+		if m then
+			return m
+		end
+	end
+	return nil
+end
+
+local function stripTexture(p)
+	for _, c in ipairs(p:GetChildren()) do
+		if c:IsA("SurfaceAppearance") then
+			c:Destroy()
+		end
+	end
+	pcall(function()
+		p.TextureID = ""
+	end)
+end
+
+local function buildFromAsset(car, source, opts)
+	local L = CarBuilder.GetShape(car.Id)[1]
+	local sil = opts.Silhouette
+	local rarity = car.Rarity
+	local clone = source:Clone()
+
+	-- flatten: every MeshPart goes to the top level with a simple name
+	local model = Instance.new("Model")
+	model.Name = car.Name
+	local parts = {}
+	for _, d in ipairs(clone:GetDescendants()) do
+		if d:IsA("BasePart") then
+			local group = (d.Parent and d.Parent ~= clone and d.Parent.Name or d.Name):lower()
+			local name = "Trim"
+			if group:find("body") then
+				name = "Body"
+			elseif group:find("hood") then
+				name = "Hood"
+			elseif group:find("wheel") then
+				name = "Wheel"
+			end
+			d.Name = name
+			d.Anchored = true
+			d.CanCollide = name == "Body"
+			d.CanTouch = false
+			d.Parent = model
+			table.insert(parts, d)
+		end
+	end
+	clone:Destroy()
+	local body = model:FindFirstChild("Body") or parts[1]
+	local hood = model:FindFirstChild("Hood")
+
+	-- world-space box around a set of parts (GetBoundingBox follows the model's own rotation, which can be anything)
+	local function worldBox()
+		local minV = Vector3.new(math.huge, math.huge, math.huge)
+		local maxV = -minV
+		for _, p in ipairs(parts) do
+			local cf, h = p.CFrame, p.Size / 2
+			local r, u, l = cf.RightVector, cf.UpVector, cf.LookVector
+			local ext = Vector3.new(
+				math.abs(r.X) * h.X + math.abs(u.X) * h.Y + math.abs(l.X) * h.Z,
+				math.abs(r.Y) * h.X + math.abs(u.Y) * h.Y + math.abs(l.Y) * h.Z,
+				math.abs(r.Z) * h.X + math.abs(u.Z) * h.Y + math.abs(l.Z) * h.Z
+			)
+			minV = minV:Min(cf.Position - ext)
+			maxV = maxV:Max(cf.Position + ext)
+		end
+		return (minV + maxV) / 2, maxV - minV, minV
+	end
+
+	-- turn it so the front (where the hood is) faces -Z
+	local center, size = worldBox()
+	local alongX = size.X > size.Z
+	local front
+	if hood then
+		local d = hood.Position - center
+		if alongX then
+			front = Vector3.new(d.X >= 0 and 1 or -1, 0, 0)
+		else
+			front = Vector3.new(0, 0, d.Z >= 0 and 1 or -1)
+		end
+	else
+		front = alongX and Vector3.new(-1, 0, 0) or Vector3.new(0, 0, -1)
+	end
+	model.WorldPivot = CFrame.lookAt(center, center + front)
+	model:PivotTo(CFrame.new())
+	-- scale to the length of this car's shape
+	local _, size2 = worldBox()
+	pcall(function()
+		-- AI cars are taller and rounder than the old block cars, so make them a bit longer to read well
+		model:ScaleTo(math.min(L * 1.25, 14.5) / math.max(size2.Z, 0.1))
+	end)
+	-- sit on the ground, centered
+	local c3, _, min3 = worldBox()
+	model.WorldPivot = CFrame.new(c3.X, min3.Y, c3.Z)
+	model:PivotTo(CFrame.new())
+
+	-- special paint jobs and silhouettes
+	for _, p in ipairs(parts) do
+		if sil then
+			stripTexture(p)
+			p.Color = Color3.new(0, 0, 0)
+			p.Material = Enum.Material.SmoothPlastic
+		elseif p.Name ~= "Wheel" and rarity == 6 then
+			stripTexture(p)
+			p.Material = Enum.Material.Glass
+			p.Color = Color3.fromRGB(150, 230, 255)
+			p.Transparency = 0.15
+			p.Reflectance = 0.3
+		elseif p.Name ~= "Wheel" and rarity == 7 then
+			stripTexture(p)
+			p.Material = Enum.Material.Metal
+			p.Color = Color3.fromRGB(255, 200, 50)
+			p.Reflectance = 0.4
+		end
+	end
+	if not sil and rarity >= 6 and body then
+		local sparkles = Instance.new("Sparkles")
+		sparkles.SparkleColor = Config.Rarities[rarity].Color
+		sparkles.Parent = body
+		local light = Instance.new("PointLight")
+		light.Color = Config.Rarities[rarity].Color
+		light.Range = 14
+		light.Brightness = 1.5
+		light.Parent = body
+	end
+
+	-- invisible root at the ground center (labels and prompts hang on it)
+	local root = newPart(model, "Root", Vector3.new(1, 1, 1), CFrame.new(0, 0.5, 0), Color3.new(0, 0, 0), { Transparency = 1, CanQuery = false })
+	model.PrimaryPart = root
+
+	-- open hood with the engine showing
+	if opts.Engine and hood then
+		local cf, half = hood.CFrame, hood.Size / 2
+		local r, u, l = cf.RightVector, cf.UpVector, cf.LookVector
+		local ext = Vector3.new(
+			math.abs(r.X) * half.X + math.abs(u.X) * half.Y + math.abs(l.X) * half.Z,
+			math.abs(r.Y) * half.X + math.abs(u.Y) * half.Y + math.abs(l.Y) * half.Z,
+			math.abs(r.Z) * half.X + math.abs(u.Z) * half.Y + math.abs(l.Z) * half.Z
+		)
+		local hp = hood.Position
+		local engine = CarBuilder.BuildEngine(opts.Engine, ext.X * 2, ext.Z * 2, sil)
+		engine:PivotTo(CFrame.new(0, hp.Y - ext.Y, hp.Z))
+		engine.Parent = model
+		-- hinge on the hood's rear edge (front of the car is -Z, so the rear edge is +Z)
+		local hinge = CFrame.new(0, hp.Y, hp.Z + ext.Z)
+		local relative = hinge:ToObjectSpace(cf)
+		hood.CFrame = hinge * CFrame.Angles(math.rad(65), 0, 0) * relative
+	end
+
+	model:SetAttribute("CarId", car.Id)
+	return model
+end
+
 function CarBuilder.BuildCar(carId, opts)
 	opts = opts or {}
 	local car = Config.CarsById[carId]
+	local asset = car and findAsset(car)
+	if asset then
+		local ok, result = pcall(buildFromAsset, car, asset, opts)
+		if ok and result then
+			return result
+		end
+		warn("[D2D] could not use model for " .. carId .. ": " .. tostring(result))
+	end
 	local s = CarBuilder.GetShape(carId)
 	local L, W, H, cabH, cabL, cabZ, wheelD, hoodL, wing = s[1], s[2], s[3], s[4], s[5], s[6], s[7], s[8], s[9]
 	local sil = opts.Silhouette
@@ -332,7 +530,9 @@ function CarBuilder.BuildContainer(level)
 		gui.PixelsPerStud = 20
 		local t = Instance.new("TextLabel")
 		t.BackgroundTransparency = 1
-		t.Size = UDim2.new(1, 0, 1, 0)
+		t.AnchorPoint = Vector2.new(0.5, 0.5)
+		t.Position = UDim2.new(0.5, 0, 0.32, 0)
+		t.Size = UDim2.new(0.5, 0, 0.26, 0)
 		t.Font = Enum.Font.FredokaOne
 		t.TextScaled = true
 		t.TextColor3 = Color3.new(1, 1, 1)
