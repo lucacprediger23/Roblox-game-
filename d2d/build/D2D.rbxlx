@@ -1,0 +1,2738 @@
+<roblox xmlns:xmime="http://www.w3.org/2005/05/xmlmime" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.roblox.com/roblox.xsd" version="4"><Item class="Workspace" referent="RBX00000001"><Properties><string name="Name">Workspace</string><bool name="StreamingEnabled">false</bool></Properties></Item><Item class="ReplicatedStorage" referent="RBX00000005"><Properties><string name="Name">ReplicatedStorage</string></Properties><Item class="Folder" referent="RBX00000004"><Properties><string name="Name">Shared</string></Properties><Item class="ModuleScript" referent="RBX00000002"><Properties><string name="Name">CarBuilder</string><ProtectedString name="Source"><![CDATA[-- CarBuilder: builds placeholder cars, engines and containers out of plain parts.
+-- These stand in until the real 3D models (from Roblox's AI generator) are ready:
+-- swap BuildCar's body for a mesh later and everything else keeps working.
+
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
+
+local CarBuilder = {}
+
+-- length, width, body height, cabin height, cabin length, cabin z-offset, wheel diameter, hood length, wing
+local SHAPES = {
+	mini = { 8, 4.6, 1.6, 1.6, 4.5, 0.4, 1.6, 2.0 },
+	hatch = { 9.5, 5, 1.7, 1.6, 5, 1.5, 1.8, 2.6 },
+	sedan = { 11, 5.2, 1.6, 1.6, 5, 0.6, 1.8, 3 },
+	wagon = { 11.5, 5.2, 1.6, 1.7, 7, 1.6, 1.8, 3 },
+	van = { 11, 5.4, 2.4, 2.0, 8.5, 1.0, 1.9, 2 },
+	truck = { 12.5, 5.6, 2.0, 1.8, 4, -1.5, 2.4, 3.2 },
+	suv = { 11, 5.6, 2.2, 1.9, 6.5, 0.9, 2.4, 3 },
+	bus = { 15, 6, 2.6, 2.4, 13, 0.6, 2.2, 1.4 },
+	classic = { 13, 5.4, 1.5, 1.5, 5, 0.8, 1.8, 4 },
+	muscle = { 12, 5.4, 1.6, 1.4, 4.5, 1.2, 2.0, 4 },
+	coupe = { 10.5, 5.2, 1.4, 1.3, 4.2, 1.0, 1.9, 3.2 },
+	racer = { 12, 5.4, 1.2, 1.0, 3, 0.5, 2.0, 3.5, true },
+	super = { 11.5, 5.6, 1.2, 1.1, 4, -0.2, 2.0, 3 },
+	hyper = { 12, 5.8, 1.1, 1.0, 4.2, 0, 2.1, 3.2, true },
+	limo = { 17, 5.4, 1.7, 1.6, 11, 1.0, 1.9, 3 },
+	open = { 10, 5, 1.5, 0.9, 1.0, -1.2, 1.9, 3 },
+}
+
+local function newPart(model, name, size, cf, color, props)
+	local p = Instance.new("Part")
+	p.Name = name
+	p.Anchored = true
+	p.CanCollide = false
+	p.TopSurface = Enum.SurfaceType.Smooth
+	p.BottomSurface = Enum.SurfaceType.Smooth
+	p.Material = Enum.Material.SmoothPlastic
+	p.Size = size
+	p.CFrame = cf
+	p.Color = color
+	if props then
+		for k, v in pairs(props) do
+			p[k] = v
+		end
+	end
+	p.Parent = model
+	return p
+end
+
+function CarBuilder.GetShape(carId)
+	local car = Config.CarsById[carId]
+	return SHAPES[car and car.Shape or "sedan"] or SHAPES.sedan
+end
+
+-- Builds an engine model sized for a car; its pivot is the bottom center.
+function CarBuilder.BuildEngine(engineIndex, width, length, silhouette)
+	local engine = Config.Engines[engineIndex] or Config.Engines[1]
+	local model = Instance.new("Model")
+	model.Name = "Engine"
+	local color = silhouette and Color3.new(0, 0, 0) or engine.Color
+	local w, l = width * 0.55, length * 0.7
+	local block = newPart(model, "EngineBlock", Vector3.new(w, 0.6, l), CFrame.new(0, 0.3, 0), color, {
+		Material = engineIndex >= 6 and Enum.Material.Neon or Enum.Material.Metal,
+	})
+	model.PrimaryPart = block
+	if engineIndex >= 3 and not silhouette then
+		-- intake pipe for turbo and up
+		newPart(model, "Pipe", Vector3.new(0.4, 0.4, l * 0.8), CFrame.new(w * 0.45, 0.75, 0), Color3.fromRGB(60, 140, 255), { Material = Enum.Material.Metal })
+	end
+	if engineIndex >= 4 and not silhouette then
+		-- two rows of cylinders
+		for _, side in ipairs({ -1, 1 }) do
+			for i = 0, 3 do
+				local cyl = newPart(model, "Cylinder", Vector3.new(0.4, 0.5, 0.5),
+					CFrame.new(side * w * 0.25, 0.85, -l * 0.35 + i * l * 0.23) * CFrame.Angles(0, 0, math.rad(90)),
+					Color3.fromRGB(230, 230, 240), { Material = Enum.Material.Metal, Shape = Enum.PartType.Cylinder })
+				cyl.Size = Vector3.new(0.4, 0.5, 0.5)
+			end
+		end
+	end
+	if engineIndex >= 5 and not silhouette then
+		for _, side in ipairs({ -1, 1 }) do
+			local turbo = newPart(model, "Turbo", Vector3.new(0.8, 0.8, 0.8), CFrame.new(side * w * 0.55, 0.6, l * 0.3), Color3.fromRGB(70, 70, 75), { Shape = Enum.PartType.Ball, Material = Enum.Material.Metal })
+			turbo.Size = Vector3.new(0.8, 0.8, 0.8)
+		end
+	end
+	if engineIndex >= 6 and not silhouette then
+		local light = Instance.new("PointLight")
+		light.Color = engine.Color
+		light.Range = 10
+		light.Brightness = 2
+		light.Parent = block
+	end
+	if engineIndex >= 7 and not silhouette then
+		local fire = Instance.new("Fire")
+		fire.Size = 2
+		fire.Heat = 4
+		fire.Color = Color3.fromRGB(255, 140, 40)
+		fire.SecondaryColor = Color3.fromRGB(255, 230, 80)
+		fire.Parent = block
+	end
+	return model
+end
+
+-- Builds a car. Front of the car faces -Z. Pivot = ground center.
+-- opts.Engine = engine index to show under an open hood; opts.Silhouette = all black
+function CarBuilder.BuildCar(carId, opts)
+	opts = opts or {}
+	local car = Config.CarsById[carId]
+	local s = CarBuilder.GetShape(carId)
+	local L, W, H, cabH, cabL, cabZ, wheelD, hoodL, wing = s[1], s[2], s[3], s[4], s[5], s[6], s[7], s[8], s[9]
+	local sil = opts.Silhouette
+	local black = Color3.new(0, 0, 0)
+
+	local model = Instance.new("Model")
+	model.Name = car and car.Name or "Car"
+
+	local root = newPart(model, "Root", Vector3.new(1, 1, 1), CFrame.new(0, 0.5, 0), black, { Transparency = 1 })
+	model.PrimaryPart = root
+
+	local clearance = wheelD * 0.35
+	local top = clearance + H
+	local bodyColor = sil and black or car.Color
+	local rarity = car and car.Rarity or 1
+
+	local bodyProps = { CanCollide = true }
+	if not sil and rarity == 6 then
+		bodyProps.Material = Enum.Material.Glass
+		bodyProps.Transparency = 0.15
+		bodyColor = Color3.fromRGB(150, 230, 255)
+	elseif not sil and rarity == 7 then
+		bodyProps.Reflectance = 0.35
+		bodyProps.Material = Enum.Material.Metal
+		bodyColor = Color3.fromRGB(255, 200, 50)
+	end
+	local body = newPart(model, "Body", Vector3.new(W, H, L), CFrame.new(0, clearance + H / 2, 0), bodyColor, bodyProps)
+
+	-- cabin / windows
+	local glass = sil and black or Color3.fromRGB(40, 60, 90)
+	newPart(model, "Cabin", Vector3.new(W * 0.85, cabH, cabL), CFrame.new(0, top + cabH / 2, cabZ), glass, {
+		Transparency = sil and 0 or 0.15,
+		Material = sil and Enum.Material.SmoothPlastic or Enum.Material.Glass,
+	})
+	if car and car.Shape == "open" then
+		model.Cabin.Transparency = sil and 0 or 0.4
+	end
+
+	-- wheels
+	local wheelColor = sil and black or Color3.fromRGB(25, 25, 28)
+	for _, sx in ipairs({ -1, 1 }) do
+		for _, sz in ipairs({ -1, 1 }) do
+			local wheel = newPart(model, "Wheel", Vector3.new(0.9, wheelD, wheelD),
+				CFrame.new(sx * (W / 2 - 0.25), wheelD / 2, sz * (L / 2 - wheelD * 0.75)), wheelColor,
+				{ Shape = Enum.PartType.Cylinder })
+			wheel.Size = Vector3.new(0.9, wheelD, wheelD)
+			if not sil then
+				newPart(model, "Rim", Vector3.new(0.95, wheelD * 0.55, wheelD * 0.55), wheel.CFrame, Color3.fromRGB(200, 200, 210), { Shape = Enum.PartType.Cylinder, Material = Enum.Material.Metal }).Size = Vector3.new(0.95, wheelD * 0.55, wheelD * 0.55)
+			end
+		end
+	end
+
+	-- lights
+	if not sil then
+		for _, sx in ipairs({ -1, 1 }) do
+			newPart(model, "Headlight", Vector3.new(1, 0.4, 0.2), CFrame.new(sx * W * 0.32, clearance + H * 0.65, -L / 2 - 0.05), Color3.fromRGB(255, 250, 220), { Material = Enum.Material.Neon })
+			newPart(model, "Taillight", Vector3.new(1, 0.4, 0.2), CFrame.new(sx * W * 0.32, clearance + H * 0.65, L / 2 + 0.05), Color3.fromRGB(220, 30, 30), { Material = Enum.Material.Neon })
+		end
+	end
+
+	-- racing wing
+	if wing then
+		newPart(model, "Wing", Vector3.new(W * 0.9, 0.2, 1.2), CFrame.new(0, top + 1.2, L / 2 - 0.8), sil and black or Color3.fromRGB(30, 30, 30))
+		for _, sx in ipairs({ -1, 1 }) do
+			newPart(model, "WingPost", Vector3.new(0.2, 1.1, 0.4), CFrame.new(sx * W * 0.3, top + 0.6, L / 2 - 0.8), sil and black or Color3.fromRGB(30, 30, 30))
+		end
+	end
+
+	-- stripe for Legendary and up
+	if not sil and rarity >= 4 and rarity <= 5 then
+		newPart(model, "Stripe", Vector3.new(0.8, 0.05, L * 0.98), CFrame.new(0, top + 0.03, 0), Config.Rarities[rarity].Color, { Material = Enum.Material.Neon })
+	end
+	if not sil and rarity >= 6 then
+		local sparkles = Instance.new("Sparkles")
+		sparkles.SparkleColor = Config.Rarities[rarity].Color
+		sparkles.Parent = body
+		local light = Instance.new("PointLight")
+		light.Color = Config.Rarities[rarity].Color
+		light.Range = 14
+		light.Brightness = 1.5
+		light.Parent = body
+	end
+
+	-- hood: closed, or open with the engine showing
+	local hoodZ0 = -L / 2 -- front edge
+	local hingeZ = -L / 2 + hoodL -- rear edge of the hood (the hinge)
+	local hoodColor = bodyColor
+	if opts.Engine then
+		local engine = CarBuilder.BuildEngine(opts.Engine, W, hoodL, sil)
+		engine:PivotTo(CFrame.new(0, top, (hoodZ0 + hingeZ) / 2))
+		engine.Parent = model
+		local hinge = CFrame.new(0, top + 0.15, hingeZ)
+		local hood = newPart(model, "Hood", Vector3.new(W * 0.96, 0.25, hoodL), CFrame.new(0, top + 0.15, (hoodZ0 + hingeZ) / 2), hoodColor, {
+			Material = bodyProps.Material or Enum.Material.SmoothPlastic,
+			Reflectance = bodyProps.Reflectance or 0,
+		})
+		-- swing the hood up around its rear edge
+		local relative = hinge:ToObjectSpace(hood.CFrame)
+		hood.CFrame = hinge * CFrame.Angles(math.rad(70), 0, 0) * relative
+	else
+		newPart(model, "Hood", Vector3.new(W * 0.96, 0.25, hoodL), CFrame.new(0, top + 0.12, (hoodZ0 + hingeZ) / 2), hoodColor, {
+			Material = bodyProps.Material or Enum.Material.SmoothPlastic,
+		})
+	end
+
+	model:SetAttribute("CarId", carId)
+	return model
+end
+
+-- Shipping container in the color of its level. Pivot = ground center.
+function CarBuilder.BuildContainer(level)
+	local info = Config.Containers[level]
+	local model = Instance.new("Model")
+	model.Name = "Container" .. level
+	local root = newPart(model, "Root", Vector3.new(1, 1, 1), CFrame.new(0, 0.5, 0), Color3.new(0, 0, 0), { Transparency = 1 })
+	model.PrimaryPart = root
+	local box = newPart(model, "Box", Vector3.new(8, 7, 14), CFrame.new(0, 3.5, 0), info.Color, { Material = Enum.Material.DiamondPlate, CanCollide = true })
+	box.Name = "Box"
+	local darker = info.Color:Lerp(Color3.new(0, 0, 0), 0.3)
+	for _, z in ipairs({ -6.8, -2.3, 2.3, 6.8 }) do
+		newPart(model, "Rib", Vector3.new(8.2, 7.1, 0.3), CFrame.new(0, 3.5, z), darker, { Material = Enum.Material.Metal })
+	end
+	-- door bars at the back
+	for _, x in ipairs({ -1.5, 1.5 }) do
+		newPart(model, "Bar", Vector3.new(0.2, 6.5, 0.2), CFrame.new(x, 3.5, 7.15), Color3.fromRGB(200, 200, 200), { Material = Enum.Material.Metal })
+	end
+	model:SetAttribute("ContainerLevel", level)
+	return model
+end
+
+return CarBuilder
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX00000003"><Properties><string name="Name">Config</string><ProtectedString name="Source"><![CDATA[-- D2D (Dust to Dealership) - all game settings and the 120 cars.
+-- Change numbers here to balance the game; no other script needs editing.
+
+local Config = {}
+
+Config.GameName = "D2D - Dust to Dealership"
+Config.DataStoreName = "D2D_v1"
+Config.MaxPlots = 6
+
+---------------------------------------------------------------------
+-- Rarities (index 1..7). Chance is per car, so 2 Commons = 45% together.
+---------------------------------------------------------------------
+Config.Rarities = {
+	{ Name = "Common", Color = Color3.fromRGB(200, 200, 205), Chance = 22.5, BaseIncome = 1 },
+	{ Name = "Rare", Color = Color3.fromRGB(70, 150, 255), Chance = 14, BaseIncome = 2.5 },
+	{ Name = "Epic", Color = Color3.fromRGB(175, 90, 255), Chance = 7.5, BaseIncome = 6 },
+	{ Name = "Legendary", Color = Color3.fromRGB(255, 190, 40), Chance = 4, BaseIncome = 15 },
+	{ Name = "Mythic", Color = Color3.fromRGB(255, 60, 80), Chance = 1.75, BaseIncome = 40 },
+	{ Name = "Diamond", Color = Color3.fromRGB(110, 240, 255), Chance = 0.45, BaseIncome = 120 },
+	{ Name = "Millionaire's", Color = Color3.fromRGB(120, 255, 120), Chance = 0.05, BaseIncome = 500 },
+}
+-- position in a container (1..12) -> rarity index
+Config.SlotRarity = { 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 7 }
+
+Config.ContainerMultiplier = 4 -- income x4 per container level
+
+---------------------------------------------------------------------
+-- Engines (rolled for free on the engine lift; a new roll replaces the old one)
+---------------------------------------------------------------------
+Config.Engines = {
+	{ Name = "Stock 4-Cylinder", Weight = 30, Mult = 1, Color = Color3.fromRGB(130, 130, 135) },
+	{ Name = "Tuned", Weight = 25, Mult = 1.2, Color = Color3.fromRGB(200, 40, 40) },
+	{ Name = "Turbo", Weight = 21, Mult = 1.5, Color = Color3.fromRGB(50, 120, 230) },
+	{ Name = "V8", Weight = 16.4, Mult = 2, Color = Color3.fromRGB(215, 220, 230) },
+	{ Name = "Twin-Turbo V8", Weight = 7, Mult = 3, Color = Color3.fromRGB(40, 40, 45) },
+	{ Name = "V12", Weight = 0.5, Mult = 6, Color = Color3.fromRGB(255, 200, 50) },
+	{ Name = "Rocket Engine", Weight = 0.1, Mult = 15, Color = Color3.fromRGB(255, 110, 30) },
+}
+Config.LuckyRollMinEngine = 4 -- Lucky Roll only rolls V8 or better
+Config.EngineLuckPerLevel = 0.1 -- +10% weight for Turbo and above per Engine Luck level
+Config.MaxEngineLuck = 10
+function Config.GetEngineLuckCost(level) -- cost to go from `level` to `level + 1`
+	return math.floor(5000 * 4 ^ level)
+end
+
+---------------------------------------------------------------------
+-- Showroom, truck, wash tools
+---------------------------------------------------------------------
+Config.MaxShowroomLevel = 10
+Config.SpotsPerLevel = 4
+function Config.GetShowroomCost(level) -- cost to reach `level`
+	return math.floor(300 * 8 ^ (level - 2))
+end
+-- highest truck level allowed at each showroom level
+Config.MaxTruckForShowroom = { 1, 1, 2, 2, 3, 3, 4, 4, 5, 5 }
+Config.TruckCosts = { [2] = 1000, [3] = 60000, [4] = 4e6, [5] = 250e6 } -- cost to reach truck level
+Config.MaxTruckLevel = 5
+
+Config.DeliveryInterval = 180 -- seconds between deliveries
+Config.FirstDeliveries = { 0, 60, 60 } -- a new player's first deliveries come faster
+Config.YardCapacity = 10
+
+Config.WashTools = {
+	{ Name = "Scrub Brush", Radius = 1.4, Power = 1, Cost = 0 },
+	{ Name = "Garden Hose", Radius = 2.0, Power = 1, Cost = 1000 },
+	{ Name = "Pressure Washer", Radius = 2.6, Power = 2, Cost = 25000 },
+	{ Name = "Foam Cannon", Radius = 3.4, Power = 3, Cost = 600000 },
+	{ Name = "Steam Jet", Radius = 4.2, Power = 5, Cost = 15e6 },
+	{ Name = "Automatic Car Wash", Radius = 6, Power = 8, Cost = 400e6, Auto = true },
+}
+Config.ScrubInterval = 0.08
+
+Config.SellSeconds = 100 -- a car sells for 100 seconds of its income
+Config.CompletionBonus = 0.05 -- +5% income per completed container
+Config.TokensPerCompletion = 5
+Config.OfflineRate = 0.25
+Config.OfflineMaxSeconds = 8 * 3600
+
+---------------------------------------------------------------------
+-- Containers and the 120 cars. Each car: { name, shape }
+-- Shapes are drawn by CarBuilder: mini, hatch, sedan, wagon, van, truck, suv,
+-- bus, classic, muscle, coupe, racer, super, hyper, limo, open
+---------------------------------------------------------------------
+Config.Containers = {
+	{ Name = "Scrapyard Finds", Color = Color3.fromRGB(150, 110, 75), Dirt = Color3.fromRGB(120, 95, 70), Cars = {
+		{ "Puddle Pip", "mini" }, { "Rattler Rustbucket", "sedan" }, { "Haulman Postie", "van" }, { "Puddle Pip Cabrio", "mini" },
+		{ "Rattler Wagon '82", "wagon" }, { "Haulman Tow-Tug", "truck" }, { "Rattler Hotshot", "hatch" }, { "Puddle Bubble", "mini" },
+		{ "Haulman Ice Cream Van", "van" }, { "Rattler Taxi Classic", "sedan" }, { "Puddle Pip Gold Rally", "mini" }, { "Rattler Junkyard King", "muscle" },
+	} },
+	{ Name = "City Streets", Color = Color3.fromRGB(90, 140, 200), Dirt = Color3.fromRGB(90, 90, 95), Cars = {
+		{ "Metrolux Commuter", "sedan" }, { "Sorano Kei", "mini" }, { "Metrolux Hatch GT", "hatch" }, { "Sorano Haru", "coupe" },
+		{ "Metrolux Cab", "sedan" }, { "Sorano Pocket Rocket", "hatch" }, { "Sorano Drift-R", "coupe" }, { "Metrolux Police Cruiser", "sedan" },
+		{ "Sorano Kei Turbo Widebody", "mini" }, { "Metrolux Limo Stretch", "limo" }, { "Sorano Neon Night", "coupe" }, { "Metrolux Executive Armored", "limo" },
+	} },
+	{ Name = "Family and Adventure", Color = Color3.fromRGB(110, 170, 90), Dirt = Color3.fromRGB(110, 80, 50), Cars = {
+		{ "Bramble Trail", "suv" }, { "Haulman Family Van", "van" }, { "Bramble Pickup", "truck" }, { "Haulman Camper Mini", "van" },
+		{ "Bramble Badger 4x4", "suv" }, { "Haulman Surf Bus", "bus" }, { "Bramble Rock Crawler", "suv" }, { "Haulman Mega Camper", "bus" },
+		{ "Bramble Desert Raider", "truck" }, { "Bramble Six-Wheeler", "truck" }, { "Bramble Wildlands Black", "suv" }, { "Haulman Rolling Mansion", "bus" },
+	} },
+	{ Name = "Golden Age Classics", Color = Color3.fromRGB(230, 200, 120), Dirt = Color3.fromRGB(150, 140, 125), Cars = {
+		{ "Bellwether Sedan '55", "classic" }, { "Bellwether Coupe '58", "classic" }, { "Bellwether Convertible '57", "open" }, { "Bellwether Diner Wagon", "wagon" },
+		{ "Bellwether Tailfin '59", "classic" }, { "Bellwether Roadster", "open" }, { "Bellwether Moonglow", "classic" }, { "Bellwether Woodie Surf", "wagon" },
+		{ "Bellwether Jet Age Concept", "super" }, { "Bellwether Pink Cadence", "open" }, { "Bellwether Royal Parade", "limo" }, { "Bellwether Golden Gleam", "classic" },
+	} },
+	{ Name = "Muscle Mayhem", Color = Color3.fromRGB(200, 70, 50), Dirt = Color3.fromRGB(60, 55, 50), Cars = {
+		{ "Thunderjaw Brawler", "muscle" }, { "Rattler Sprint 70", "muscle" }, { "Thunderjaw Fastback 69", "muscle" }, { "Rattler Bandit", "muscle" },
+		{ "Thunderjaw Hammerhead", "muscle" }, { "Rattler Pursuit", "sedan" }, { "Thunderjaw Supercharger", "muscle" }, { "Rattler Midnight Run", "muscle" },
+		{ "Thunderjaw Drag King", "racer" }, { "Thunderjaw Twin-Blower", "muscle" }, { "Thunderjaw Inferno", "muscle" }, { "Thunderjaw Big Daddy Gold", "muscle" },
+	} },
+	{ Name = "Tuner Nights", Color = Color3.fromRGB(80, 60, 160), Dirt = Color3.fromRGB(45, 45, 50), Cars = {
+		{ "Hikari Tsubame", "hatch" }, { "Sorano Shiro", "sedan" }, { "Hikari Kaze GT", "coupe" }, { "Sorano Spinner", "coupe" },
+		{ "Hikari Touge", "coupe" }, { "Sorano Wing", "sedan" }, { "Hikari Kaze GT-Z", "coupe" }, { "Sorano Midnight Bay", "coupe" },
+		{ "Hikari Raijin", "coupe" }, { "Sorano Spinner Twin-Rotor", "racer" }, { "Hikari Daimyo", "super" }, { "Sorano Neo-Tokyo", "super" },
+	} },
+	{ Name = "Euro Sport", Color = Color3.fromRGB(60, 160, 140), Dirt = Color3.fromRGB(200, 200, 205), Cars = {
+		{ "Strassen Kompakt", "hatch" }, { "Lucenti Piccola", "mini" }, { "Strassen Coupe 3", "coupe" }, { "Lucenti Aria", "open" },
+		{ "Strassen Bahnsturm", "coupe" }, { "Lucenti GT Classico", "classic" }, { "Strassen Flachbau", "racer" }, { "Lucenti Gran Turismo V8", "coupe" },
+		{ "Strassen Ringmeister", "racer" }, { "Lucenti Rosso Fuoco", "super" }, { "Strassen Schwarzwald Black", "super" }, { "Lucenti Principessa", "coupe" },
+	} },
+	{ Name = "Race Legends", Color = Color3.fromRGB(240, 240, 240), Dirt = Color3.fromRGB(100, 75, 50), Cars = {
+		{ "Vellora Club Racer", "racer" }, { "Strassen Touring Cup", "sedan" }, { "Vellora Rally Stage", "hatch" }, { "Strassen Endurance '72", "racer" },
+		{ "Vellora Le Grand", "racer" }, { "Strassen Group-B Monster", "hatch" }, { "Vellora Open-Wheel 90", "racer" }, { "Strassen Hillclimb Beast", "racer" },
+		{ "Vellora Prototype X", "hyper" }, { "Strassen Endurance Hybrid", "racer" }, { "Vellora Championship Winner", "racer" }, { "Vellora Golden Trophy", "racer" },
+	} },
+	{ Name = "Supercars", Color = Color3.fromRGB(255, 120, 30), Dirt = Color3.fromRGB(210, 180, 120), Cars = {
+		{ "Vellora Furia", "super" }, { "Lucenti Veloce", "coupe" }, { "Vellora Furia Spider", "super" }, { "Lucenti Tempesta", "super" },
+		{ "Vellora Falco", "super" }, { "Lucenti Ombra", "super" }, { "Vellora Saetta", "super" }, { "Lucenti Vortice", "super" },
+		{ "Vellora Falco Ultimo", "super" }, { "Lucenti Fulmine", "super" }, { "Vellora Carbonio", "super" }, { "Vellora Imperatore", "super" },
+	} },
+	{ Name = "Hypercars and Future", Color = Color3.fromRGB(40, 40, 60), Dirt = Color3.fromRGB(150, 120, 200), Cars = {
+		{ "Quasar Watt", "hatch" }, { "Quasar Pulse", "sedan" }, { "Quasar Ionic GT", "coupe" }, { "Gilded Aero", "coupe" },
+		{ "Quasar Photon", "hyper" }, { "Gilded Oasis", "hyper" }, { "Quasar Singularity", "hyper" }, { "Gilded Regent", "limo" },
+		{ "Quasar Hover Prototype", "hyper" }, { "Gilded Midas", "hyper" }, { "Quasar Diamond Edge", "hyper" }, { "Gilded Fortune One", "hyper" },
+	} },
+}
+
+-- Body colors for cars (picked per car so every car looks different)
+local palette = {
+	Color3.fromRGB(220, 50, 50), Color3.fromRGB(40, 110, 220), Color3.fromRGB(240, 200, 40), Color3.fromRGB(40, 170, 90),
+	Color3.fromRGB(245, 245, 245), Color3.fromRGB(30, 30, 35), Color3.fromRGB(250, 130, 30), Color3.fromRGB(140, 60, 200),
+	Color3.fromRGB(110, 200, 230), Color3.fromRGB(150, 150, 160), Color3.fromRGB(255, 120, 170), Color3.fromRGB(120, 80, 50),
+}
+
+-- Build the flat car list: id "c3_7" = container 3, slot 7
+Config.Cars = {}
+Config.CarsById = {}
+for c, container in ipairs(Config.Containers) do
+	container.Index = c
+	container.CarIds = {}
+	for slot, entry in ipairs(container.Cars) do
+		local rarity = Config.SlotRarity[slot]
+		local car = {
+			Id = "c" .. c .. "_" .. slot,
+			Name = entry[1],
+			Shape = entry[2],
+			Container = c,
+			Slot = slot,
+			Rarity = rarity,
+			Color = palette[((c * 5 + slot * 7) % #palette) + 1],
+		}
+		car.BaseIncome = Config.Rarities[rarity].BaseIncome * Config.ContainerMultiplier ^ (c - 1)
+		table.insert(Config.Cars, car)
+		Config.CarsById[car.Id] = car
+		table.insert(container.CarIds, car.Id)
+	end
+end
+
+---------------------------------------------------------------------
+-- Helpers
+---------------------------------------------------------------------
+function Config.WeightedIndex(weights, rng)
+	local total = 0
+	for _, w in ipairs(weights) do
+		total = total + w
+	end
+	local roll = rng:NextNumber() * total
+	for i, w in ipairs(weights) do
+		roll = roll - w
+		if roll <= 0 then
+			return i
+		end
+	end
+	return #weights
+end
+
+-- Rolls which car comes out of a container of this level
+function Config.RollCar(containerLevel, rng)
+	local weights = {}
+	for slot = 1, 12 do
+		weights[slot] = Config.Rarities[Config.SlotRarity[slot]].Chance
+	end
+	local slot = Config.WeightedIndex(weights, rng)
+	return "c" .. containerLevel .. "_" .. slot
+end
+
+-- Engine weights with Engine Luck applied (normal roll) or Lucky Roll
+function Config.GetEngineWeights(luckLevel, lucky)
+	local weights = {}
+	for i, engine in ipairs(Config.Engines) do
+		local w = engine.Weight
+		if i >= 3 then
+			w = w * (1 + Config.EngineLuckPerLevel * luckLevel)
+		end
+		if lucky and i < Config.LuckyRollMinEngine then
+			w = 0
+		end
+		weights[i] = w
+	end
+	return weights
+end
+
+function Config.GetEngineChances(luckLevel, lucky)
+	local weights = Config.GetEngineWeights(luckLevel, lucky)
+	local total = 0
+	for _, w in ipairs(weights) do
+		total = total + w
+	end
+	local chances = {}
+	for i, w in ipairs(weights) do
+		chances[i] = total > 0 and (w / total * 100) or 0
+	end
+	return chances
+end
+
+function Config.GetCarIncome(carId, engineIndex)
+	local car = Config.CarsById[carId]
+	if not car then
+		return 0
+	end
+	local engine = Config.Engines[engineIndex or 1] or Config.Engines[1]
+	return car.BaseIncome * engine.Mult
+end
+
+function Config.GetOddsText(carId)
+	local car = Config.CarsById[carId]
+	local chance = Config.Rarities[car.Rarity].Chance
+	local oneIn = 100 / chance
+	if oneIn >= 1000 then
+		return string.format("1 in %s", Config.FormatNumber(oneIn))
+	end
+	return "1 in " .. math.floor(oneIn + 0.5)
+end
+
+local suffixes = { "", "K", "M", "B", "T", "Qa", "Qi" }
+function Config.FormatNumber(n)
+	n = tonumber(n) or 0
+	if n < 1000 then
+		if n == math.floor(n) then
+			return tostring(math.floor(n))
+		end
+		return string.format("%.1f", n)
+	end
+	local i = 1
+	while n >= 1000 and i < #suffixes do
+		n = n / 1000
+		i = i + 1
+	end
+	if n >= 100 then
+		return string.format("%d%s", math.floor(n), suffixes[i])
+	elseif n >= 10 then
+		return string.format("%.1f%s", n, suffixes[i])
+	end
+	return string.format("%.2f%s", n, suffixes[i])
+end
+
+function Config.FormatTime(seconds)
+	seconds = math.max(0, math.floor(seconds))
+	return string.format("%02d:%02d", math.floor(seconds / 60), seconds % 60)
+end
+
+return Config
+]]></ProtectedString></Properties></Item></Item></Item><Item class="ServerScriptService" referent="RBX0000000A"><Properties><string name="Name">ServerScriptService</string></Properties><Item class="Folder" referent="RBX00000009"><Properties><string name="Name">Server</string></Properties><Item class="ModuleScript" referent="RBX00000006"><Properties><string name="Name">DataService</string><ProtectedString name="Source"><![CDATA[-- DataService: loads and saves each player's progress.
+-- Saving in Studio needs Game Settings > Security > "Enable Studio Access to API Services".
+
+local DataStoreService = game:GetService("DataStoreService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
+
+local DataService = {}
+
+local store
+local ok, err = pcall(function()
+	store = DataStoreService:GetDataStore(Config.DataStoreName)
+end)
+if not ok then
+	warn("[D2D] Saving is off: " .. tostring(err))
+end
+
+local profiles = {}
+
+local function default()
+	return {
+		Cash = 0,
+		Tokens = 0,
+		ShowroomLevel = 1,
+		TruckLevel = 1,
+		ToolLevel = 1,
+		EngineLuck = 0,
+		Display = {}, -- { {Id=, Engine=, Spot=} }
+		Discovered = {}, -- [carId] = true
+		Claimed = {}, -- [carId] = true
+		Completed = {}, -- [containerIndex as string] = true
+		Yard = {}, -- { {Kind="Container", Level=} or {Kind="Car", Id=} }
+		DeliveriesDone = 0,
+		LastOnline = 0,
+		IncomeRate = 0,
+	}
+end
+
+local function num(v, lo, hi, fallback)
+	if type(v) ~= "number" or v ~= v then
+		return fallback
+	end
+	return math.clamp(math.floor(v), lo, hi)
+end
+
+local function sanitize(data)
+	local p = default()
+	if type(data) ~= "table" then
+		return p
+	end
+	if type(data.Cash) == "number" and data.Cash == data.Cash then
+		p.Cash = math.max(0, data.Cash)
+	end
+	p.Tokens = num(data.Tokens, 0, 1e6, 0)
+	p.ShowroomLevel = num(data.ShowroomLevel, 1, Config.MaxShowroomLevel, 1)
+	p.TruckLevel = num(data.TruckLevel, 1, Config.MaxTruckLevel, 1)
+	p.ToolLevel = num(data.ToolLevel, 1, #Config.WashTools, 1)
+	p.EngineLuck = num(data.EngineLuck, 0, Config.MaxEngineLuck, 0)
+	p.DeliveriesDone = num(data.DeliveriesDone, 0, 1e9, 0)
+	p.LastOnline = type(data.LastOnline) == "number" and data.LastOnline or 0
+	p.IncomeRate = type(data.IncomeRate) == "number" and math.max(0, data.IncomeRate) or 0
+	local maxSpots = p.ShowroomLevel * Config.SpotsPerLevel
+	if type(data.Display) == "table" then
+		local used = {}
+		for _, d in ipairs(data.Display) do
+			if type(d) == "table" and Config.CarsById[d.Id] and type(d.Spot) == "number" then
+				local spot = math.floor(d.Spot)
+				if spot >= 1 and spot <= maxSpots and not used[spot] then
+					used[spot] = true
+					table.insert(p.Display, { Id = d.Id, Engine = num(d.Engine, 1, #Config.Engines, 1), Spot = spot })
+				end
+			end
+		end
+	end
+	for _, key in ipairs({ "Discovered", "Claimed" }) do
+		if type(data[key]) == "table" then
+			for id, v in pairs(data[key]) do
+				if v and Config.CarsById[id] then
+					p[key][id] = true
+				end
+			end
+		end
+	end
+	if type(data.Completed) == "table" then
+		for k, v in pairs(data.Completed) do
+			if v and tonumber(k) then
+				p.Completed[tostring(k)] = true
+			end
+		end
+	end
+	if type(data.Yard) == "table" then
+		for _, y in ipairs(data.Yard) do
+			if #p.Yard >= Config.YardCapacity then
+				break
+			end
+			if type(y) == "table" then
+				if y.Kind == "Container" and type(y.Level) == "number" and Config.Containers[y.Level] then
+					table.insert(p.Yard, { Kind = "Container", Level = y.Level })
+				elseif y.Kind == "Car" and Config.CarsById[y.Id] then
+					table.insert(p.Yard, { Kind = "Car", Id = y.Id })
+				end
+			end
+		end
+	end
+	return p
+end
+
+function DataService.Load(player)
+	local data
+	if store then
+		local success, result = pcall(function()
+			return store:GetAsync("player_" .. player.UserId)
+		end)
+		if success then
+			data = result
+		else
+			warn("[D2D] Load failed for " .. player.Name .. ": " .. tostring(result))
+		end
+	end
+	local profile = sanitize(data)
+	profiles[player] = profile
+	return profile
+end
+
+function DataService.Get(player)
+	return profiles[player]
+end
+
+function DataService.Save(player)
+	local profile = profiles[player]
+	if not profile or not store then
+		return
+	end
+	local success, result = pcall(function()
+		store:SetAsync("player_" .. player.UserId, profile)
+	end)
+	if not success then
+		warn("[D2D] Save failed for " .. player.Name .. ": " .. tostring(result))
+	end
+end
+
+function DataService.Release(player)
+	profiles[player] = nil
+end
+
+return DataService
+]]></ProtectedString></Properties></Item><Item class="Script" referent="RBX00000007"><Properties><string name="Name">GameServer</string><ProtectedString name="Source"><![CDATA[-- D2D (Dust to Dealership) - main server script.
+-- Truck delivers containers -> open -> wash to 100% -> roll an engine -> display -> NPC customers pay.
+
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
+local CollectionService = game:GetService("CollectionService")
+
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Config = require(Shared:WaitForChild("Config"))
+local CarBuilder = require(Shared:WaitForChild("CarBuilder"))
+local DataService = require(script.Parent:WaitForChild("DataService"))
+local MapBuilder = require(script.Parent:WaitForChild("MapBuilder"))
+
+local rng = Random.new()
+
+---------------------------------------------------------------------
+-- Remotes
+---------------------------------------------------------------------
+local remotes = Instance.new("Folder")
+remotes.Name = "Remotes"
+remotes.Parent = ReplicatedStorage
+local function remote(className, name)
+	local r = Instance.new(className)
+	r.Name = name
+	r.Parent = remotes
+	return r
+end
+local NotifyEvent = remote("RemoteEvent", "Notify")
+local ScrubEvent = remote("RemoteEvent", "Scrub")
+local RevealEvent = remote("RemoteEvent", "Reveal")
+local OpenEngineEvent = remote("RemoteEvent", "OpenEngine")
+local GoHomeEvent = remote("RemoteEvent", "GoHome")
+local EngineAction = remote("RemoteFunction", "EngineAction")
+local ClaimToken = remote("RemoteFunction", "ClaimToken")
+
+local GOLD = Color3.fromRGB(255, 220, 80)
+local RED = Color3.fromRGB(255, 110, 110)
+local GREEN = Color3.fromRGB(120, 255, 150)
+
+local function notify(player, text, color)
+	NotifyEvent:FireClient(player, text, color or Color3.new(1, 1, 1))
+end
+local function notifyAll(text, color)
+	NotifyEvent:FireAllClients(text, color or Color3.new(1, 1, 1))
+end
+local function now()
+	return workspace:GetServerTimeNow()
+end
+
+---------------------------------------------------------------------
+-- Map and state
+---------------------------------------------------------------------
+local map = MapBuilder.Build()
+local carsFolder = Instance.new("Folder")
+carsFolder.Name = "Cars"
+carsFolder.Parent = map.Folder
+local dirtFolder = Instance.new("Folder")
+dirtFolder.Name = "Dirt"
+dirtFolder.Parent = map.Folder
+local npcFolder = Instance.new("Folder")
+npcFolder.Name = "NPCs"
+npcFolder.Parent = map.Folder
+
+local plotOwner = {} -- [plotIndex] = player
+local playerPlot = {} -- [player] = plot
+local state = {} -- [plotIndex] = { Spots, Yard, Wash, Lift, NPCs }
+local lastScrub = {}
+
+for i = 1, #map.Plots do
+	state[i] = { Spots = {}, Yard = {}, Wash = nil, Lift = nil, NPCs = 0 }
+end
+
+---------------------------------------------------------------------
+-- Helpers
+---------------------------------------------------------------------
+local function getRoot(player)
+	local c = player.Character
+	return c and c:FindFirstChild("HumanoidRootPart")
+end
+
+local function rarityOf(carId)
+	return Config.Rarities[Config.CarsById[carId].Rarity]
+end
+
+local function setCash(player, amount)
+	local profile = DataService.Get(player)
+	if not profile then
+		return
+	end
+	profile.Cash = math.max(0, amount)
+	local ls = player:FindFirstChild("leaderstats")
+	if ls and ls:FindFirstChild("Cash") then
+		ls.Cash.Value = profile.Cash
+	end
+end
+local function addCash(player, amount)
+	local profile = DataService.Get(player)
+	if profile then
+		setCash(player, profile.Cash + amount)
+	end
+end
+
+local function completedCount(profile)
+	local n = 0
+	for _ in pairs(profile.Completed) do
+		n = n + 1
+	end
+	return n
+end
+
+local function syncAttributes(player)
+	local profile = DataService.Get(player)
+	if not profile then
+		return
+	end
+	player:SetAttribute("Tokens", profile.Tokens)
+	player:SetAttribute("ShowroomLevel", profile.ShowroomLevel)
+	player:SetAttribute("TruckLevel", profile.TruckLevel)
+	player:SetAttribute("ToolLevel", profile.ToolLevel)
+	player:SetAttribute("EngineLuck", profile.EngineLuck)
+	player:SetAttribute("Completed", completedCount(profile))
+	local d, c = {}, {}
+	for id in pairs(profile.Discovered) do
+		table.insert(d, id)
+	end
+	for id in pairs(profile.Claimed) do
+		table.insert(c, id)
+	end
+	player:SetAttribute("Discovered", table.concat(d, ","))
+	player:SetAttribute("Claimed", table.concat(c, ","))
+	local ls = player:FindFirstChild("leaderstats")
+	if ls and ls:FindFirstChild("Cars") then
+		ls.Cars.Value = #d
+	end
+end
+
+local function addLabel(adornee, title, subtitle, color, offsetY)
+	local gui = Instance.new("BillboardGui")
+	gui.Name = "Label"
+	gui.Size = UDim2.new(0, 260, 0, 58)
+	gui.StudsOffset = Vector3.new(0, offsetY or 6, 0)
+	gui.MaxDistance = 70
+	gui.LightInfluence = 0
+	local t = Instance.new("TextLabel")
+	t.BackgroundTransparency = 1
+	t.Size = UDim2.new(1, 0, 0.55, 0)
+	t.Font = Enum.Font.FredokaOne
+	t.TextScaled = true
+	t.TextColor3 = color or Color3.new(1, 1, 1)
+	t.TextStrokeTransparency = 0.2
+	t.Text = title
+	t.Parent = gui
+	local s = Instance.new("TextLabel")
+	s.BackgroundTransparency = 1
+	s.Position = UDim2.new(0, 0, 0.55, 0)
+	s.Size = UDim2.new(1, 0, 0.45, 0)
+	s.Font = Enum.Font.GothamBold
+	s.TextScaled = true
+	s.TextColor3 = Color3.new(1, 1, 1)
+	s.TextStrokeTransparency = 0.3
+	s.Text = subtitle or ""
+	s.Parent = gui
+	gui.Parent = adornee
+	return gui, t, s
+end
+
+local function addPrompt(parentPart, action, object, hold, owner, callback)
+	local prompt = Instance.new("ProximityPrompt")
+	prompt.ActionText = action
+	prompt.ObjectText = object or ""
+	prompt.HoldDuration = hold or 0
+	prompt.MaxActivationDistance = 12
+	prompt.RequiresLineOfSight = false
+	if owner then
+		prompt:SetAttribute("OwnerUserId", owner.UserId)
+		CollectionService:AddTag(prompt, "OwnerPrompt")
+	end
+	prompt.Triggered:Connect(callback)
+	prompt.Parent = parentPart
+	return prompt
+end
+
+local function carTitle(carId)
+	return Config.CarsById[carId].Name
+end
+
+local function carSubtitle(carId, engineIndex)
+	local r = rarityOf(carId)
+	local s = string.upper(r.Name) .. " · " .. Config.GetOddsText(carId)
+	if engineIndex then
+		s = s .. " · $" .. Config.FormatNumber(Config.GetCarIncome(carId, engineIndex)) .. "/s"
+	end
+	return s
+end
+
+---------------------------------------------------------------------
+-- Showroom spots
+---------------------------------------------------------------------
+local function maxSpots(profile)
+	return profile.ShowroomLevel * Config.SpotsPerLevel
+end
+
+local function refreshSpotPads(plot, profile)
+	local open = profile and maxSpots(profile) or 0
+	for i, spot in ipairs(plot.Spots) do
+		if i <= open then
+			spot.Pad.Transparency = 0
+			spot.Pad.Color = Color3.fromRGB(60, 60, 70)
+		else
+			spot.Pad.Transparency = 0.85
+			spot.Pad.Color = Color3.fromRGB(120, 120, 125)
+		end
+	end
+end
+
+local sellSpot -- forward declaration
+
+local function showSpot(plot, spotIndex, entry)
+	local owner = plotOwner[plot.Index]
+	if entry.Model then
+		entry.Model:Destroy()
+	end
+	local model = CarBuilder.BuildCar(entry.Id, { Engine = entry.Engine })
+	model:PivotTo(plot.Spots[spotIndex].CFrame)
+	addLabel(model.PrimaryPart, carTitle(entry.Id), carSubtitle(entry.Id, entry.Engine), rarityOf(entry.Id).Color, 7)
+	local value = Config.GetCarIncome(entry.Id, entry.Engine) * Config.SellSeconds
+	addPrompt(model:FindFirstChild("Body"), "Sell $" .. Config.FormatNumber(value), carTitle(entry.Id), 1, owner, function(player)
+		sellSpot(player, plot, spotIndex, entry)
+	end)
+	model.Parent = carsFolder
+	entry.Model = model
+end
+
+local function freeSpot(plot, profile)
+	for i = 1, maxSpots(profile) do
+		if not state[plot.Index].Spots[i] then
+			return i
+		end
+	end
+	return nil
+end
+
+sellSpot = function(player, plot, spotIndex, entry)
+	if plotOwner[plot.Index] ~= player or state[plot.Index].Spots[spotIndex] ~= entry then
+		return
+	end
+	state[plot.Index].Spots[spotIndex] = nil
+	if entry.Model then
+		entry.Model:Destroy()
+	end
+	local value = Config.GetCarIncome(entry.Id, entry.Engine) * Config.SellSeconds
+	addCash(player, value)
+	notify(player, "Sold " .. carTitle(entry.Id) .. " for $" .. Config.FormatNumber(value), GOLD)
+end
+
+---------------------------------------------------------------------
+-- Discovery and the Index
+---------------------------------------------------------------------
+local function discover(player, carId)
+	local profile = DataService.Get(player)
+	local isNew = not profile.Discovered[carId]
+	profile.Discovered[carId] = true
+	if isNew then
+		local car = Config.CarsById[carId]
+		local key = tostring(car.Container)
+		if not profile.Completed[key] then
+			local all = true
+			for _, id in ipairs(Config.Containers[car.Container].CarIds) do
+				if not profile.Discovered[id] then
+					all = false
+					break
+				end
+			end
+			if all then
+				profile.Completed[key] = true
+				profile.Tokens = profile.Tokens + Config.TokensPerCompletion
+				notify(player, "Container " .. car.Container .. " COMPLETE! +5% income and +" .. Config.TokensPerCompletion .. " tokens", GOLD)
+			end
+		end
+	end
+	syncAttributes(player)
+	return isNew
+end
+
+ClaimToken.OnServerInvoke = function(player, carId)
+	local profile = DataService.Get(player)
+	if not profile or type(carId) ~= "string" or not profile.Discovered[carId] or profile.Claimed[carId] then
+		return false
+	end
+	profile.Claimed[carId] = true
+	profile.Tokens = profile.Tokens + 1
+	syncAttributes(player)
+	return true
+end
+
+---------------------------------------------------------------------
+-- Yard: containers and opened cars
+---------------------------------------------------------------------
+local spawnYardCar -- forward declaration
+local sendToWash -- forward declaration
+
+local function freeYardSlot(plot)
+	for i = 1, #plot.YardSlots do
+		if not state[plot.Index].Yard[i] then
+			return i
+		end
+	end
+	return nil
+end
+
+local function yardCount(plot)
+	local n = 0
+	for i = 1, #plot.YardSlots do
+		if state[plot.Index].Yard[i] then
+			n = n + 1
+		end
+	end
+	return n
+end
+
+local function openContainer(player, plot, slot, entry)
+	if plotOwner[plot.Index] ~= player or state[plot.Index].Yard[slot] ~= entry then
+		return
+	end
+	entry.Model:Destroy()
+	state[plot.Index].Yard[slot] = nil
+	local carId = Config.RollCar(entry.Level, rng)
+	local isNew = discover(player, carId)
+	spawnYardCar(plot, slot, carId)
+	RevealEvent:FireClient(player, carId, isNew)
+	local car = Config.CarsById[carId]
+	if car.Rarity >= 6 then
+		notifyAll(player.DisplayName .. " found a " .. string.upper(rarityOf(carId).Name) .. " car: " .. car.Name .. "!", rarityOf(carId).Color)
+	end
+end
+
+local function spawnContainer(plot, slot, level, drop)
+	local owner = plotOwner[plot.Index]
+	local entry = { Kind = "Container", Level = level }
+	local model = CarBuilder.BuildContainer(level)
+	local target = plot.YardSlots[slot]
+	model:PivotTo(drop and (target + Vector3.new(0, 40, 0)) or target)
+	addLabel(model.PrimaryPart, "CONTAINER " .. level, Config.Containers[level].Name, Config.Containers[level].Color:Lerp(Color3.new(1, 1, 1), 0.4), 9)
+	addPrompt(model:FindFirstChild("Box"), "Open", "Container " .. level, 0.6, owner, function(player)
+		openContainer(player, plot, slot, entry)
+	end)
+	model.Parent = carsFolder
+	entry.Model = model
+	state[plot.Index].Yard[slot] = entry
+	if drop then
+		local value = Instance.new("CFrameValue")
+		value.Value = model:GetPivot()
+		value.Changed:Connect(function(cf)
+			if model.Parent then
+				model:PivotTo(cf)
+			end
+		end)
+		local tween = TweenService:Create(value, TweenInfo.new(1.2, Enum.EasingStyle.Bounce, Enum.EasingDirection.Out), { Value = target })
+		tween:Play()
+		tween.Completed:Connect(function()
+			value:Destroy()
+		end)
+	end
+end
+
+spawnYardCar = function(plot, slot, carId)
+	local owner = plotOwner[plot.Index]
+	local entry = { Kind = "Car", Id = carId }
+	local model = CarBuilder.BuildCar(carId)
+	model:PivotTo(plot.YardSlots[slot])
+	-- a dusty look until it's washed
+	for _, p in ipairs(model:GetDescendants()) do
+		if p:IsA("BasePart") and p.Name ~= "Root" then
+			p.Color = p.Color:Lerp(Config.Containers[Config.CarsById[carId].Container].Dirt, 0.6)
+		end
+	end
+	addLabel(model.PrimaryPart, carTitle(carId) .. " (dirty)", carSubtitle(carId), rarityOf(carId).Color, 7)
+	addPrompt(model:FindFirstChild("Body"), "Send to Wash Bay", carTitle(carId), 0.3, owner, function(player)
+		sendToWash(player, plot, slot, entry)
+	end)
+	model.Parent = carsFolder
+	entry.Model = model
+	state[plot.Index].Yard[slot] = entry
+end
+
+---------------------------------------------------------------------
+-- Wash bay
+---------------------------------------------------------------------
+local moveToLift -- forward declaration
+
+local function dirtHealth(containerLevel)
+	return math.min(4, math.ceil(containerLevel / 3))
+end
+
+local function setWashProgress(plot, value)
+	local owner = plotOwner[plot.Index]
+	if owner then
+		owner:SetAttribute("WashProgress", value)
+	end
+	if value then
+		plot.WashLabel.Text = "WASHING  " .. math.floor(value * 100) .. "%"
+	else
+		plot.WashLabel.Text = "WASH BAY"
+	end
+end
+
+local function finishWash(plot)
+	local wash = state[plot.Index].Wash
+	if not wash or wash.Done then
+		return
+	end
+	wash.Done = true
+	for _, b in ipairs(wash.Blobs) do
+		b.Part:Destroy()
+	end
+	wash.Blobs = {}
+	setWashProgress(plot, nil)
+	plot.WashLabel.Text = "SPARKLING CLEAN!"
+	local owner = plotOwner[plot.Index]
+	if owner then
+		notify(owner, "Sparkling clean! " .. carTitle(wash.Id) .. " is ready for an engine.", GREEN)
+	end
+	local sparkles = Instance.new("Sparkles")
+	sparkles.Parent = wash.Model:FindFirstChild("Body")
+	if not state[plot.Index].Lift then
+		task.delay(1.2, function()
+			moveToLift(plot)
+		end)
+	else
+		addPrompt(wash.Model:FindFirstChild("Body"), "Move to Engine Lift", carTitle(wash.Id), 0, owner, function(player)
+			if plotOwner[plot.Index] == player then
+				if state[plot.Index].Lift then
+					notify(player, "The engine lift is busy. Finish that car first!", RED)
+				else
+					moveToLift(plot)
+				end
+			end
+		end)
+	end
+end
+
+local function startWash(plot, carId)
+	local car = Config.CarsById[carId]
+	local model = CarBuilder.BuildCar(carId)
+	model:PivotTo(plot.WashCFrame)
+	model.Parent = carsFolder
+	local health = dirtHealth(car.Container)
+	local dirtColor = Config.Containers[car.Container].Dirt
+	local boxCF, size = model:GetBoundingBox()
+	local hx, hy, hz = size.X / 2, size.Y / 2, size.Z / 2
+	local blobs = {}
+	-- only the visible parts of the car catch dirt
+	local visible = {}
+	for _, d in ipairs(model:GetDescendants()) do
+		if d:IsA("BasePart") and d.Transparency < 0.9 then
+			table.insert(visible, d)
+		end
+	end
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Include
+	params.FilterDescendantsInstances = visible
+	local taken = {}
+	local function blob(fromLocal, dirLocal)
+		local origin = boxCF:PointToWorldSpace(fromLocal)
+		local dir = boxCF:VectorToWorldSpace(dirLocal)
+		local hit = workspace:Raycast(origin, dir, params)
+		if not hit then
+			return
+		end
+		local pos = hit.Position
+		local key = math.floor(pos.X / 1.2) .. "," .. math.floor(pos.Y / 1.2) .. "," .. math.floor(pos.Z / 1.2)
+		if taken[key] then
+			return
+		end
+		taken[key] = true
+		local s = rng:NextNumber(1.8, 2.6)
+		local p = Instance.new("Part")
+		p.Name = "Dirt"
+		p.Shape = Enum.PartType.Ball
+		p.Size = Vector3.new(s, s, s)
+		p.CFrame = CFrame.new(pos + hit.Normal * (s * 0.2))
+		p.Anchored = true
+		p.CanCollide = false
+		p.CanTouch = false
+		p.CastShadow = false
+		p.Material = Enum.Material.Sand
+		p.Color = dirtColor:Lerp(Color3.new(0, 0, 0), rng:NextNumber(0, 0.2))
+		p.Parent = dirtFolder
+		table.insert(blobs, { Part = p, Health = health, StartSize = s })
+	end
+	-- shoot rays at the car from above and from all four sides; dirt sticks where they land
+	local spacing = 1.7
+	local reach = 2 * math.max(hx, hy, hz) + 4
+	for x = -hx + 0.6, hx - 0.6, spacing do
+		for z = -hz + 0.6, hz - 0.6, spacing do
+			blob(Vector3.new(x + rng:NextNumber(-0.4, 0.4), hy + 2, z + rng:NextNumber(-0.4, 0.4)), Vector3.new(0, -reach, 0))
+		end
+	end
+	for y = -hy + 0.8, hy - 0.4, spacing do
+		for z = -hz + 0.6, hz - 0.6, spacing do
+			blob(Vector3.new(hx + 2, y, z), Vector3.new(-reach, 0, 0))
+			blob(Vector3.new(-hx - 2, y, z), Vector3.new(reach, 0, 0))
+		end
+		for x = -hx + 0.6, hx - 0.6, spacing do
+			blob(Vector3.new(x, y, hz + 2), Vector3.new(0, 0, -reach))
+			blob(Vector3.new(x, y, -hz - 2), Vector3.new(0, 0, reach))
+		end
+	end
+	local wash = {
+		Id = carId,
+		Model = model,
+		Blobs = blobs,
+		Total = #blobs * health,
+		Remaining = #blobs * health,
+		Health = health,
+		Done = false,
+	}
+	state[plot.Index].Wash = wash
+	setWashProgress(plot, 0)
+
+	-- the Automatic Car Wash cleans by itself
+	local owner = plotOwner[plot.Index]
+	local profile = owner and DataService.Get(owner)
+	if profile and Config.WashTools[profile.ToolLevel].Auto then
+		task.spawn(function()
+			local steps = 40
+			for i = 1, steps do
+				task.wait(8 / steps)
+				if state[plot.Index].Wash ~= wash or wash.Done then
+					return
+				end
+				local removeCount = math.ceil(#wash.Blobs / (steps - i + 1))
+				for _ = 1, removeCount do
+					local b = table.remove(wash.Blobs)
+					if b then
+						b.Part:Destroy()
+					end
+				end
+				setWashProgress(plot, i / steps)
+			end
+			finishWash(plot)
+		end)
+	end
+end
+
+sendToWash = function(player, plot, slot, entry)
+	if plotOwner[plot.Index] ~= player or state[plot.Index].Yard[slot] ~= entry then
+		return
+	end
+	if state[plot.Index].Wash then
+		notify(player, "The wash bay is busy. Finish washing the current car first!", RED)
+		return
+	end
+	state[plot.Index].Yard[slot] = nil
+	entry.Model:Destroy()
+	startWash(plot, entry.Id)
+	notify(player, "Hold the mouse (or your finger) over the dirt to scrub it off!", Color3.fromRGB(150, 220, 255))
+end
+
+ScrubEvent.OnServerEvent:Connect(function(player, hitPosition)
+	if typeof(hitPosition) ~= "Vector3" then
+		return
+	end
+	local t = os.clock()
+	if lastScrub[player] and t - lastScrub[player] < Config.ScrubInterval * 0.6 then
+		return
+	end
+	lastScrub[player] = t
+	local plot = playerPlot[player]
+	local wash = plot and state[plot.Index].Wash
+	local profile = DataService.Get(player)
+	if not wash or wash.Done or not profile then
+		return
+	end
+	local root = getRoot(player)
+	local center = plot.WashCFrame.Position
+	if not root or (root.Position - center).Magnitude > 40 or (hitPosition - center).Magnitude > 22 then
+		return
+	end
+	local tool = Config.WashTools[profile.ToolLevel]
+	for i = #wash.Blobs, 1, -1 do
+		local b = wash.Blobs[i]
+		if (b.Part.Position - hitPosition).Magnitude <= tool.Radius + b.Part.Size.X / 2 then
+			local dmg = math.min(tool.Power, b.Health)
+			b.Health = b.Health - dmg
+			wash.Remaining = wash.Remaining - dmg
+			if b.Health <= 0 then
+				b.Part:Destroy()
+				table.remove(wash.Blobs, i)
+			else
+				local sz = b.StartSize * (0.5 + 0.5 * b.Health / wash.Health)
+				b.Part.Size = Vector3.new(sz, sz, sz)
+			end
+		end
+	end
+	local progress = 1 - wash.Remaining / math.max(1, wash.Total)
+	setWashProgress(plot, progress)
+	if #wash.Blobs == 0 or progress >= 0.94 then
+		finishWash(plot)
+	end
+end)
+
+---------------------------------------------------------------------
+-- Engine lift
+---------------------------------------------------------------------
+local function rebuildLift(plot)
+	local lift = state[plot.Index].Lift
+	if not lift then
+		return
+	end
+	if lift.Model then
+		lift.Model:Destroy()
+	end
+	local owner = plotOwner[plot.Index]
+	local model = CarBuilder.BuildCar(lift.Id, { Engine = lift.Engine })
+	model:PivotTo(plot.LiftCFrame)
+	addLabel(model.PrimaryPart, carTitle(lift.Id), carSubtitle(lift.Id, lift.Engine), rarityOf(lift.Id).Color, 8)
+	addPrompt(model:FindFirstChild("Body"), "Choose Engine", carTitle(lift.Id), 0, owner, function(player)
+		if plotOwner[plot.Index] == player and state[plot.Index].Lift == lift then
+			OpenEngineEvent:FireClient(player, lift.Id, lift.Engine)
+		end
+	end)
+	model.Parent = carsFolder
+	lift.Model = model
+end
+
+moveToLift = function(plot)
+	local wash = state[plot.Index].Wash
+	if not wash or not wash.Done or state[plot.Index].Lift then
+		return
+	end
+	wash.Model:Destroy()
+	state[plot.Index].Wash = nil
+	plot.WashLabel.Text = "WASH BAY"
+	state[plot.Index].Lift = { Id = wash.Id, Engine = nil }
+	rebuildLift(plot)
+	plot.LiftLabel.Text = "ENGINE LIFT"
+	local owner = plotOwner[plot.Index]
+	if owner then
+		OpenEngineEvent:FireClient(owner, wash.Id, nil)
+	end
+end
+
+local function rollEngine(profile, lucky)
+	local weights = Config.GetEngineWeights(profile.EngineLuck, lucky)
+	return Config.WeightedIndex(weights, rng)
+end
+
+EngineAction.OnServerInvoke = function(player, action)
+	local plot = playerPlot[player]
+	local profile = DataService.Get(player)
+	local lift = plot and state[plot.Index].Lift
+	if not profile or not lift then
+		return { Ok = false, Message = "There's no car on the engine lift." }
+	end
+	if action == "Roll" or action == "Lucky" then
+		if action == "Lucky" then
+			if profile.Tokens < 1 then
+				return { Ok = false, Message = "You need 1 token. Collect tokens in the Index!" }
+			end
+			profile.Tokens = profile.Tokens - 1
+			syncAttributes(player)
+		end
+		lift.Engine = rollEngine(profile, action == "Lucky")
+		rebuildLift(plot)
+		local engine = Config.Engines[lift.Engine]
+		if lift.Engine >= 6 then
+			notifyAll(player.DisplayName .. " rolled a " .. engine.Name .. "!", engine.Color)
+		end
+		return { Ok = true, Engine = lift.Engine, Income = Config.GetCarIncome(lift.Id, lift.Engine) }
+	elseif action == "Done" then
+		if not lift.Engine then
+			return { Ok = false, Message = "Roll an engine first!" }
+		end
+		local spot = freeSpot(plot, profile)
+		if not spot then
+			return { Ok = false, Message = "Your showroom is full! Sell a car or upgrade the showroom." }
+		end
+		lift.Model:Destroy()
+		state[plot.Index].Lift = nil
+		local entry = { Id = lift.Id, Engine = lift.Engine }
+		state[plot.Index].Spots[spot] = entry
+		showSpot(plot, spot, entry)
+		notify(player, carTitle(lift.Id) .. " is on display! Customers are on the way.", GREEN)
+		if state[plot.Index].Wash and state[plot.Index].Wash.Done then
+			task.delay(0.5, function()
+				moveToLift(plot)
+			end)
+		end
+		return { Ok = true, Done = true }
+	elseif action == "Sell" then
+		local value = Config.GetCarIncome(lift.Id, lift.Engine or 1) * Config.SellSeconds
+		lift.Model:Destroy()
+		state[plot.Index].Lift = nil
+		addCash(player, value)
+		notify(player, "Sold " .. carTitle(lift.Id) .. " for $" .. Config.FormatNumber(value), GOLD)
+		if state[plot.Index].Wash and state[plot.Index].Wash.Done then
+			task.delay(0.5, function()
+				moveToLift(plot)
+			end)
+		end
+		return { Ok = true, Done = true }
+	end
+	return { Ok = false }
+end
+
+---------------------------------------------------------------------
+-- Upgrade pads
+---------------------------------------------------------------------
+local function refreshPads(plot)
+	local owner = plotOwner[plot.Index]
+	local profile = owner and DataService.Get(owner)
+	local pads = plot.Pads
+	if not profile then
+		pads.Showroom.Label.Text = "Showroom"
+		pads.Truck.Label.Text = "Truck"
+		pads.Wash.Label.Text = "Wash Tools"
+		pads.Engine.Label.Text = "Engine Luck"
+		return
+	end
+	if profile.ShowroomLevel >= Config.MaxShowroomLevel then
+		pads.Showroom.Label.Text = "Showroom MAX"
+	else
+		pads.Showroom.Label.Text = "Showroom Lv " .. (profile.ShowroomLevel + 1) .. " · $" .. Config.FormatNumber(Config.GetShowroomCost(profile.ShowroomLevel + 1))
+	end
+	if profile.TruckLevel >= Config.MaxTruckLevel then
+		pads.Truck.Label.Text = "Truck MAX"
+	else
+		local nextLevel = profile.TruckLevel + 1
+		if nextLevel > Config.MaxTruckForShowroom[profile.ShowroomLevel] then
+			pads.Truck.Label.Text = "Truck Lv " .. nextLevel .. " · needs bigger showroom"
+		else
+			pads.Truck.Label.Text = "Truck Lv " .. nextLevel .. " (" .. nextLevel .. " containers) · $" .. Config.FormatNumber(Config.TruckCosts[nextLevel])
+		end
+	end
+	if profile.ToolLevel >= #Config.WashTools then
+		pads.Wash.Label.Text = Config.WashTools[profile.ToolLevel].Name .. " (MAX)"
+	else
+		local t = Config.WashTools[profile.ToolLevel + 1]
+		pads.Wash.Label.Text = t.Name .. " · $" .. Config.FormatNumber(t.Cost)
+	end
+	if profile.EngineLuck >= Config.MaxEngineLuck then
+		pads.Engine.Label.Text = "Engine Luck MAX"
+	else
+		pads.Engine.Label.Text = "Engine Luck Lv " .. (profile.EngineLuck + 1) .. " · $" .. Config.FormatNumber(Config.GetEngineLuckCost(profile.EngineLuck))
+	end
+end
+
+local function tryBuy(player, cost, apply)
+	local profile = DataService.Get(player)
+	if profile.Cash < cost then
+		notify(player, "You need $" .. Config.FormatNumber(cost) .. ".", RED)
+		return
+	end
+	setCash(player, profile.Cash - cost)
+	apply(profile)
+	syncAttributes(player)
+	local plot = playerPlot[player]
+	if plot then
+		refreshPads(plot)
+		refreshSpotPads(plot, profile)
+	end
+end
+
+for _, plot in ipairs(map.Plots) do
+	local function padPrompt(padKey, handler)
+		addPrompt(plot.Pads[padKey].Part, "Upgrade", "", 0.4, nil, function(player)
+			if playerPlot[player] ~= plot then
+				notify(player, "That's someone else's upgrade pad.", RED)
+				return
+			end
+			handler(player, DataService.Get(player))
+		end)
+	end
+	padPrompt("Showroom", function(player, profile)
+		if profile.ShowroomLevel >= Config.MaxShowroomLevel then
+			return notify(player, "Your showroom is maxed!", GOLD)
+		end
+		tryBuy(player, Config.GetShowroomCost(profile.ShowroomLevel + 1), function(p)
+			p.ShowroomLevel = p.ShowroomLevel + 1
+			notify(player, "Showroom level " .. p.ShowroomLevel .. "! " .. maxSpots(p) .. " display spots, container " .. p.ShowroomLevel .. " unlocked.", GREEN)
+		end)
+	end)
+	padPrompt("Truck", function(player, profile)
+		local nextLevel = profile.TruckLevel + 1
+		if nextLevel > Config.MaxTruckLevel then
+			return notify(player, "Your truck is maxed!", GOLD)
+		end
+		if nextLevel > Config.MaxTruckForShowroom[profile.ShowroomLevel] then
+			return notify(player, "Upgrade your showroom first to unlock a bigger truck.", RED)
+		end
+		tryBuy(player, Config.TruckCosts[nextLevel], function(p)
+			p.TruckLevel = nextLevel
+			notify(player, "Truck level " .. nextLevel .. "! " .. nextLevel .. " containers per delivery.", GREEN)
+		end)
+	end)
+	padPrompt("Wash", function(player, profile)
+		if profile.ToolLevel >= #Config.WashTools then
+			return notify(player, "You have the best wash tool!", GOLD)
+		end
+		local t = Config.WashTools[profile.ToolLevel + 1]
+		tryBuy(player, t.Cost, function(p)
+			p.ToolLevel = p.ToolLevel + 1
+			notify(player, "New tool: " .. t.Name .. "!", GREEN)
+		end)
+	end)
+	padPrompt("Engine", function(player, profile)
+		if profile.EngineLuck >= Config.MaxEngineLuck then
+			return notify(player, "Engine Luck is maxed!", GOLD)
+		end
+		tryBuy(player, Config.GetEngineLuckCost(profile.EngineLuck), function(p)
+			p.EngineLuck = p.EngineLuck + 1
+			notify(player, "Engine Luck level " .. p.EngineLuck .. "! Better engines are more likely.", GREEN)
+		end)
+	end)
+	refreshPads(plot)
+	refreshSpotPads(plot, nil)
+end
+
+---------------------------------------------------------------------
+-- Truck deliveries
+---------------------------------------------------------------------
+local function scheduleNext(player)
+	local profile = DataService.Get(player)
+	local delay = Config.FirstDeliveries[profile.DeliveriesDone + 1] or Config.DeliveryInterval
+	player:SetAttribute("NextDelivery", now() + delay)
+end
+
+local function rollContainerLevel(profile)
+	local highest = math.min(profile.ShowroomLevel, #Config.Containers)
+	local r = rng:NextNumber()
+	if r < 0.5 or highest == 1 then
+		return highest
+	elseif r < 0.8 then
+		return math.max(1, highest - 1)
+	end
+	return rng:NextInteger(1, highest)
+end
+
+local function deliver(player)
+	local plot = playerPlot[player]
+	local profile = DataService.Get(player)
+	if not plot or not profile then
+		return
+	end
+	local delivered = 0
+	for _ = 1, profile.TruckLevel do
+		local slot = freeYardSlot(plot)
+		if not slot then
+			break
+		end
+		spawnContainer(plot, slot, rollContainerLevel(profile), true)
+		delivered = delivered + 1
+	end
+	if delivered > 0 then
+		profile.DeliveriesDone = profile.DeliveriesDone + 1
+		notify(player, "TRUCK HERE! " .. delivered .. " container" .. (delivered > 1 and "s" or "") .. " dropped in your backyard.", GOLD)
+	end
+	scheduleNext(player)
+end
+
+task.spawn(function()
+	while true do
+		task.wait(0.5)
+		local t = now()
+		for player, plot in pairs(playerPlot) do
+			local nextAt = player:GetAttribute("NextDelivery")
+			if nextAt and t >= nextAt then
+				if freeYardSlot(plot) then
+					player:SetAttribute("YardFull", false)
+					deliver(player)
+				else
+					player:SetAttribute("YardFull", true)
+				end
+			end
+		end
+	end
+end)
+
+---------------------------------------------------------------------
+-- Income (every second) and NPC customers
+---------------------------------------------------------------------
+local function plotIncome(plot, profile)
+	local total = 0
+	for _, entry in pairs(state[plot.Index].Spots) do
+		total = total + Config.GetCarIncome(entry.Id, entry.Engine)
+	end
+	return total * (1 + Config.CompletionBonus * completedCount(profile))
+end
+
+task.spawn(function()
+	while true do
+		task.wait(1)
+		for player, plot in pairs(playerPlot) do
+			local profile = DataService.Get(player)
+			if profile then
+				local income = plotIncome(plot, profile)
+				profile.IncomeRate = income
+				player:SetAttribute("IncomeRate", income)
+				if income > 0 then
+					addCash(player, income)
+				end
+			end
+		end
+	end
+end)
+
+local function buildNPC()
+	local model = Instance.new("Model")
+	model.Name = "Customer"
+	local shirt = Color3.fromHSV(rng:NextNumber(), 0.6, 0.9)
+	local body = Instance.new("Part")
+	body.Name = "Body"
+	body.Size = Vector3.new(2, 2, 1)
+	body.Color = shirt
+	body.Anchored = true
+	body.CanCollide = false
+	body.Parent = model
+	local function attach(name, size, offset, color, shape)
+		local p = Instance.new("Part")
+		p.Name = name
+		if shape then
+			p.Shape = shape
+		end
+		p.Size = size
+		p.Color = color
+		p.CFrame = body.CFrame * CFrame.new(offset)
+		p.Anchored = false
+		p.CanCollide = false
+		p.Massless = true
+		local w = Instance.new("WeldConstraint")
+		w.Part0 = body
+		w.Part1 = p
+		w.Parent = p
+		p.Parent = model
+		return p
+	end
+	attach("Head", Vector3.new(1.4, 1.4, 1.4), Vector3.new(0, 1.7, 0), Color3.fromRGB(255, 205, 160), Enum.PartType.Ball)
+	attach("Legs", Vector3.new(2, 1.8, 1), Vector3.new(0, -1.9, 0), Color3.fromRGB(50, 60, 90))
+	model.PrimaryPart = body
+	return model, body
+end
+
+local function walk(body, target, speed)
+	local from = body.Position
+	local dist = (target - from).Magnitude
+	if dist < 0.1 then
+		return
+	end
+	local look = Vector3.new(target.X, from.Y, target.Z)
+	if (look - from).Magnitude > 0.1 then
+		body.CFrame = CFrame.lookAt(from, look)
+	end
+	local tween = TweenService:Create(body, TweenInfo.new(dist / speed, Enum.EasingStyle.Linear), { CFrame = CFrame.lookAt(target, target + (target - from).Unit) })
+	tween:Play()
+	tween.Completed:Wait()
+end
+
+local function runCustomer(plot)
+	local spots = {}
+	for i, entry in pairs(state[plot.Index].Spots) do
+		table.insert(spots, { Index = i, Entry = entry })
+	end
+	if #spots == 0 then
+		return
+	end
+	local pick = spots[rng:NextInteger(1, #spots)]
+	local model, body = buildNPC()
+	local y = plot.DoorOutside.Y + 1.2
+	body.CFrame = CFrame.new(plot.DoorOutside.X + rng:NextNumber(-4, 4), y, plot.DoorOutside.Z)
+	model.Parent = npcFolder
+	state[plot.Index].NPCs = state[plot.Index].NPCs + 1
+	local ok = pcall(function()
+		local inside = Vector3.new(plot.DoorInside.X, y, plot.DoorInside.Z)
+		local front = plot.Spots[pick.Index].Front.Position
+		walk(body, inside, 9)
+		walk(body, Vector3.new(front.X + rng:NextNumber(-2, 2), y, front.Z), 9)
+		-- admire the car and pay
+		local entry = state[plot.Index].Spots[pick.Index]
+		if entry then
+			local amount = Config.GetCarIncome(entry.Id, entry.Engine) * 3
+			local gui, t = addLabel(body, "+$" .. Config.FormatNumber(amount), "Wow!", GREEN, 3)
+			t.TextColor3 = GREEN
+			task.wait(2.5)
+			gui:Destroy()
+		else
+			task.wait(1)
+		end
+		walk(body, inside, 9)
+		walk(body, Vector3.new(plot.DoorOutside.X + rng:NextNumber(-6, 6), y, plot.DoorOutside.Z), 9)
+	end)
+	if not ok then
+		warn("[D2D] customer walk failed")
+	end
+	model:Destroy()
+	state[plot.Index].NPCs = state[plot.Index].NPCs - 1
+end
+
+task.spawn(function()
+	while true do
+		task.wait(3)
+		for player, plot in pairs(playerPlot) do
+			local profile = DataService.Get(player)
+			if profile then
+				local limit = math.min(1 + math.floor(profile.ShowroomLevel / 2), 6)
+				if state[plot.Index].NPCs < limit and next(state[plot.Index].Spots) then
+					task.spawn(runCustomer, plot)
+				end
+			end
+		end
+	end
+end)
+
+---------------------------------------------------------------------
+-- Players joining and leaving
+---------------------------------------------------------------------
+local function setupCharacter(player, character)
+	local root = character:WaitForChild("HumanoidRootPart", 10)
+	if not root then
+		return
+	end
+	task.wait()
+	local plot = playerPlot[player]
+	if plot then
+		character:PivotTo(plot.SpawnCFrame)
+	end
+end
+
+local function onPlayerAdded(player)
+	local profile = DataService.Load(player)
+	if player.Parent ~= Players then
+		return
+	end
+	local ls = Instance.new("Folder")
+	ls.Name = "leaderstats"
+	local cash = Instance.new("NumberValue")
+	cash.Name = "Cash"
+	cash.Value = profile.Cash
+	cash.Parent = ls
+	local cars = Instance.new("IntValue")
+	cars.Name = "Cars"
+	cars.Parent = ls
+	ls.Parent = player
+
+	local plot
+	for i, p in ipairs(map.Plots) do
+		if not plotOwner[i] then
+			plot = p
+			break
+		end
+	end
+	if plot then
+		plotOwner[plot.Index] = player
+		playerPlot[player] = plot
+		player:SetAttribute("PlotIndex", plot.Index)
+		plot.SignLabel.Text = string.upper(player.DisplayName) .. "'S SHOWROOM"
+		for _, d in ipairs(profile.Display) do
+			local entry = { Id = d.Id, Engine = d.Engine }
+			state[plot.Index].Spots[d.Spot] = entry
+			showSpot(plot, d.Spot, entry)
+		end
+		for i, y in ipairs(profile.Yard) do
+			if y.Kind == "Container" then
+				spawnContainer(plot, i, y.Level, false)
+			else
+				spawnYardCar(plot, i, y.Id)
+			end
+		end
+		refreshPads(plot)
+		refreshSpotPads(plot, profile)
+	else
+		notify(player, "All showrooms are taken, sorry! Try another server.", RED)
+	end
+	syncAttributes(player)
+
+	-- offline earnings
+	if profile.LastOnline > 0 and profile.IncomeRate > 0 then
+		local away = math.min(os.time() - profile.LastOnline, Config.OfflineMaxSeconds)
+		local earned = math.floor(away * profile.IncomeRate * Config.OfflineRate)
+		if earned >= 1 then
+			addCash(player, earned)
+			task.delay(4, function()
+				if player.Parent == Players then
+					notify(player, "Welcome back! Your showroom earned $" .. Config.FormatNumber(earned) .. " while you were away.", GOLD)
+				end
+			end)
+		end
+	end
+	if plot then
+		scheduleNext(player)
+	end
+
+	player.CharacterAdded:Connect(function(character)
+		setupCharacter(player, character)
+	end)
+	if player.Character then
+		task.spawn(setupCharacter, player, player.Character)
+	end
+end
+
+local function collectSave(player)
+	local profile = DataService.Get(player)
+	local plot = playerPlot[player]
+	if not profile or not plot then
+		return
+	end
+	local s = state[plot.Index]
+	profile.Display = {}
+	for spot, entry in pairs(s.Spots) do
+		table.insert(profile.Display, { Id = entry.Id, Engine = entry.Engine, Spot = spot })
+	end
+	profile.Yard = {}
+	-- cars in the wash bay or on the lift go back to the yard
+	if s.Lift then
+		table.insert(profile.Yard, { Kind = "Car", Id = s.Lift.Id })
+	end
+	if s.Wash then
+		table.insert(profile.Yard, { Kind = "Car", Id = s.Wash.Id })
+	end
+	for i = 1, #plot.YardSlots do
+		local y = s.Yard[i]
+		if y and #profile.Yard < Config.YardCapacity then
+			if y.Kind == "Container" then
+				table.insert(profile.Yard, { Kind = "Container", Level = y.Level })
+			else
+				table.insert(profile.Yard, { Kind = "Car", Id = y.Id })
+			end
+		end
+	end
+	profile.LastOnline = os.time()
+end
+
+local function clearPlot(plot)
+	local s = state[plot.Index]
+	for _, entry in pairs(s.Spots) do
+		if entry.Model then
+			entry.Model:Destroy()
+		end
+	end
+	for _, entry in pairs(s.Yard) do
+		if entry.Model then
+			entry.Model:Destroy()
+		end
+	end
+	if s.Wash then
+		for _, b in ipairs(s.Wash.Blobs) do
+			b.Part:Destroy()
+		end
+		s.Wash.Model:Destroy()
+	end
+	if s.Lift and s.Lift.Model then
+		s.Lift.Model:Destroy()
+	end
+	state[plot.Index] = { Spots = {}, Yard = {}, Wash = nil, Lift = nil, NPCs = s.NPCs }
+	plot.SignLabel.Text = "FOR SALE"
+	plot.WashLabel.Text = "WASH BAY"
+	plot.LiftLabel.Text = "ENGINE LIFT"
+end
+
+local function onPlayerRemoving(player)
+	collectSave(player)
+	DataService.Save(player)
+	local plot = playerPlot[player]
+	if plot then
+		clearPlot(plot)
+		plotOwner[plot.Index] = nil
+		playerPlot[player] = nil
+		refreshPads(plot)
+		refreshSpotPads(plot, nil)
+	end
+	lastScrub[player] = nil
+	DataService.Release(player)
+end
+
+Players.PlayerAdded:Connect(onPlayerAdded)
+for _, player in ipairs(Players:GetPlayers()) do
+	task.spawn(onPlayerAdded, player)
+end
+Players.PlayerRemoving:Connect(onPlayerRemoving)
+
+GoHomeEvent.OnServerEvent:Connect(function(player)
+	local plot = playerPlot[player]
+	if plot and player.Character then
+		player.Character:PivotTo(plot.SpawnCFrame)
+	end
+end)
+
+game:BindToClose(function()
+	local running = 0
+	for _, player in ipairs(Players:GetPlayers()) do
+		running = running + 1
+		task.spawn(function()
+			collectSave(player)
+			DataService.Save(player)
+			running = running - 1
+		end)
+	end
+	local waited = 0
+	while running > 0 and waited < 25 do
+		waited = waited + task.wait(0.5)
+	end
+end)
+
+task.spawn(function()
+	while true do
+		task.wait(120)
+		for _, player in ipairs(Players:GetPlayers()) do
+			collectSave(player)
+			task.spawn(DataService.Save, player)
+		end
+	end
+end)
+
+print("[D2D] Server ready!")
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX00000008"><Properties><string name="Name">MapBuilder</string><ProtectedString name="Source"><![CDATA[-- MapBuilder: builds the street and the 6 player plots when the server starts.
+-- Each plot, front to back: showroom (by the street) -> service (wash bay, engine lift) -> backyard.
+
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Lighting = game:GetService("Lighting")
+local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
+
+local MapBuilder = {}
+
+local PLOT_SPACING = 110
+local FLOOR_Y = 1
+
+local function part(props, parent)
+	local p = Instance.new("Part")
+	p.Anchored = true
+	p.TopSurface = Enum.SurfaceType.Smooth
+	p.BottomSurface = Enum.SurfaceType.Smooth
+	p.Material = Enum.Material.SmoothPlastic
+	if props.Shape then
+		p.Shape = props.Shape
+	end
+	for k, v in pairs(props) do
+		if k ~= "Shape" then
+			p[k] = v
+		end
+	end
+	p.Parent = parent
+	return p
+end
+
+local function label(adornee, text, color, offsetY, width, maxDist)
+	local gui = Instance.new("BillboardGui")
+	gui.Size = UDim2.new(0, width or 220, 0, 50)
+	gui.StudsOffset = Vector3.new(0, offsetY or 4, 0)
+	gui.MaxDistance = maxDist or 90
+	gui.LightInfluence = 0
+	local l = Instance.new("TextLabel")
+	l.Size = UDim2.new(1, 0, 1, 0)
+	l.BackgroundTransparency = 1
+	l.Font = Enum.Font.FredokaOne
+	l.TextScaled = true
+	l.TextColor3 = color or Color3.new(1, 1, 1)
+	l.TextStrokeTransparency = 0.2
+	l.Text = text
+	l.Parent = gui
+	gui.Parent = adornee
+	return l
+end
+
+local function surfaceText(p, face, text, color)
+	local gui = Instance.new("SurfaceGui")
+	gui.Face = face
+	gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+	gui.PixelsPerStud = 30
+	gui.LightInfluence = 0
+	local l = Instance.new("TextLabel")
+	l.Size = UDim2.new(1, 0, 1, 0)
+	l.BackgroundTransparency = 1
+	l.Font = Enum.Font.FredokaOne
+	l.TextScaled = true
+	l.TextColor3 = color or Color3.new(1, 1, 1)
+	l.TextStrokeTransparency = 0.3
+	l.Text = text
+	l.Parent = gui
+	gui.Parent = p
+	return l
+end
+
+local function buildLighting()
+	Lighting.ClockTime = 14.5
+	Lighting.Brightness = 2.5
+	Lighting.OutdoorAmbient = Color3.fromRGB(140, 140, 150)
+	if not Lighting:FindFirstChildOfClass("Atmosphere") then
+		local a = Instance.new("Atmosphere")
+		a.Density = 0.2
+		a.Color = Color3.fromRGB(220, 230, 245)
+		a.Parent = Lighting
+	end
+end
+
+local function buildWorld(map)
+	-- remove the default baseplate if the place has one
+	local baseplate = workspace:FindFirstChild("Baseplate")
+	if baseplate then
+		baseplate:Destroy()
+	end
+	part({ Name = "Ground", Size = Vector3.new(760, 4, 260), CFrame = CFrame.new(0, -2, -25), Color = Color3.fromRGB(110, 170, 90), Material = Enum.Material.Grass }, map)
+	part({ Name = "Road", Size = Vector3.new(760, 0.2, 26), CFrame = CFrame.new(0, 0.1, -108), Color = Color3.fromRGB(55, 55, 60), Material = Enum.Material.Asphalt }, map)
+	for x = -360, 360, 20 do
+		part({ Name = "RoadLine", Size = Vector3.new(8, 0.05, 0.6), CFrame = CFrame.new(x, 0.22, -108), Color = Color3.fromRGB(240, 220, 90) }, map)
+	end
+	part({ Name = "Sidewalk", Size = Vector3.new(760, 0.6, 8), CFrame = CFrame.new(0, 0.3, -91), Color = Color3.fromRGB(190, 190, 195), Material = Enum.Material.Concrete }, map)
+	local walls = {
+		{ Vector3.new(4, 60, 260), Vector3.new(-380, 30, -25) },
+		{ Vector3.new(4, 60, 260), Vector3.new(380, 30, -25) },
+		{ Vector3.new(760, 60, 4), Vector3.new(0, 30, -125) },
+		{ Vector3.new(760, 60, 4), Vector3.new(0, 30, 105) },
+	}
+	for _, w in ipairs(walls) do
+		part({ Name = "Boundary", Size = w[1], CFrame = CFrame.new(w[2]), Transparency = 1 }, map)
+	end
+	local spawn = Instance.new("SpawnLocation")
+	spawn.Anchored = true
+	spawn.Size = Vector3.new(8, 1, 8)
+	spawn.CFrame = CFrame.new(0, 0.5, -100)
+	spawn.Transparency = 1
+	spawn.CanCollide = false
+	spawn.Duration = 0
+	spawn.Parent = map
+end
+
+local function buildPlot(index, parent)
+	local cx = -((Config.MaxPlots - 1) * PLOT_SPACING) / 2 + (index - 1) * PLOT_SPACING
+	local m = Instance.new("Model")
+	m.Name = "Plot" .. index
+	m.Parent = parent
+	local function at(x, y, z)
+		return CFrame.new(cx + x, y, z)
+	end
+	local white = Color3.fromRGB(240, 240, 240)
+	local glassColor = Color3.fromRGB(170, 210, 240)
+
+	-- SHOWROOM (z -88 .. -8)
+	part({ Name = "ShowroomFloor", Size = Vector3.new(90, FLOOR_Y, 80), CFrame = at(0, FLOOR_Y / 2, -48), Color = Color3.fromRGB(225, 225, 230), Material = Enum.Material.Marble }, m)
+	part({ Name = "Wall", Size = Vector3.new(1, 14, 80), CFrame = at(-45, 8, -48), Color = white }, m)
+	part({ Name = "Wall", Size = Vector3.new(1, 14, 80), CFrame = at(45, 8, -48), Color = white }, m)
+	-- glass front with a door gap
+	for _, x in ipairs({ -26.5, 26.5 }) do
+		part({ Name = "Glass", Size = Vector3.new(37, 14, 0.6), CFrame = at(x, 8, -88), Color = glassColor, Material = Enum.Material.Glass, Transparency = 0.6 }, m)
+	end
+	part({ Name = "DoorFrame", Size = Vector3.new(16, 3, 0.8), CFrame = at(0, 13.5, -88), Color = white }, m)
+	-- back wall with an opening into the service area
+	for _, x in ipairs({ -26.5, 26.5 }) do
+		part({ Name = "Wall", Size = Vector3.new(37, 14, 1), CFrame = at(x, 8, -8), Color = white }, m)
+	end
+	local sign = part({ Name = "Sign", Size = Vector3.new(40, 6, 0.5), CFrame = at(0, 19, -88.4), Color = Color3.fromRGB(30, 30, 40) }, m)
+	local signLabel = surfaceText(sign, Enum.NormalId.Front, "FOR SALE", Color3.fromRGB(255, 210, 60))
+
+	-- display spots: 8 columns x 5 rows, filled from the front row, center outward
+	local spots = {}
+	local cols = { -5, 5, -15, 15, -25, 25, -35, 35 }
+	local rows = { -74, -60, -46, -32, -18 }
+	for _, z in ipairs(rows) do
+		for _, x in ipairs(cols) do
+			local pad = part({ Name = "Spot", Size = Vector3.new(8.5, 0.2, 15), CFrame = at(x, FLOOR_Y + 0.1, z), Color = Color3.fromRGB(60, 60, 70), CanCollide = false }, m)
+			table.insert(spots, { Pad = pad, CFrame = at(x, FLOOR_Y + 0.2, z), Front = at(x, FLOOR_Y, z - 10) })
+		end
+	end
+
+	-- SERVICE (z -8 .. 28)
+	part({ Name = "ServiceFloor", Size = Vector3.new(90, FLOOR_Y, 36), CFrame = at(0, FLOOR_Y / 2, 10), Color = Color3.fromRGB(150, 150, 155), Material = Enum.Material.Concrete }, m)
+	part({ Name = "Wall", Size = Vector3.new(1, 10, 36), CFrame = at(-45, 6, 10), Color = Color3.fromRGB(200, 200, 205) }, m)
+	part({ Name = "Wall", Size = Vector3.new(1, 10, 36), CFrame = at(45, 6, 10), Color = Color3.fromRGB(200, 200, 205) }, m)
+	local wash = part({ Name = "WashBay", Size = Vector3.new(12, 0.4, 20), CFrame = at(-15, FLOOR_Y + 0.2, 10), Color = Color3.fromRGB(70, 160, 230), CanCollide = false }, m)
+	local washLabel = label(wash, "WASH BAY", Color3.fromRGB(120, 210, 255), 9, 240)
+	local lift = part({ Name = "EngineLift", Size = Vector3.new(12, 0.4, 20), CFrame = at(15, FLOOR_Y + 0.2, 10), Color = Color3.fromRGB(230, 170, 40), CanCollide = false }, m)
+	for _, x in ipairs({ -7, 7 }) do
+		part({ Name = "LiftPost", Size = Vector3.new(0.8, 8, 0.8), CFrame = at(15 + x, FLOOR_Y + 4, 10), Color = Color3.fromRGB(230, 170, 40), Material = Enum.Material.Metal }, m)
+	end
+	local liftLabel = label(lift, "ENGINE LIFT", Color3.fromRGB(255, 210, 90), 9, 240)
+
+	-- BACKYARD (z 28 .. 70)
+	part({ Name = "Yard", Size = Vector3.new(90, 0.4, 42), CFrame = at(0, 0.2, 49), Color = Color3.fromRGB(165, 155, 140), Material = Enum.Material.Pebble }, m)
+	for _, x in ipairs({ -45, 45 }) do
+		part({ Name = "Fence", Size = Vector3.new(0.5, 4, 42), CFrame = at(x, 2, 49), Color = Color3.fromRGB(120, 90, 60), Material = Enum.Material.Wood }, m)
+	end
+	part({ Name = "Fence", Size = Vector3.new(90, 4, 0.5), CFrame = at(0, 2, 70), Color = Color3.fromRGB(120, 90, 60), Material = Enum.Material.Wood }, m)
+	local yardSlots = {}
+	for _, z in ipairs({ 40, 59 }) do
+		for _, x in ipairs({ -28, -14, 0, 14, 28 }) do
+			table.insert(yardSlots, at(x, 0.4, z))
+		end
+	end
+
+	-- upgrade pads
+	local function pad(name, x, z, color)
+		local p = part({ Name = name, Size = Vector3.new(6, 0.4, 6), CFrame = at(x, FLOOR_Y + 0.2, z), Color = color, Material = Enum.Material.Neon, CanCollide = false }, m)
+		local l = label(p, name, Color3.new(1, 1, 1), 4.5, 260, 60)
+		return { Part = p, Label = l }
+	end
+	local pads = {
+		Showroom = pad("Showroom", -36, 0, Color3.fromRGB(90, 220, 120)),
+		Wash = pad("Wash Tools", -36, 20, Color3.fromRGB(70, 170, 255)),
+		Engine = pad("Engine Luck", 36, 20, Color3.fromRGB(255, 180, 40)),
+		Truck = pad("Truck", 36, 33, Color3.fromRGB(240, 90, 90)),
+	}
+	pads.Truck.Part.CFrame = at(36, 0.6, 33)
+
+	return {
+		Index = index,
+		CenterX = cx,
+		Model = m,
+		Spots = spots,
+		WashCFrame = at(-15, FLOOR_Y + 0.4, 10),
+		LiftCFrame = at(15, FLOOR_Y + 0.4, 10),
+		WashLabel = washLabel,
+		LiftLabel = liftLabel,
+		YardSlots = yardSlots,
+		Pads = pads,
+		SignLabel = signLabel,
+		SpawnCFrame = CFrame.lookAt(Vector3.new(cx, 4, 31), Vector3.new(cx, 4, 60)),
+		DoorOutside = Vector3.new(cx, FLOOR_Y + 2.5, -96),
+		DoorInside = Vector3.new(cx, FLOOR_Y + 2.5, -84),
+	}
+end
+
+function MapBuilder.Build()
+	buildLighting()
+	local map = Instance.new("Folder")
+	map.Name = "Map"
+	map.Parent = workspace
+	buildWorld(map)
+	local plots = {}
+	for i = 1, Config.MaxPlots do
+		plots[i] = buildPlot(i, map)
+	end
+	return { Folder = map, Plots = plots }
+end
+
+return MapBuilder
+]]></ProtectedString></Properties></Item></Item></Item><Item class="StarterPlayer" referent="RBX0000000D"><Properties><string name="Name">StarterPlayer</string></Properties><Item class="StarterPlayerScripts" referent="RBX0000000C"><Properties><string name="Name">StarterPlayerScripts</string></Properties><Item class="LocalScript" referent="RBX0000000B"><Properties><string name="Name">Client</string><ProtectedString name="Source"><![CDATA[-- D2D client: HUD, truck timer, scrubbing, engine screen, Index and messages.
+
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+local CollectionService = game:GetService("CollectionService")
+
+local player = Players.LocalPlayer
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Config = require(Shared:WaitForChild("Config"))
+local CarBuilder = require(Shared:WaitForChild("CarBuilder"))
+local remotes = ReplicatedStorage:WaitForChild("Remotes")
+local NotifyEvent = remotes:WaitForChild("Notify")
+local ScrubEvent = remotes:WaitForChild("Scrub")
+local RevealEvent = remotes:WaitForChild("Reveal")
+local OpenEngineEvent = remotes:WaitForChild("OpenEngine")
+local GoHomeEvent = remotes:WaitForChild("GoHome")
+local EngineAction = remotes:WaitForChild("EngineAction")
+local ClaimToken = remotes:WaitForChild("ClaimToken")
+
+---------------------------------------------------------------------
+-- UI helpers (comic-garage style: chunky, dark plates, bold outlines)
+---------------------------------------------------------------------
+local DARK = Color3.fromRGB(28, 30, 38)
+local YELLOW = Color3.fromRGB(255, 205, 40)
+local WHITE = Color3.new(1, 1, 1)
+
+local function corner(p, r)
+	local c = Instance.new("UICorner")
+	c.CornerRadius = UDim.new(0, r or 12)
+	c.Parent = p
+end
+local function stroke(p, color, t)
+	local s = Instance.new("UIStroke")
+	s.Color = color or Color3.new(0, 0, 0)
+	s.Thickness = t or 3
+	s.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	s.Parent = p
+end
+local function text(parent, props)
+	local l = Instance.new("TextLabel")
+	l.BackgroundTransparency = 1
+	l.Font = Enum.Font.FredokaOne
+	l.TextColor3 = WHITE
+	l.TextScaled = true
+	l.TextStrokeTransparency = 0.3
+	for k, v in pairs(props) do
+		l[k] = v
+	end
+	l.Parent = parent
+	return l
+end
+local function button(parent, props)
+	local b = Instance.new("TextButton")
+	b.Font = Enum.Font.FredokaOne
+	b.TextColor3 = WHITE
+	b.TextScaled = true
+	b.TextStrokeTransparency = 0.4
+	b.AutoButtonColor = true
+	for k, v in pairs(props) do
+		b[k] = v
+	end
+	corner(b, 12)
+	stroke(b, Color3.new(0, 0, 0), 3)
+	local pad = Instance.new("UIPadding")
+	pad.PaddingTop = UDim.new(0, 5)
+	pad.PaddingBottom = UDim.new(0, 5)
+	pad.PaddingLeft = UDim.new(0, 8)
+	pad.PaddingRight = UDim.new(0, 8)
+	pad.Parent = b
+	b.Parent = parent
+	return b
+end
+local function panel(parent, props)
+	local f = Instance.new("Frame")
+	f.BackgroundColor3 = DARK
+	f.BorderSizePixel = 0
+	for k, v in pairs(props) do
+		f[k] = v
+	end
+	corner(f, 16)
+	stroke(f, YELLOW, 4)
+	f.Parent = parent
+	return f
+end
+
+local gui = Instance.new("ScreenGui")
+gui.Name = "D2D"
+gui.ResetOnSpawn = false
+gui.IgnoreGuiInset = true
+gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+gui.Parent = player:WaitForChild("PlayerGui")
+
+---------------------------------------------------------------------
+-- HUD
+---------------------------------------------------------------------
+local cashBox = panel(gui, { AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 12, 1, -62), Size = UDim2.new(0, 260, 0, 54) })
+local cashLabel = text(cashBox, { Position = UDim2.new(0, 10, 0, 4), Size = UDim2.new(1, -20, 1, -8), Text = "$0", TextColor3 = Color3.fromRGB(120, 255, 130), TextXAlignment = Enum.TextXAlignment.Left })
+local tokenBox = panel(gui, { AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 12, 1, -12), Size = UDim2.new(0, 170, 0, 40) })
+local tokenLabel = text(tokenBox, { Position = UDim2.new(0, 10, 0, 4), Size = UDim2.new(1, -20, 1, -8), Text = "Tokens: 0", TextColor3 = YELLOW, TextXAlignment = Enum.TextXAlignment.Left })
+local incomeLabel = text(gui, { Position = UDim2.new(0, 16, 1, -150), Size = UDim2.new(0, 220, 0, 24), Text = "$0/s", TextColor3 = Color3.fromRGB(180, 255, 180), TextXAlignment = Enum.TextXAlignment.Left })
+
+local timerBox = panel(gui, { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 12), Size = UDim2.new(0, 300, 0, 64) })
+text(timerBox, { Position = UDim2.new(0, 0, 0, 4), Size = UDim2.new(1, 0, 0.38, 0), Text = "TRUCK ARRIVING", TextColor3 = YELLOW })
+local timerLabel = text(timerBox, { Position = UDim2.new(0, 0, 0.4, 0), Size = UDim2.new(1, 0, 0.55, 0), Text = "--:--" })
+
+local leftColumn = Instance.new("Frame")
+leftColumn.BackgroundTransparency = 1
+leftColumn.Position = UDim2.new(0, 12, 0.5, -70)
+leftColumn.Size = UDim2.new(0, 120, 0, 150)
+leftColumn.Parent = gui
+local list = Instance.new("UIListLayout")
+list.Padding = UDim.new(0, 10)
+list.Parent = leftColumn
+local indexButton = button(leftColumn, { Size = UDim2.new(1, 0, 0, 64), Text = "INDEX", BackgroundColor3 = Color3.fromRGB(60, 120, 230) })
+local homeButton = button(leftColumn, { Size = UDim2.new(1, 0, 0, 64), Text = "HOME", BackgroundColor3 = Color3.fromRGB(230, 120, 40) })
+local indexDot = Instance.new("Frame")
+indexDot.Size = UDim2.new(0, 18, 0, 18)
+indexDot.Position = UDim2.new(1, -10, 0, -6)
+indexDot.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
+indexDot.Visible = false
+corner(indexDot, 9)
+indexDot.Parent = indexButton
+
+homeButton.MouseButton1Click:Connect(function()
+	GoHomeEvent:FireServer()
+end)
+
+-- cash counter with a floating "+$X"
+local lastCash = 0
+local function floatGain(amount)
+	local l = text(gui, { Position = UDim2.new(0, 280, 1, -110), Size = UDim2.new(0, 200, 0, 34), Text = "+$" .. Config.FormatNumber(amount), TextColor3 = Color3.fromRGB(120, 255, 130), TextXAlignment = Enum.TextXAlignment.Left })
+	local tw = TweenService:Create(l, TweenInfo.new(1.2), { Position = UDim2.new(0, 280, 1, -150), TextTransparency = 1, TextStrokeTransparency = 1 })
+	tw:Play()
+	tw.Completed:Connect(function()
+		l:Destroy()
+	end)
+end
+task.spawn(function()
+	local ls = player:WaitForChild("leaderstats")
+	local cash = ls:WaitForChild("Cash")
+	local function update()
+		cashLabel.Text = "$" .. Config.FormatNumber(cash.Value)
+		local diff = cash.Value - lastCash
+		if diff > 0 and lastCash > 0 then
+			floatGain(diff)
+		end
+		lastCash = cash.Value
+	end
+	cash.Changed:Connect(update)
+	update()
+end)
+
+local function unclaimedCount()
+	local claimed = {}
+	for id in string.gmatch(player:GetAttribute("Claimed") or "", "[^,]+") do
+		claimed[id] = true
+	end
+	local n = 0
+	for id in string.gmatch(player:GetAttribute("Discovered") or "", "[^,]+") do
+		if not claimed[id] then
+			n = n + 1
+		end
+	end
+	return n
+end
+
+local function refreshTokens()
+	tokenLabel.Text = "Tokens: " .. (player:GetAttribute("Tokens") or 0)
+	indexDot.Visible = unclaimedCount() > 0
+end
+player:GetAttributeChangedSignal("Tokens"):Connect(refreshTokens)
+player:GetAttributeChangedSignal("Claimed"):Connect(refreshTokens)
+player:GetAttributeChangedSignal("Discovered"):Connect(refreshTokens)
+refreshTokens()
+
+RunService.Heartbeat:Connect(function()
+	local nextAt = player:GetAttribute("NextDelivery")
+	if player:GetAttribute("YardFull") then
+		timerLabel.Text = "YARD FULL!"
+	elseif nextAt then
+		timerLabel.Text = Config.FormatTime(nextAt - workspace:GetServerTimeNow())
+	end
+	incomeLabel.Text = "$" .. Config.FormatNumber(player:GetAttribute("IncomeRate") or 0) .. "/s"
+end)
+
+---------------------------------------------------------------------
+-- Messages
+---------------------------------------------------------------------
+local notifyList = Instance.new("Frame")
+notifyList.BackgroundTransparency = 1
+notifyList.AnchorPoint = Vector2.new(0.5, 0)
+notifyList.Position = UDim2.new(0.5, 0, 0, 84)
+notifyList.Size = UDim2.new(0, 620, 0, 200)
+notifyList.Parent = gui
+local nl = Instance.new("UIListLayout")
+nl.Padding = UDim.new(0, 4)
+nl.HorizontalAlignment = Enum.HorizontalAlignment.Center
+nl.SortOrder = Enum.SortOrder.LayoutOrder
+nl.Parent = notifyList
+local notifyCount = 0
+local function showNotification(message, color)
+	notifyCount = notifyCount + 1
+	local l = text(notifyList, { Size = UDim2.new(1, 0, 0, 30), Text = message, TextColor3 = color or WHITE, TextStrokeTransparency = 0, LayoutOrder = notifyCount })
+	local labels = {}
+	for _, c in ipairs(notifyList:GetChildren()) do
+		if c:IsA("TextLabel") then
+			table.insert(labels, c)
+		end
+	end
+	if #labels > 5 then
+		table.sort(labels, function(a, b)
+			return a.LayoutOrder < b.LayoutOrder
+		end)
+		labels[1]:Destroy()
+	end
+	task.delay(4, function()
+		if l.Parent then
+			local tw = TweenService:Create(l, TweenInfo.new(0.5), { TextTransparency = 1, TextStrokeTransparency = 1 })
+			tw:Play()
+			tw.Completed:Wait()
+			l:Destroy()
+		end
+	end)
+end
+NotifyEvent.OnClientEvent:Connect(showNotification)
+
+---------------------------------------------------------------------
+-- Reveal splash when a container is opened
+---------------------------------------------------------------------
+local function reveal(carId, isNew)
+	local car = Config.CarsById[carId]
+	local rarity = Config.Rarities[car.Rarity]
+	local f = Instance.new("Frame")
+	f.BackgroundTransparency = 1
+	f.AnchorPoint = Vector2.new(0.5, 0.5)
+	f.Position = UDim2.new(0.5, 0, 0.42, 0)
+	f.Size = UDim2.new(0, 640, 0, 190)
+	f.Parent = gui
+	text(f, { Size = UDim2.new(1, 0, 0.32, 0), Text = isNew and "NEW CAR!" or "YOU GOT", TextColor3 = YELLOW, TextStrokeTransparency = 0 })
+	text(f, { Position = UDim2.new(0, 0, 0.32, 0), Size = UDim2.new(1, 0, 0.4, 0), Text = car.Name, TextColor3 = rarity.Color, TextStrokeTransparency = 0 })
+	text(f, { Position = UDim2.new(0, 0, 0.72, 0), Size = UDim2.new(1, 0, 0.26, 0), Text = string.upper(rarity.Name) .. "  ·  " .. Config.GetOddsText(carId), TextStrokeTransparency = 0 })
+	local scale = Instance.new("UIScale")
+	scale.Scale = 0.2
+	scale.Parent = f
+	TweenService:Create(scale, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play()
+	task.delay(3, function()
+		local tw = TweenService:Create(scale, TweenInfo.new(0.25), { Scale = 0 })
+		tw:Play()
+		tw.Completed:Wait()
+		f:Destroy()
+	end)
+end
+RevealEvent.OnClientEvent:Connect(reveal)
+
+---------------------------------------------------------------------
+-- Washing: progress bar and scrubbing
+---------------------------------------------------------------------
+local washBox = panel(gui, { AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -24), Size = UDim2.new(0, 420, 0, 70), Visible = false })
+local washFill = Instance.new("Frame")
+washFill.BackgroundColor3 = Color3.fromRGB(70, 190, 255)
+washFill.BorderSizePixel = 0
+washFill.Position = UDim2.new(0, 8, 0, 8)
+washFill.Size = UDim2.new(0, 0, 0, 30)
+corner(washFill, 8)
+washFill.Parent = washBox
+local washText = text(washBox, { Position = UDim2.new(0, 8, 0, 8), Size = UDim2.new(1, -16, 0, 30), Text = "0% CLEAN", ZIndex = 2 })
+text(washBox, { Position = UDim2.new(0, 8, 0, 42), Size = UDim2.new(1, -16, 0, 22), Text = "Hold the mouse over the dirt and drag", TextColor3 = Color3.fromRGB(200, 200, 210) })
+
+local function refreshWash()
+	local p = player:GetAttribute("WashProgress")
+	washBox.Visible = p ~= nil
+	if p then
+		washFill.Size = UDim2.new(0, math.floor((420 - 16) * p), 0, 30)
+		washText.Text = math.floor(p * 100) .. "% CLEAN"
+	end
+end
+player:GetAttributeChangedSignal("WashProgress"):Connect(refreshWash)
+refreshWash()
+
+local GuiService = game:GetService("GuiService")
+local touchHolding = false
+local touchPos = Vector2.new()
+UserInputService.InputBegan:Connect(function(input, processed)
+	if input.UserInputType == Enum.UserInputType.Touch and not processed then
+		touchHolding = true
+		touchPos = Vector2.new(input.Position.X, input.Position.Y)
+	end
+end)
+UserInputService.InputChanged:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.Touch then
+		touchPos = Vector2.new(input.Position.X, input.Position.Y)
+	end
+end)
+UserInputService.InputEnded:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.Touch then
+		touchHolding = false
+	end
+end)
+
+-- true when one of our solid panels or buttons is under this screen point
+local function overOurGui(x, y)
+	local inset = GuiService:GetGuiInset()
+	for _, obj in ipairs(player.PlayerGui:GetGuiObjectsAtPosition(x, y - inset.Y)) do
+		if obj:IsDescendantOf(gui) and obj.Visible and (obj:IsA("GuiButton") or obj.BackgroundTransparency < 1) then
+			return true
+		end
+	end
+	return false
+end
+
+-- returns the screen point (with the top bar inset included) being scrubbed, or nil
+local function scrubPoint()
+	if touchHolding then
+		local inset = GuiService:GetGuiInset()
+		return Vector2.new(touchPos.X, touchPos.Y + inset.Y)
+	end
+	if UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) then
+		local m = UserInputService:GetMouseLocation()
+		if not overOurGui(m.X, m.Y) then
+			return m
+		end
+	end
+	return nil
+end
+
+local function bubbles(position)
+	for _ = 1, 3 do
+		local b = Instance.new("Part")
+		b.Shape = Enum.PartType.Ball
+		b.Size = Vector3.new(0.5, 0.5, 0.5)
+		b.Material = Enum.Material.Glass
+		b.Transparency = 0.3
+		b.Color = Color3.fromRGB(220, 240, 255)
+		b.Anchored = true
+		b.CanCollide = false
+		b.CanQuery = false
+		b.CFrame = CFrame.new(position + Vector3.new(math.random() - 0.5, 0, math.random() - 0.5))
+		b.Parent = workspace
+		local tw = TweenService:Create(b, TweenInfo.new(0.8), { CFrame = b.CFrame + Vector3.new(0, 2.5, 0), Transparency = 1, Size = Vector3.new(1, 1, 1) })
+		tw:Play()
+		tw.Completed:Connect(function()
+			b:Destroy()
+		end)
+	end
+end
+
+local lastSent = 0
+RunService.RenderStepped:Connect(function()
+	if player:GetAttribute("WashProgress") == nil then
+		return
+	end
+	local point = scrubPoint()
+	if not point then
+		return
+	end
+	local t = os.clock()
+	if t - lastSent < Config.ScrubInterval then
+		return
+	end
+	local dirt = workspace:FindFirstChild("Map") and workspace.Map:FindFirstChild("Dirt")
+	if not dirt then
+		return
+	end
+	local camera = workspace.CurrentCamera
+	local ray = camera:ViewportPointToRay(point.X, point.Y)
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Include
+	params.FilterDescendantsInstances = { dirt }
+	local result = workspace:Raycast(ray.Origin, ray.Direction * 200, params)
+	if result then
+		lastSent = t
+		ScrubEvent:FireServer(result.Position)
+		bubbles(result.Position)
+	end
+end)
+
+---------------------------------------------------------------------
+-- Engine screen
+---------------------------------------------------------------------
+local engineFrame = panel(gui, { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0.5, 0), Size = UDim2.new(0, 640, 0, 420), Visible = false })
+local engineTitle = text(engineFrame, { Position = UDim2.new(0, 16, 0, 10), Size = UDim2.new(1, -80, 0, 40), Text = "Choose your engine", TextColor3 = YELLOW })
+local engineCar = text(engineFrame, { Position = UDim2.new(0, 16, 0, 52), Size = UDim2.new(0.5, -16, 0, 30), Text = "" })
+local engineValue = text(engineFrame, { Position = UDim2.new(0, 16, 0, 86), Size = UDim2.new(0.5, -16, 0, 40), Text = "$0/s -> ?", TextColor3 = Color3.fromRGB(120, 255, 130) })
+local engineCurrent = text(engineFrame, { Position = UDim2.new(0, 16, 0, 130), Size = UDim2.new(0.5, -16, 0, 34), Text = "No engine yet" })
+text(engineFrame, { Position = UDim2.new(0.5, 10, 0, 52), Size = UDim2.new(0.5, -26, 0, 28), Text = "ENGINE CHANCES", TextColor3 = YELLOW })
+local chanceRows = {}
+for i, engine in ipairs(Config.Engines) do
+	local row = text(engineFrame, { Position = UDim2.new(0.5, 10, 0, 84 + (i - 1) * 30), Size = UDim2.new(0.5, -26, 0, 26), Text = engine.Name, TextColor3 = engine.Color:Lerp(WHITE, 0.3), TextXAlignment = Enum.TextXAlignment.Left })
+	chanceRows[i] = row
+end
+local rollButton = button(engineFrame, { Position = UDim2.new(0, 16, 1, -130), Size = UDim2.new(0.5, -24, 0, 54), Text = "ROLL ENGINE (E)", BackgroundColor3 = Color3.fromRGB(240, 140, 30) })
+local luckyButton = button(engineFrame, { Position = UDim2.new(0.5, 8, 1, -130), Size = UDim2.new(0.5, -24, 0, 54), Text = "LUCKY ROLL (1 token)", BackgroundColor3 = Color3.fromRGB(170, 80, 230) })
+local doneButton = button(engineFrame, { Position = UDim2.new(0, 16, 1, -68), Size = UDim2.new(0.5, -24, 0, 54), Text = "DONE - DISPLAY (Q)", BackgroundColor3 = Color3.fromRGB(60, 190, 90) })
+local sellButton = button(engineFrame, { Position = UDim2.new(0.5, 8, 1, -68), Size = UDim2.new(0.5, -24, 0, 54), Text = "SELL", BackgroundColor3 = Color3.fromRGB(200, 60, 60) })
+local closeButton = button(engineFrame, { Position = UDim2.new(1, -56, 0, 10), Size = UDim2.new(0, 44, 0, 44), Text = "X", BackgroundColor3 = Color3.fromRGB(200, 60, 60) })
+
+local engineCarId, engineIndex = nil, nil
+local busy = false
+
+local function refreshEngineScreen()
+	if not engineCarId then
+		return
+	end
+	local car = Config.CarsById[engineCarId]
+	local base = Config.GetCarIncome(engineCarId, 1)
+	engineCar.Text = car.Name
+	engineCar.TextColor3 = Config.Rarities[car.Rarity].Color
+	if engineIndex then
+		local e = Config.Engines[engineIndex]
+		engineValue.Text = "$" .. Config.FormatNumber(base) .. "/s -> $" .. Config.FormatNumber(Config.GetCarIncome(engineCarId, engineIndex)) .. "/s"
+		engineCurrent.Text = "Engine: " .. e.Name .. "  (x" .. e.Mult .. ")"
+		engineCurrent.TextColor3 = e.Color:Lerp(WHITE, 0.3)
+		sellButton.Text = "SELL $" .. Config.FormatNumber(Config.GetCarIncome(engineCarId, engineIndex) * Config.SellSeconds)
+	else
+		engineValue.Text = "$" .. Config.FormatNumber(base) .. "/s -> ?"
+		engineCurrent.Text = "No engine yet - roll one!"
+		engineCurrent.TextColor3 = WHITE
+		sellButton.Text = "SELL $" .. Config.FormatNumber(base * Config.SellSeconds)
+	end
+	local chances = Config.GetEngineChances(player:GetAttribute("EngineLuck") or 0, false)
+	for i, row in ipairs(chanceRows) do
+		row.Text = string.format("%s   %.2f%%", Config.Engines[i].Name, chances[i])
+	end
+	luckyButton.Text = "LUCKY ROLL (1 of " .. (player:GetAttribute("Tokens") or 0) .. " tokens)"
+end
+
+OpenEngineEvent.OnClientEvent:Connect(function(carId, current)
+	engineCarId, engineIndex = carId, current
+	engineFrame.Visible = true
+	refreshEngineScreen()
+end)
+
+local function doAction(action)
+	if busy or not engineCarId then
+		return
+	end
+	busy = true
+	if action == "Roll" or action == "Lucky" then
+		-- short spin through engine names while the server rolls
+		for _ = 1, 8 do
+			local i = math.random(1, #Config.Engines)
+			engineCurrent.Text = Config.Engines[i].Name .. "..."
+			engineCurrent.TextColor3 = Config.Engines[i].Color
+			task.wait(0.07)
+		end
+	end
+	local result = EngineAction:InvokeServer(action)
+	if result and result.Ok then
+		if result.Done then
+			engineFrame.Visible = false
+			engineCarId, engineIndex = nil, nil
+		elseif result.Engine then
+			engineIndex = result.Engine
+			refreshEngineScreen()
+			local e = Config.Engines[engineIndex]
+			showNotification("You got: " .. e.Name .. "!", e.Color:Lerp(WHITE, 0.3))
+		end
+	elseif result and result.Message then
+		showNotification(result.Message, Color3.fromRGB(255, 120, 120))
+		refreshEngineScreen()
+	end
+	busy = false
+end
+rollButton.MouseButton1Click:Connect(function()
+	doAction("Roll")
+end)
+luckyButton.MouseButton1Click:Connect(function()
+	doAction("Lucky")
+end)
+doneButton.MouseButton1Click:Connect(function()
+	doAction("Done")
+end)
+sellButton.MouseButton1Click:Connect(function()
+	doAction("Sell")
+end)
+closeButton.MouseButton1Click:Connect(function()
+	engineFrame.Visible = false
+end)
+UserInputService.InputBegan:Connect(function(input, processed)
+	if processed or not engineFrame.Visible then
+		return
+	end
+	if input.KeyCode == Enum.KeyCode.E then
+		doAction("Roll")
+	elseif input.KeyCode == Enum.KeyCode.Q then
+		doAction("Done")
+	end
+end)
+player:GetAttributeChangedSignal("Tokens"):Connect(refreshEngineScreen)
+
+---------------------------------------------------------------------
+-- Index (collection book)
+---------------------------------------------------------------------
+local indexFrame = panel(gui, { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0.5, 0), Size = UDim2.new(0, 860, 0, 540), Visible = false })
+text(indexFrame, { Position = UDim2.new(0, 20, 0, 10), Size = UDim2.new(0, 300, 0, 50), Text = "CAR INDEX", TextColor3 = YELLOW, TextXAlignment = Enum.TextXAlignment.Left })
+local indexTotal = text(indexFrame, { Position = UDim2.new(0, 330, 0, 18), Size = UDim2.new(0, 400, 0, 34), Text = "" })
+local indexClose = button(indexFrame, { Position = UDim2.new(1, -60, 0, 12), Size = UDim2.new(0, 46, 0, 46), Text = "X", BackgroundColor3 = Color3.fromRGB(200, 60, 60) })
+local containerList = Instance.new("ScrollingFrame")
+containerList.BackgroundTransparency = 1
+containerList.Position = UDim2.new(0, 16, 0, 70)
+containerList.Size = UDim2.new(0, 200, 1, -86)
+containerList.CanvasSize = UDim2.new(0, 0, 0, #Config.Containers * 52)
+containerList.ScrollBarThickness = 6
+containerList.Parent = indexFrame
+local cl = Instance.new("UIListLayout")
+cl.Padding = UDim.new(0, 6)
+cl.Parent = containerList
+local headerLabel = text(indexFrame, { Position = UDim2.new(0, 232, 0, 68), Size = UDim2.new(1, -250, 0, 30), Text = "", TextColor3 = YELLOW, TextXAlignment = Enum.TextXAlignment.Left })
+local grid = Instance.new("Frame")
+grid.BackgroundTransparency = 1
+grid.Position = UDim2.new(0, 232, 0, 104)
+grid.Size = UDim2.new(1, -250, 1, -120)
+grid.Parent = indexFrame
+local gl = Instance.new("UIGridLayout")
+gl.CellSize = UDim2.new(0.25, -8, 0.333, -8)
+gl.CellPadding = UDim2.new(0, 8, 0, 8)
+gl.SortOrder = Enum.SortOrder.LayoutOrder
+gl.Parent = grid
+
+local selectedContainer = 1
+local containerButtons = {}
+
+local function discoveredSet()
+	local d, c = {}, {}
+	for id in string.gmatch(player:GetAttribute("Discovered") or "", "[^,]+") do
+		d[id] = true
+	end
+	for id in string.gmatch(player:GetAttribute("Claimed") or "", "[^,]+") do
+		c[id] = true
+	end
+	return d, c
+end
+
+local function makeCard(carId, discovered, claimed, order)
+	local car = Config.CarsById[carId]
+	local rarity = Config.Rarities[car.Rarity]
+	local card = Instance.new("Frame")
+	card.BackgroundColor3 = Color3.fromRGB(45, 48, 60)
+	card.LayoutOrder = order
+	corner(card, 10)
+	stroke(card, discovered and rarity.Color or Color3.fromRGB(70, 70, 80), 3)
+	card.Parent = grid
+	local vp = Instance.new("ViewportFrame")
+	vp.BackgroundTransparency = 1
+	vp.Size = UDim2.new(1, 0, 0.55, 0)
+	vp.Parent = card
+	local model = CarBuilder.BuildCar(carId, { Silhouette = not discovered })
+	model:PivotTo(CFrame.new(0, 0, 0) * CFrame.Angles(0, math.rad(35), 0))
+	model.Parent = vp
+	local cam = Instance.new("Camera")
+	local _, size = model:GetBoundingBox()
+	local dist = math.max(size.X, size.Z) * 1.15 + 3
+	cam.CFrame = CFrame.lookAt(Vector3.new(dist * 0.6, dist * 0.45, -dist * 0.75), Vector3.new(0, size.Y * 0.35, 0))
+	cam.Parent = vp
+	vp.CurrentCamera = cam
+	text(card, { Position = UDim2.new(0, 4, 0.55, 0), Size = UDim2.new(1, -8, 0.15, 0), Text = discovered and car.Name or "???", TextColor3 = discovered and rarity.Color or Color3.fromRGB(150, 150, 160) })
+	text(card, { Position = UDim2.new(0, 4, 0.70, 0), Size = UDim2.new(1, -8, 0.12, 0), Text = rarity.Name .. " · " .. Config.GetOddsText(carId), TextColor3 = Color3.fromRGB(210, 210, 220) })
+	if discovered and not claimed then
+		local b = button(card, { Position = UDim2.new(0, 6, 0.83, 0), Size = UDim2.new(1, -12, 0.15, 0), Text = "COLLECT TOKEN", BackgroundColor3 = YELLOW, TextColor3 = Color3.new(0, 0, 0) })
+		b.MouseButton1Click:Connect(function()
+			b.Active = false
+			if ClaimToken:InvokeServer(carId) then
+				showNotification("+1 token!", YELLOW)
+			end
+		end)
+	else
+		text(card, { Position = UDim2.new(0, 4, 0.84, 0), Size = UDim2.new(1, -8, 0.13, 0), Text = "$" .. Config.FormatNumber(car.BaseIncome) .. "/s", TextColor3 = Color3.fromRGB(120, 255, 130) })
+	end
+end
+
+local function refreshIndex()
+	if not indexFrame.Visible then
+		return
+	end
+	local discovered, claimed = discoveredSet()
+	local total = 0
+	for _ in pairs(discovered) do
+		total = total + 1
+	end
+	indexTotal.Text = total .. " / " .. #Config.Cars .. " discovered · Tokens: " .. (player:GetAttribute("Tokens") or 0)
+	for c, b in ipairs(containerButtons) do
+		local n = 0
+		for _, id in ipairs(Config.Containers[c].CarIds) do
+			if discovered[id] then
+				n = n + 1
+			end
+		end
+		b.Text = "Container " .. c .. "  " .. n .. "/12"
+		b.BackgroundColor3 = (c == selectedContainer) and Color3.fromRGB(90, 200, 100) or Color3.fromRGB(70, 74, 90)
+	end
+	for _, child in ipairs(grid:GetChildren()) do
+		if child:IsA("Frame") then
+			child:Destroy()
+		end
+	end
+	local container = Config.Containers[selectedContainer]
+	local found = 0
+	for slot, id in ipairs(container.CarIds) do
+		if discovered[id] then
+			found = found + 1
+		end
+		makeCard(id, discovered[id], claimed[id], slot)
+	end
+	headerLabel.Text = "CONTAINER " .. selectedContainer .. ": " .. string.upper(container.Name) .. (found == 12 and "  ·  COMPLETE: +5% income" or "  ·  complete it for +5% income")
+end
+
+for c = 1, #Config.Containers do
+	local b = button(containerList, { Size = UDim2.new(1, -10, 0, 46), Text = "Container " .. c, BackgroundColor3 = Color3.fromRGB(70, 74, 90), LayoutOrder = c })
+	b.MouseButton1Click:Connect(function()
+		selectedContainer = c
+		refreshIndex()
+	end)
+	containerButtons[c] = b
+end
+
+indexButton.MouseButton1Click:Connect(function()
+	indexFrame.Visible = not indexFrame.Visible
+	refreshIndex()
+end)
+indexClose.MouseButton1Click:Connect(function()
+	indexFrame.Visible = false
+end)
+player:GetAttributeChangedSignal("Claimed"):Connect(refreshIndex)
+player:GetAttributeChangedSignal("Discovered"):Connect(refreshIndex)
+
+---------------------------------------------------------------------
+-- Only the owner sees prompts on their own cars and containers
+---------------------------------------------------------------------
+local function checkPrompt(prompt)
+	local owner = prompt:GetAttribute("OwnerUserId")
+	if owner and owner ~= player.UserId then
+		prompt.Enabled = false
+	end
+end
+for _, p in ipairs(CollectionService:GetTagged("OwnerPrompt")) do
+	checkPrompt(p)
+end
+CollectionService:GetInstanceAddedSignal("OwnerPrompt"):Connect(checkPrompt)
+
+task.delay(2, function()
+	showNotification("Welcome to D2D! Your first container is landing in your backyard.", YELLOW)
+end)
+]]></ProtectedString></Properties></Item></Item></Item></roblox>

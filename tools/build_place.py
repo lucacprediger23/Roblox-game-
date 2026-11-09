@@ -8,7 +8,11 @@ import os
 from xml.sax.saxutils import escape
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-OUT = os.path.join(ROOT, "build", "StealASquishyEgg.rbxlx")
+import sys
+# usage: build_place.py [project_dir] [output_name]
+if len(sys.argv) > 1:
+    ROOT = os.path.abspath(sys.argv[1])
+OUT = os.path.join(ROOT, "build", sys.argv[2] if len(sys.argv) > 2 else "StealASquishyEgg.rbxlx")
 
 _ref = 0
 
