@@ -52,6 +52,34 @@ local function text(parent, props)
 	l.Parent = parent
 	return l
 end
+local SoundService = game:GetService("SoundService")
+local function playSound(id, volume)
+	if id == "" then
+		return
+	end
+	local snd = Instance.new("Sound")
+	snd.SoundId = id
+	snd.Volume = volume or 0.5
+	snd.Parent = SoundService
+	SoundService:PlayLocalSound(snd)
+	task.delay(3, function()
+		snd:Destroy()
+	end)
+end
+-- sound ids: fill these in with sounds from the Creator Store (Toolbox > Audio) that the game is allowed to use
+local SOUND_CLICK = ""
+local SOUND_PING = ""
+local SOUND_SWOOSH = ""
+
+-- glossy shine: lighter at the top, darker at the bottom
+local function shine(p, amount)
+	local g = Instance.new("UIGradient")
+	local a = amount or 0.25
+	g.Color = ColorSequence.new(Color3.new(1, 1, 1), Color3.new(1 - a, 1 - a, 1 - a))
+	g.Rotation = 90
+	g.Parent = p
+end
+
 local function button(parent, props)
 	local b = Instance.new("TextButton")
 	b.Font = Enum.Font.FredokaOne
@@ -70,6 +98,28 @@ local function button(parent, props)
 	pad.PaddingLeft = UDim.new(0, 8)
 	pad.PaddingRight = UDim.new(0, 8)
 	pad.Parent = b
+	shine(b, 0.3)
+	-- juicy feel: grow on hover, squish on press, click sound
+	local scale = Instance.new("UIScale")
+	scale.Parent = b
+	local function to(v)
+		TweenService:Create(scale, TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Scale = v }):Play()
+	end
+	b.MouseEnter:Connect(function()
+		to(1.06)
+	end)
+	b.MouseLeave:Connect(function()
+		to(1)
+	end)
+	b.MouseButton1Down:Connect(function()
+		to(0.92)
+	end)
+	b.MouseButton1Up:Connect(function()
+		to(1.06)
+	end)
+	b.Activated:Connect(function()
+		playSound(SOUND_CLICK, 0.4)
+	end)
 	b.Parent = parent
 	return b
 end
@@ -82,6 +132,7 @@ local function panel(parent, props)
 	end
 	corner(f, 16)
 	stroke(f, YELLOW, 4)
+	shine(f, 0.35)
 	f.Parent = parent
 	return f
 end
@@ -233,6 +284,7 @@ NotifyEvent.OnClientEvent:Connect(showNotification)
 local function reveal(carId, isNew)
 	local car = Config.CarsById[carId]
 	local rarity = Config.Rarities[car.Rarity]
+	playSound(SOUND_PING, 0.7)
 	local f = Instance.new("Frame")
 	f.BackgroundTransparency = 1
 	f.AnchorPoint = Vector2.new(0.5, 0.5)
@@ -429,6 +481,9 @@ end
 
 OpenEngineEvent.OnClientEvent:Connect(function(carId, current)
 	engineCarId, engineIndex = carId, current
+	if not engineFrame.Visible then
+		playSound(SOUND_SWOOSH, 0.5)
+	end
 	engineFrame.Visible = true
 	refreshEngineScreen()
 end)
@@ -552,8 +607,9 @@ local function makeCard(carId, discovered, claimed, order)
 	model.Parent = vp
 	local cam = Instance.new("Camera")
 	local _, size = model:GetBoundingBox()
-	local dist = math.max(size.X, size.Z) * 1.15 + 3
-	cam.CFrame = CFrame.lookAt(Vector3.new(dist * 0.6, dist * 0.45, -dist * 0.75), Vector3.new(0, size.Y * 0.35, 0))
+	cam.FieldOfView = 30
+	local dist = math.max(size.X, size.Z) * 1.55 + 2
+	cam.CFrame = CFrame.lookAt(Vector3.new(dist * 0.55, dist * 0.4, -dist * 0.75), Vector3.new(0, size.Y * 0.4, 0))
 	cam.Parent = vp
 	vp.CurrentCamera = cam
 	text(card, { Position = UDim2.new(0, 4, 0.55, 0), Size = UDim2.new(1, -8, 0.15, 0), Text = discovered and car.Name or "???", TextColor3 = discovered and rarity.Color or Color3.fromRGB(150, 150, 160) })
@@ -618,6 +674,7 @@ end
 
 indexButton.MouseButton1Click:Connect(function()
 	indexFrame.Visible = not indexFrame.Visible
+	playSound(SOUND_SWOOSH, 0.5)
 	refreshIndex()
 end)
 indexClose.MouseButton1Click:Connect(function()

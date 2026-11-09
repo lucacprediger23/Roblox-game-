@@ -204,12 +204,11 @@ end
 local function refreshSpotPads(plot, profile)
 	local open = profile and maxSpots(profile) or 0
 	for i, spot in ipairs(plot.Spots) do
-		if i <= open then
-			spot.Pad.Transparency = 0
-			spot.Pad.Color = Color3.fromRGB(60, 60, 70)
-		else
-			spot.Pad.Transparency = 0.85
-			spot.Pad.Color = Color3.fromRGB(120, 120, 125)
+		local unlocked = i <= open
+		spot.Pad.Transparency = unlocked and 0 or 0.6
+		spot.Pad.Color = unlocked and Color3.fromRGB(30, 32, 40) or Color3.fromRGB(90, 92, 102)
+		for _, trim in ipairs(spot.Trims or {}) do
+			trim.Transparency = unlocked and 0 or 1
 		end
 	end
 end
@@ -936,8 +935,20 @@ local function buildNPC()
 		p.Parent = model
 		return p
 	end
-	attach("Head", Vector3.new(1.4, 1.4, 1.4), Vector3.new(0, 1.7, 0), Color3.fromRGB(255, 205, 160), Enum.PartType.Ball)
-	attach("Legs", Vector3.new(2, 1.8, 1), Vector3.new(0, -1.9, 0), Color3.fromRGB(50, 60, 90))
+	local skins = { Color3.fromRGB(255, 214, 170), Color3.fromRGB(235, 180, 130), Color3.fromRGB(190, 130, 90), Color3.fromRGB(120, 80, 55) }
+	local skin = skins[rng:NextInteger(1, #skins)]
+	local pants = Color3.fromHSV(rng:NextNumber(), 0.4, rng:NextNumber(0.25, 0.5))
+	local hair = Color3.fromHSV(rng:NextNumber(0.02, 0.12), 0.6, rng:NextNumber(0.15, 0.6))
+	body.Material = Enum.Material.SmoothPlastic
+	attach("Head", Vector3.new(1.5, 1.5, 1.5), Vector3.new(0, 1.8, 0), skin, Enum.PartType.Ball)
+	attach("Hair", Vector3.new(1.6, 0.6, 1.6), Vector3.new(0, 2.35, 0.1), hair)
+	for _, x in ipairs({ -0.3, 0.3 }) do
+		attach("Eye", Vector3.new(0.18, 0.28, 0.1), Vector3.new(x, 1.9, -0.72), Color3.fromRGB(20, 20, 25))
+		attach("Arm", Vector3.new(0.6, 1.9, 0.6), Vector3.new(x > 0 and 1.3 or -1.3, -0.05, 0), shirt:Lerp(skin, 0.15))
+		attach("Hand", Vector3.new(0.55, 0.45, 0.55), Vector3.new(x > 0 and 1.3 or -1.3, -1.15, 0), skin)
+		attach("Leg", Vector3.new(0.9, 1.8, 0.95), Vector3.new(x > 0 and 0.5 or -0.5, -1.9, 0), pants)
+		attach("Shoe", Vector3.new(0.95, 0.35, 1.2), Vector3.new(x > 0 and 0.5 or -0.5, -2.85, -0.1), Color3.fromRGB(240, 240, 240))
+	end
 	model.PrimaryPart = body
 	return model, body
 end
@@ -967,7 +978,7 @@ local function runCustomer(plot)
 	end
 	local pick = spots[rng:NextInteger(1, #spots)]
 	local model, body = buildNPC()
-	local y = plot.DoorOutside.Y + 1.2
+	local y = plot.DoorOutside.Y + 0.55
 	body.CFrame = CFrame.new(plot.DoorOutside.X + rng:NextNumber(-4, 4), y, plot.DoorOutside.Z)
 	model.Parent = npcFolder
 	state[plot.Index].NPCs = state[plot.Index].NPCs + 1

@@ -133,37 +133,118 @@ function CarBuilder.BuildCar(carId, opts)
 		bodyProps.Material = Enum.Material.Metal
 		bodyColor = Color3.fromRGB(255, 200, 50)
 	end
+	if not sil and rarity < 6 then
+		bodyProps.Reflectance = 0.2 -- glossy paint
+	end
 	local body = newPart(model, "Body", Vector3.new(W, H, L), CFrame.new(0, clearance + H / 2, 0), bodyColor, bodyProps)
+	local trimColor = sil and black or Color3.fromRGB(30, 30, 34)
+	local chrome = sil and black or Color3.fromRGB(215, 218, 225)
+	local chromeProps = sil and nil or { Material = Enum.Material.Metal, Reflectance = 0.35 }
 
-	-- cabin / windows
-	local glass = sil and black or Color3.fromRGB(40, 60, 90)
-	newPart(model, "Cabin", Vector3.new(W * 0.85, cabH, cabL), CFrame.new(0, top + cabH / 2, cabZ), glass, {
-		Transparency = sil and 0 or 0.15,
-		Material = sil and Enum.Material.SmoothPlastic or Enum.Material.Glass,
-	})
-	if car and car.Shape == "open" then
-		model.Cabin.Transparency = sil and 0 or 0.4
+	-- bumpers, side skirts and grille
+	for _, sz in ipairs({ -1, 1 }) do
+		newPart(model, "Bumper", Vector3.new(W + 0.1, H * 0.38, 0.5), CFrame.new(0, clearance + H * 0.19, sz * (L / 2 + 0.05)), trimColor)
+	end
+	for _, sx in ipairs({ -1, 1 }) do
+		newPart(model, "Skirt", Vector3.new(0.2, H * 0.22, L * 0.62), CFrame.new(sx * (W / 2 + 0.05), clearance + H * 0.11, 0), trimColor)
+	end
+	newPart(model, "Grille", Vector3.new(W * 0.45, H * 0.4, 0.15), CFrame.new(0, clearance + H * 0.55, -L / 2 - 0.08), trimColor)
+	if not sil then
+		newPart(model, "GrilleBar", Vector3.new(W * 0.47, 0.12, 0.2), CFrame.new(0, clearance + H * 0.62, -L / 2 - 0.12), chrome, chromeProps)
+		for _, sz in ipairs({ -1, 1 }) do
+			newPart(model, "Plate", Vector3.new(1.6, 0.5, 0.06), CFrame.new(0, clearance + H * 0.22, sz * (L / 2 + 0.33)), Color3.fromRGB(245, 245, 235))
+		end
+		for _, sx in ipairs({ -1, 1 }) do
+			local pipe = newPart(model, "Exhaust", Vector3.new(0.7, 0.35, 0.35), CFrame.new(sx * W * 0.28, clearance + 0.1, L / 2 + 0.25) * CFrame.Angles(0, math.rad(90), 0), chrome, { Shape = Enum.PartType.Cylinder, Material = Enum.Material.Metal, Reflectance = 0.35 })
+			pipe.Size = Vector3.new(0.7, 0.35, 0.35)
+		end
 	end
 
-	-- wheels
-	local wheelColor = sil and black or Color3.fromRGB(25, 25, 28)
+	-- cabin: tinted glass with a sloped windshield and back window, and a painted roof
+	local glass = sil and black or Color3.fromRGB(25, 40, 65)
+	local glassProps = {
+		Transparency = sil and 0 or 0.1,
+		Material = sil and Enum.Material.SmoothPlastic or Enum.Material.Glass,
+		Reflectance = sil and 0 or 0.3,
+	}
+	local isOpen = car and car.Shape == "open"
+	if isOpen then
+		-- convertible: just a windshield and seats
+		newPart(model, "Windshield", Vector3.new(W * 0.85, cabH, 0.2), CFrame.new(0, top + cabH / 2, cabZ - 0.5) * CFrame.Angles(math.rad(-20), 0, 0), glass, glassProps)
+		for _, sx in ipairs({ -1, 1 }) do
+			newPart(model, "Seat", Vector3.new(W * 0.32, 1.2, 1.2), CFrame.new(sx * W * 0.2, top + 0.4, cabZ + 1.2), sil and black or Color3.fromRGB(120, 60, 40))
+		end
+	else
+		local front = cabL >= 3 and math.min(1.6, cabL * 0.3) or 0
+		local back = cabL >= 3 and math.min(1.2, cabL * 0.22) or 0
+		local midL = cabL - front - back
+		local cabFront = cabZ - cabL / 2
+		local midZ = cabFront + front + midL / 2
+		newPart(model, "Cabin", Vector3.new(W * 0.86, cabH, midL), CFrame.new(0, top + cabH / 2, midZ), glass, glassProps)
+		if front > 0 then
+			local w = Instance.new("WedgePart")
+			w.Name = "Windshield"
+			w.Anchored = true
+			w.CanCollide = false
+			w.Size = Vector3.new(W * 0.86, cabH, front)
+			w.CFrame = CFrame.new(0, top + cabH / 2, cabFront + front / 2)
+			w.Color = glass
+			for k, v in pairs(glassProps) do
+				w[k] = v
+			end
+			w.Parent = model
+		end
+		if back > 0 then
+			local w = Instance.new("WedgePart")
+			w.Name = "RearWindow"
+			w.Anchored = true
+			w.CanCollide = false
+			w.Size = Vector3.new(W * 0.86, cabH, back)
+			w.CFrame = CFrame.new(0, top + cabH / 2, cabFront + cabL - back / 2) * CFrame.Angles(0, math.rad(180), 0)
+			w.Color = glass
+			for k, v in pairs(glassProps) do
+				w[k] = v
+			end
+			w.Parent = model
+		end
+		newPart(model, "Roof", Vector3.new(W * 0.88, 0.22, midL + 0.1), CFrame.new(0, top + cabH + 0.08, midZ), bodyColor, {
+			Material = bodyProps.Material or Enum.Material.SmoothPlastic,
+			Reflectance = bodyProps.Reflectance or 0,
+			Transparency = bodyProps.Transparency or 0,
+		})
+		-- mirrors
+		for _, sx in ipairs({ -1, 1 }) do
+			newPart(model, "Mirror", Vector3.new(0.5, 0.35, 0.3), CFrame.new(sx * (W * 0.43 + 0.3), top + 0.35, cabFront + front + 0.2), bodyColor)
+		end
+	end
+
+	-- wheels: rubber tire, shiny rim, colored hub
+	local wheelColor = sil and black or Color3.fromRGB(22, 22, 25)
+	local hubColor = sil and black or (rarity >= 4 and Config.Rarities[rarity].Color or Color3.fromRGB(70, 70, 80))
 	for _, sx in ipairs({ -1, 1 }) do
 		for _, sz in ipairs({ -1, 1 }) do
-			local wheel = newPart(model, "Wheel", Vector3.new(0.9, wheelD, wheelD),
-				CFrame.new(sx * (W / 2 - 0.25), wheelD / 2, sz * (L / 2 - wheelD * 0.75)), wheelColor,
-				{ Shape = Enum.PartType.Cylinder })
+			local wcf = CFrame.new(sx * (W / 2 - 0.25), wheelD / 2, sz * (L / 2 - wheelD * 0.75))
+			local wheel = newPart(model, "Wheel", Vector3.new(0.9, wheelD, wheelD), wcf, wheelColor, { Shape = Enum.PartType.Cylinder, Material = sil and Enum.Material.SmoothPlastic or Enum.Material.Rubber })
 			wheel.Size = Vector3.new(0.9, wheelD, wheelD)
 			if not sil then
-				newPart(model, "Rim", Vector3.new(0.95, wheelD * 0.55, wheelD * 0.55), wheel.CFrame, Color3.fromRGB(200, 200, 210), { Shape = Enum.PartType.Cylinder, Material = Enum.Material.Metal }).Size = Vector3.new(0.95, wheelD * 0.55, wheelD * 0.55)
+				local rim = newPart(model, "Rim", Vector3.new(0.95, wheelD * 0.62, wheelD * 0.62), wcf, chrome, { Shape = Enum.PartType.Cylinder, Material = Enum.Material.Metal, Reflectance = 0.4 })
+				rim.Size = Vector3.new(0.95, wheelD * 0.62, wheelD * 0.62)
+				local hub = newPart(model, "Hub", Vector3.new(1.0, wheelD * 0.25, wheelD * 0.25), wcf, hubColor, { Shape = Enum.PartType.Cylinder })
+				hub.Size = Vector3.new(1.0, wheelD * 0.25, wheelD * 0.25)
 			end
+			-- dark wheel arch above each wheel
+			newPart(model, "Arch", Vector3.new(0.25, 0.3, wheelD * 1.25), CFrame.new(sx * (W / 2 + 0.06), clearance + H * 0.62, sz * (L / 2 - wheelD * 0.75)), trimColor)
 		end
 	end
 
 	-- lights
 	if not sil then
 		for _, sx in ipairs({ -1, 1 }) do
-			newPart(model, "Headlight", Vector3.new(1, 0.4, 0.2), CFrame.new(sx * W * 0.32, clearance + H * 0.65, -L / 2 - 0.05), Color3.fromRGB(255, 250, 220), { Material = Enum.Material.Neon })
-			newPart(model, "Taillight", Vector3.new(1, 0.4, 0.2), CFrame.new(sx * W * 0.32, clearance + H * 0.65, L / 2 + 0.05), Color3.fromRGB(220, 30, 30), { Material = Enum.Material.Neon })
+			newPart(model, "Headlight", Vector3.new(W * 0.2, 0.4, 0.2), CFrame.new(sx * W * 0.34, clearance + H * 0.68, -L / 2 - 0.05), Color3.fromRGB(255, 250, 225), { Material = Enum.Material.Neon })
+			newPart(model, "Taillight", Vector3.new(W * 0.22, 0.35, 0.2), CFrame.new(sx * W * 0.32, clearance + H * 0.7, L / 2 + 0.05), Color3.fromRGB(230, 25, 35), { Material = Enum.Material.Neon })
+		end
+		if car and (car.Shape == "super" or car.Shape == "hyper" or car.Shape == "racer") then
+			newPart(model, "LightBar", Vector3.new(W * 0.8, 0.12, 0.2), CFrame.new(0, clearance + H * 0.85, -L / 2 - 0.06), Color3.fromRGB(200, 240, 255), { Material = Enum.Material.Neon })
 		end
 	end
 
@@ -232,6 +313,33 @@ function CarBuilder.BuildContainer(level)
 	-- door bars at the back
 	for _, x in ipairs({ -1.5, 1.5 }) do
 		newPart(model, "Bar", Vector3.new(0.2, 6.5, 0.2), CFrame.new(x, 3.5, 7.15), Color3.fromRGB(200, 200, 200), { Material = Enum.Material.Metal })
+	end
+	-- corner castings, top rails and a painted level number
+	for _, x in ipairs({ -4.05, 4.05 }) do
+		for _, z in ipairs({ -7.05, 7.05 }) do
+			newPart(model, "Corner", Vector3.new(0.5, 7.3, 0.5), CFrame.new(x, 3.6, z), darker:Lerp(Color3.new(0, 0, 0), 0.3), { Material = Enum.Material.Metal })
+		end
+		newPart(model, "Rail", Vector3.new(0.4, 0.4, 14.2), CFrame.new(x, 7.1, 0), darker, { Material = Enum.Material.Metal })
+	end
+	for _, x in ipairs({ -0.6, 0.6 }) do
+		newPart(model, "Handle", Vector3.new(0.15, 1.2, 0.15), CFrame.new(x, 3.2, 7.25), Color3.fromRGB(240, 200, 60), { Material = Enum.Material.Metal })
+	end
+	for _, face in ipairs({ Enum.NormalId.Left, Enum.NormalId.Right }) do
+		local gui = Instance.new("SurfaceGui")
+		gui.Face = face
+		gui.LightInfluence = 0.3
+		gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+		gui.PixelsPerStud = 20
+		local t = Instance.new("TextLabel")
+		t.BackgroundTransparency = 1
+		t.Size = UDim2.new(1, 0, 1, 0)
+		t.Font = Enum.Font.FredokaOne
+		t.TextScaled = true
+		t.TextColor3 = Color3.new(1, 1, 1)
+		t.TextTransparency = 0.1
+		t.Text = "D2D  #" .. level
+		t.Parent = gui
+		gui.Parent = box
 	end
 	model:SetAttribute("ContainerLevel", level)
 	return model

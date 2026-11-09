@@ -68,6 +68,8 @@ def main():
     body = "".join(
         [
             service("Workspace", props='<bool name="StreamingEnabled">false</bool>'),
+            # Future lighting: real light from lamps and neon, shiny reflections
+            service("Lighting", props='<token name="Technology">4</token>'),
             service("ReplicatedStorage", folder_of_scripts("Folder", "Shared", os.path.join(src, "shared"))),
             service("ServerScriptService", folder_of_scripts("Folder", "Server", os.path.join(src, "server"))),
             service(
