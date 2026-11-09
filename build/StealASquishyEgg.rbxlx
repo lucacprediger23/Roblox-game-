@@ -1,0 +1,2344 @@
+<roblox xmlns:xmime="http://www.w3.org/2005/05/xmlmime" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.roblox.com/roblox.xsd" version="4"><Item class="Workspace" referent="RBX00000001"><Properties><string name="Name">Workspace</string><bool name="StreamingEnabled">false</bool></Properties></Item><Item class="ReplicatedStorage" referent="RBX00000005"><Properties><string name="Name">ReplicatedStorage</string></Properties><Item class="Folder" referent="RBX00000004"><Properties><string name="Name">Shared</string></Properties><Item class="ModuleScript" referent="RBX00000002"><Properties><string name="Name">Config</string><ProtectedString name="Source"><![CDATA[-- Config: every number and every squishy in the game lives here.
+-- Change values in this file to balance the game without touching the scripts.
+
+local Config = {}
+
+---------------------------------------------------------------------
+-- General
+---------------------------------------------------------------------
+Config.GameName = "Steal a Squishy Egg"
+Config.DataStoreName = "SquishyEgg_v1"
+Config.StartingCoins = 0
+Config.MaxPetsPerBase = 10 -- pedestals per base
+Config.MaxPlots = 8 -- set Max Players to 8 in Game Settings
+
+---------------------------------------------------------------------
+-- Movement and speed upgrades
+---------------------------------------------------------------------
+Config.BaseWalkSpeed = 16
+Config.SpeedPerLevel = 1.5
+Config.MaxSpeedLevel = 25
+Config.SpeedCostBase = 20
+Config.SpeedCostGrowth = 1.55
+Config.CarrySpeedMultiplier = 0.8 -- carrying an egg or pet slows you down
+
+function Config.GetSpeedCost(level)
+	-- cost to go from `level` to `level + 1`
+	return math.floor(Config.SpeedCostBase * Config.SpeedCostGrowth ^ level)
+end
+
+function Config.GetWalkSpeed(level)
+	return Config.BaseWalkSpeed + Config.SpeedPerLevel * level
+end
+
+---------------------------------------------------------------------
+-- Base lock
+---------------------------------------------------------------------
+Config.BaseLockDuration = 30 -- seconds the base is protected
+Config.BaseLockCooldown = 60 -- seconds before you can lock again (counted from locking)
+
+---------------------------------------------------------------------
+-- Rarities (Order is used for sorting, Color for eggs and labels)
+---------------------------------------------------------------------
+Config.Rarities = {
+	Common = { Order = 1, Color = Color3.fromRGB(235, 235, 225), HatchTime = 5, HoldTime = 0.4 },
+	Uncommon = { Order = 2, Color = Color3.fromRGB(120, 220, 120), HatchTime = 8, HoldTime = 0.6 },
+	Rare = { Order = 3, Color = Color3.fromRGB(90, 170, 255), HatchTime = 12, HoldTime = 0.9 },
+	Epic = { Order = 4, Color = Color3.fromRGB(190, 110, 255), HatchTime = 18, HoldTime = 1.2 },
+	Legendary = { Order = 5, Color = Color3.fromRGB(255, 200, 60), HatchTime = 25, HoldTime = 1.6 },
+	Secret = { Order = 6, Color = Color3.fromRGB(255, 80, 160), HatchTime = 40, HoldTime = 2.0 },
+}
+
+---------------------------------------------------------------------
+-- Mutations (rolled when an egg hatches)
+---------------------------------------------------------------------
+Config.Mutations = {
+	{ Name = "Normal", Weight = 84, Multiplier = 1 },
+	{ Name = "Glitter", Weight = 8, Multiplier = 2 },
+	{ Name = "Frozen", Weight = 4, Multiplier = 3 },
+	{ Name = "Spicy", Weight = 3, Multiplier = 4 },
+	{ Name = "Rainbow", Weight = 1, Multiplier = 6 },
+}
+
+function Config.GetMutation(name)
+	for _, m in ipairs(Config.Mutations) do
+		if m.Name == name then
+			return m
+		end
+	end
+	return Config.Mutations[1]
+end
+
+---------------------------------------------------------------------
+-- Zones (the egg field). Farther zones = rarer eggs + faster guardians.
+-- ZStart/ZEnd are world Z positions; the field runs toward negative Z.
+---------------------------------------------------------------------
+Config.Zones = {
+	{
+		Name = "Candy Meadow",
+		ZStart = -20,
+		ZEnd = -140,
+		FloorColor = Color3.fromRGB(170, 230, 160),
+		Nests = 8,
+		EggWeights = { Common = 75, Uncommon = 25 },
+		Guardian = { Name = "Chef Bear", PatrolSpeed = 8, ChaseSpeed = 14, ChaseRange = 35, Color = Color3.fromRGB(160, 110, 70) },
+	},
+	{
+		Name = "Kitchen Canyon",
+		ZStart = -150,
+		ZEnd = -280,
+		FloorColor = Color3.fromRGB(240, 200, 150),
+		Nests = 7,
+		EggWeights = { Uncommon = 40, Rare = 45, Epic = 15 },
+		Guardian = { Name = "Grumpy Rolling Pin", PatrolSpeed = 10, ChaseSpeed = 22, ChaseRange = 40, Color = Color3.fromRGB(200, 150, 90) },
+	},
+	{
+		Name = "Starlight Bakery",
+		ZStart = -290,
+		ZEnd = -420,
+		FloorColor = Color3.fromRGB(200, 180, 255),
+		Nests = 6,
+		EggWeights = { Rare = 30, Epic = 50, Legendary = 18, Secret = 2 },
+		Guardian = { Name = "Snow Yeti", PatrolSpeed = 12, ChaseSpeed = 30, ChaseRange = 45, Color = Color3.fromRGB(235, 245, 255) },
+	},
+}
+Config.FieldHalfWidth = 150 -- the field spans X from -150 to 150
+Config.EggRespawnTime = 4 -- seconds before an empty nest gets a new egg
+
+---------------------------------------------------------------------
+-- Squishies
+-- Parts are built by PetModels. Kinds: Ellipsoid, Ball, Block, Cylinder (vertical), Wedge.
+-- Size is in studs. Offset is from the center of the squishy.
+-- Face = where the eyes go (front of the squishy faces -Z).
+---------------------------------------------------------------------
+local cream = Color3.fromRGB(245, 235, 215)
+
+Config.Pets = {
+	-- Common
+	{
+		Id = "Dumpy", Name = "Dumpy", Rarity = "Common", Income = 1,
+		Face = Vector3.new(0, 0, -1.5),
+		Parts = {
+			{ Kind = "Ellipsoid", Size = Vector3.new(3.2, 2.2, 3), Color = cream, Body = true },
+			{ Kind = "Ellipsoid", Size = Vector3.new(1, 0.8, 1), Offset = Vector3.new(0, 1.15, 0), Color = cream },
+			{ Kind = "Ellipsoid", Size = Vector3.new(0.5, 0.6, 0.5), Offset = Vector3.new(-0.7, 0.9, 0), Color = cream },
+			{ Kind = "Ellipsoid", Size = Vector3.new(0.5, 0.6, 0.5), Offset = Vector3.new(0.7, 0.9, 0), Color = cream },
+		},
+	},
+	{
+		Id = "MochiMo", Name = "Mochi Mo", Rarity = "Common", Income = 2,
+		Face = Vector3.new(0, 0, -1.5),
+		Parts = {
+			{ Kind = "Ellipsoid", Size = Vector3.new(3, 2.6, 3), Color = Color3.fromRGB(255, 190, 210), Body = true },
+			{ Kind = "Ellipsoid", Size = Vector3.new(0.9, 0.3, 0.5), Offset = Vector3.new(0.4, 1.35, 0), Color = Color3.fromRGB(120, 200, 110) },
+		},
+	},
+	{
+		Id = "Toasty", Name = "Toasty", Rarity = "Common", Income = 2,
+		Face = Vector3.new(0, 0.1, -0.62),
+		Parts = {
+			{ Kind = "Block", Size = Vector3.new(3, 3.2, 1.2), Color = Color3.fromRGB(240, 200, 130), Body = true },
+			{ Kind = "Block", Size = Vector3.new(3.3, 3.5, 1.05), Offset = Vector3.new(0, 0, 0.12), Color = Color3.fromRGB(200, 135, 65) },
+			{ Kind = "Block", Size = Vector3.new(1, 0.3, 0.8), Offset = Vector3.new(0, 1.85, 0), Color = Color3.fromRGB(255, 230, 120) },
+		},
+	},
+
+	-- Uncommon
+	{
+		Id = "BobaBub", Name = "Boba Bub", Rarity = "Uncommon", Income = 4,
+		Face = Vector3.new(0, 0.3, -1.3),
+		Parts = {
+			{ Kind = "Cylinder", Size = Vector3.new(2.6, 3.2, 2.6), Color = Color3.fromRGB(225, 190, 150), Body = true },
+			{ Kind = "Ellipsoid", Size = Vector3.new(2.7, 0.9, 2.7), Offset = Vector3.new(0, 1.6, 0), Color = Color3.fromRGB(250, 250, 255), Transparency = 0.3 },
+			{ Kind = "Cylinder", Size = Vector3.new(0.3, 2, 0.3), Offset = Vector3.new(0.5, 2.5, 0), Color = Color3.fromRGB(255, 120, 170) },
+			{ Kind = "Ball", Size = Vector3.new(0.5, 0.5, 0.5), Offset = Vector3.new(-0.6, -1.3, -1.15), Color = Color3.fromRGB(40, 25, 20) },
+			{ Kind = "Ball", Size = Vector3.new(0.5, 0.5, 0.5), Offset = Vector3.new(0, -1.35, -1.25), Color = Color3.fromRGB(40, 25, 20) },
+			{ Kind = "Ball", Size = Vector3.new(0.5, 0.5, 0.5), Offset = Vector3.new(0.6, -1.3, -1.15), Color = Color3.fromRGB(40, 25, 20) },
+		},
+	},
+	{
+		Id = "SushiRolly", Name = "Sushi Roll-y", Rarity = "Uncommon", Income = 5,
+		Face = Vector3.new(0, 0.35, -1.4),
+		Parts = {
+			{ Kind = "Cylinder", Size = Vector3.new(2.8, 2.4, 2.8), Color = Color3.fromRGB(250, 250, 245), Body = true },
+			{ Kind = "Cylinder", Size = Vector3.new(2.95, 1, 2.95), Offset = Vector3.new(0, -0.7, 0), Color = Color3.fromRGB(30, 60, 40) },
+			{ Kind = "Ellipsoid", Size = Vector3.new(2.4, 0.6, 2.4), Offset = Vector3.new(0, 1.25, 0), Color = Color3.fromRGB(250, 130, 90) },
+		},
+	},
+	{
+		Id = "Puddin", Name = "Puddin'", Rarity = "Uncommon", Income = 5,
+		Face = Vector3.new(0, -0.1, -1.4),
+		Parts = {
+			{ Kind = "Cylinder", Size = Vector3.new(2.8, 2.4, 2.8), Color = Color3.fromRGB(250, 215, 120), Body = true },
+			{ Kind = "Ellipsoid", Size = Vector3.new(2.6, 0.6, 2.6), Offset = Vector3.new(0, 1.2, 0), Color = Color3.fromRGB(150, 80, 30) },
+			{ Kind = "Cylinder", Size = Vector3.new(3.6, 0.25, 3.6), Offset = Vector3.new(0, -1.3, 0), Color = Color3.fromRGB(255, 255, 255) },
+			{ Kind = "Ball", Size = Vector3.new(0.6, 0.6, 0.6), Offset = Vector3.new(0, 1.6, 0), Color = Color3.fromRGB(220, 30, 50) },
+		},
+	},
+
+	-- Rare
+	{
+		Id = "TacoTilly", Name = "Taco Tilly", Rarity = "Rare", Income = 12,
+		Face = Vector3.new(0, -0.1, -0.8),
+		Parts = {
+			{ Kind = "Ellipsoid", Size = Vector3.new(3.4, 2.6, 1.6), Color = Color3.fromRGB(240, 200, 90), Body = true },
+			{ Kind = "Ellipsoid", Size = Vector3.new(3, 0.6, 1.2), Offset = Vector3.new(0, 1.15, 0), Color = Color3.fromRGB(110, 190, 70) },
+			{ Kind = "Ball", Size = Vector3.new(0.5, 0.5, 0.5), Offset = Vector3.new(-0.8, 1.35, 0), Color = Color3.fromRGB(230, 50, 50) },
+			{ Kind = "Ball", Size = Vector3.new(0.5, 0.5, 0.5), Offset = Vector3.new(0.7, 1.35, 0), Color = Color3.fromRGB(230, 50, 50) },
+		},
+	},
+	{
+		Id = "RamenBear", Name = "Ramen Noodle-Bear", Rarity = "Rare", Income = 15,
+		Face = Vector3.new(0, 0.9, -1.2),
+		Parts = {
+			{ Kind = "Ellipsoid", Size = Vector3.new(2.6, 2.4, 2.4), Offset = Vector3.new(0, 0.9, 0), Color = Color3.fromRGB(230, 190, 140), Body = true },
+			{ Kind = "Cylinder", Size = Vector3.new(3.4, 1.8, 3.4), Offset = Vector3.new(0, -0.6, 0), Color = Color3.fromRGB(200, 50, 50) },
+			{ Kind = "Ball", Size = Vector3.new(0.8, 0.8, 0.8), Offset = Vector3.new(-0.9, 2, 0), Color = Color3.fromRGB(230, 190, 140) },
+			{ Kind = "Ball", Size = Vector3.new(0.8, 0.8, 0.8), Offset = Vector3.new(0.9, 2, 0), Color = Color3.fromRGB(230, 190, 140) },
+			{ Kind = "Cylinder", Size = Vector3.new(0.15, 3, 0.15), Offset = Vector3.new(1.3, 1, 0.6), Color = Color3.fromRGB(120, 80, 40) },
+			{ Kind = "Cylinder", Size = Vector3.new(0.15, 3, 0.15), Offset = Vector3.new(1.55, 1, 0.6), Color = Color3.fromRGB(120, 80, 40) },
+		},
+	},
+
+	-- Epic
+	{
+		Id = "DinoDumpling", Name = "Dino-Dumpling", Rarity = "Epic", Income = 40,
+		Face = Vector3.new(0, 0, -1.6),
+		Parts = {
+			{ Kind = "Ellipsoid", Size = Vector3.new(3.4, 2.4, 3.2), Color = Color3.fromRGB(150, 210, 120), Body = true },
+			{ Kind = "Wedge", Size = Vector3.new(0.3, 0.8, 0.8), Offset = Vector3.new(0, 1.25, -0.5), Color = Color3.fromRGB(255, 150, 60) },
+			{ Kind = "Wedge", Size = Vector3.new(0.3, 0.8, 0.8), Offset = Vector3.new(0, 1.2, 0.3), Color = Color3.fromRGB(255, 150, 60) },
+			{ Kind = "Wedge", Size = Vector3.new(0.3, 0.7, 0.7), Offset = Vector3.new(0, 0.95, 1.05), Color = Color3.fromRGB(255, 150, 60) },
+			{ Kind = "Ellipsoid", Size = Vector3.new(0.8, 0.8, 1.6), Offset = Vector3.new(0, -0.4, 1.9), Color = Color3.fromRGB(150, 210, 120) },
+		},
+	},
+	{
+		Id = "CupcakeCat", Name = "Cupcake Cat", Rarity = "Epic", Income = 50,
+		Face = Vector3.new(0, 0.5, -1.5),
+		Parts = {
+			{ Kind = "Ellipsoid", Size = Vector3.new(3, 2.2, 3), Offset = Vector3.new(0, 0.5, 0), Color = Color3.fromRGB(255, 245, 250), Body = true },
+			{ Kind = "Cylinder", Size = Vector3.new(2.6, 1.6, 2.6), Offset = Vector3.new(0, -0.9, 0), Color = Color3.fromRGB(240, 120, 160) },
+			{ Kind = "Ellipsoid", Size = Vector3.new(0.7, 0.9, 0.4), Offset = Vector3.new(-0.8, 1.65, 0), Color = Color3.fromRGB(255, 170, 200) },
+			{ Kind = "Ellipsoid", Size = Vector3.new(0.7, 0.9, 0.4), Offset = Vector3.new(0.8, 1.65, 0), Color = Color3.fromRGB(255, 170, 200) },
+			{ Kind = "Ball", Size = Vector3.new(0.6, 0.6, 0.6), Offset = Vector3.new(0, 1.65, 0.3), Color = Color3.fromRGB(220, 30, 50) },
+		},
+	},
+
+	-- Legendary
+	{
+		Id = "StarlightMochi", Name = "Starlight Mochi", Rarity = "Legendary", Income = 150,
+		Face = Vector3.new(0, 0, -1.6), Glow = Color3.fromRGB(200, 170, 255),
+		Parts = {
+			{ Kind = "Ellipsoid", Size = Vector3.new(3.2, 2.8, 3.2), Color = Color3.fromRGB(190, 150, 255), Body = true },
+			{ Kind = "Cylinder", Size = Vector3.new(2.4, 0.15, 2.4), Offset = Vector3.new(0, 2.1, 0), Color = Color3.fromRGB(255, 230, 120), Material = "Neon" },
+			{ Kind = "Ball", Size = Vector3.new(0.4, 0.4, 0.4), Offset = Vector3.new(-1.3, 1.2, -0.6), Color = Color3.fromRGB(255, 255, 200), Material = "Neon" },
+			{ Kind = "Ball", Size = Vector3.new(0.3, 0.3, 0.3), Offset = Vector3.new(1.4, 0.9, -0.5), Color = Color3.fromRGB(255, 255, 200), Material = "Neon" },
+		},
+	},
+
+	-- Secret
+	{
+		Id = "GoldenMegaDumpling", Name = "Golden Mega Dumpling", Rarity = "Secret", Income = 1000,
+		Face = Vector3.new(0, 0, -2.1), FaceScale = 1.4, Glow = Color3.fromRGB(255, 210, 80), Sparkle = true,
+		Parts = {
+			{ Kind = "Ellipsoid", Size = Vector3.new(4.5, 3.1, 4.2), Color = Color3.fromRGB(255, 200, 40), Body = true, Reflectance = 0.3 },
+			{ Kind = "Ellipsoid", Size = Vector3.new(1.4, 1.1, 1.4), Offset = Vector3.new(0, 1.6, 0), Color = Color3.fromRGB(255, 200, 40), Reflectance = 0.3 },
+			{ Kind = "Cylinder", Size = Vector3.new(1.6, 0.8, 1.6), Offset = Vector3.new(0, 2.4, 0), Color = Color3.fromRGB(255, 230, 90), Material = "Neon" },
+		},
+	},
+}
+
+-- Quick lookups
+Config.PetsById = {}
+Config.PetsByRarity = {}
+for _, pet in ipairs(Config.Pets) do
+	Config.PetsById[pet.Id] = pet
+	Config.PetsByRarity[pet.Rarity] = Config.PetsByRarity[pet.Rarity] or {}
+	table.insert(Config.PetsByRarity[pet.Rarity], pet)
+end
+
+-- Picks a random key from a { key = weight } table
+function Config.WeightedPick(weights, rng)
+	rng = rng or Random.new()
+	local total = 0
+	for _, w in pairs(weights) do
+		total = total + w
+	end
+	local roll = rng:NextNumber() * total
+	for key, w in pairs(weights) do
+		roll = roll - w
+		if roll <= 0 then
+			return key
+		end
+	end
+	local last
+	for key in pairs(weights) do
+		last = key
+	end
+	return last
+end
+
+function Config.RollMutation(rng)
+	local weights = {}
+	for _, m in ipairs(Config.Mutations) do
+		weights[m.Name] = m.Weight
+	end
+	return Config.WeightedPick(weights, rng)
+end
+
+function Config.RollPetForRarity(rarity, rng)
+	rng = rng or Random.new()
+	local list = Config.PetsByRarity[rarity]
+	return list[rng:NextInteger(1, #list)]
+end
+
+function Config.GetPetIncome(petId, mutationName)
+	local pet = Config.PetsById[petId]
+	if not pet then
+		return 0
+	end
+	return pet.Income * Config.GetMutation(mutationName).Multiplier
+end
+
+function Config.FormatNumber(n)
+	n = math.floor(n)
+	if n >= 1e9 then
+		return string.format("%.1fB", n / 1e9)
+	elseif n >= 1e6 then
+		return string.format("%.1fM", n / 1e6)
+	elseif n >= 1e4 then
+		return string.format("%.1fK", n / 1e3)
+	end
+	return tostring(n)
+end
+
+return Config
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX00000003"><Properties><string name="Name">PetModels</string><ProtectedString name="Source"><![CDATA[-- PetModels: builds the squishies and eggs out of plain parts, using the specs in Config.
+-- No meshes or uploads are needed, so the game works straight away.
+
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
+
+local PetModels = {}
+
+local function applyCommon(part)
+	part.Anchored = true
+	part.CanCollide = false
+	part.CanTouch = false
+	part.TopSurface = Enum.SurfaceType.Smooth
+	part.BottomSurface = Enum.SurfaceType.Smooth
+	part.Material = Enum.Material.SmoothPlastic
+end
+
+-- Builds one part from a spec table. Returns the part (positioned relative to the origin).
+local function makePart(spec, scale)
+	local className = "Part"
+	if spec.Kind == "Wedge" then
+		className = "WedgePart"
+	end
+	local part = Instance.new(className)
+	applyCommon(part)
+
+	local size = spec.Size * scale
+	local offset = (spec.Offset or Vector3.new(0, 0, 0)) * scale
+	local cf = CFrame.new(offset)
+
+	if spec.Kind == "Ellipsoid" then
+		part.Size = size
+		local mesh = Instance.new("SpecialMesh")
+		mesh.MeshType = Enum.MeshType.Sphere
+		mesh.Parent = part
+	elseif spec.Kind == "Ball" then
+		part.Shape = Enum.PartType.Ball
+		part.Size = size
+	elseif spec.Kind == "Cylinder" then
+		-- Roblox cylinders lie along X, so turn them upright
+		part.Shape = Enum.PartType.Cylinder
+		part.Size = Vector3.new(size.Y, size.X, size.Z)
+		cf = cf * CFrame.Angles(0, 0, math.rad(90))
+	else
+		part.Size = size
+	end
+
+	part.Color = spec.Color or Color3.new(1, 1, 1)
+	if spec.Material and Enum.Material[spec.Material] then
+		part.Material = Enum.Material[spec.Material]
+	end
+	part.Transparency = spec.Transparency or 0
+	part.Reflectance = spec.Reflectance or 0
+	part.CFrame = cf
+	return part
+end
+
+-- Adds cute eyes, blush and a mouth at `facePos`
+local function addFace(model, facePos, s)
+	local function facePart(kind, size, pos, color)
+		local p = makePart({ Kind = kind, Size = size, Color = color }, 1)
+		p.CFrame = CFrame.new(pos)
+		p.Name = "Face"
+		p:SetAttribute("Face", true)
+		p.Parent = model
+		return p
+	end
+	local black = Color3.fromRGB(30, 25, 30)
+	local white = Color3.new(1, 1, 1)
+	local pink = Color3.fromRGB(255, 140, 170)
+	for _, side in ipairs({ -1, 1 }) do
+		local eyePos = facePos + Vector3.new(0.42 * s * side, 0.1 * s, 0)
+		facePart("Ball", Vector3.new(0.45, 0.45, 0.45) * s, eyePos, black)
+		facePart("Ball", Vector3.new(0.15, 0.15, 0.15) * s, eyePos + Vector3.new(0.08 * s, 0.1 * s, -0.18 * s), white)
+		facePart("Ellipsoid", Vector3.new(0.45, 0.22, 0.1) * s, facePos + Vector3.new(0.85 * s * side, -0.25 * s, -0.02), pink)
+	end
+	facePart("Ellipsoid", Vector3.new(0.35, 0.15, 0.1) * s, facePos + Vector3.new(0, -0.3 * s, -0.03), black)
+end
+
+local function applyMutation(model, body, mutationName)
+	if mutationName == "Glitter" then
+		local sparkles = Instance.new("Sparkles")
+		sparkles.SparkleColor = Color3.fromRGB(255, 240, 255)
+		sparkles.Parent = body
+	elseif mutationName == "Frozen" then
+		for _, part in ipairs(model:GetDescendants()) do
+			if part:IsA("BasePart") and not part:GetAttribute("Face") then
+				part.Color = part.Color:Lerp(Color3.fromRGB(170, 220, 255), 0.55)
+				part.Material = Enum.Material.Ice
+			end
+		end
+	elseif mutationName == "Spicy" then
+		local fire = Instance.new("Fire")
+		fire.Size = 3
+		fire.Heat = 4
+		fire.Color = Color3.fromRGB(255, 120, 30)
+		fire.SecondaryColor = Color3.fromRGB(255, 220, 60)
+		fire.Parent = body
+	elseif mutationName == "Rainbow" then
+		-- The client colour-cycles any model with this attribute
+		model:SetAttribute("Rainbow", true)
+	end
+end
+
+-- Builds a squishy. Returns a Model whose PrimaryPart is the body.
+function PetModels.BuildPet(petId, mutationName)
+	local def = Config.PetsById[petId]
+	assert(def, "Unknown pet " .. tostring(petId))
+	local model = Instance.new("Model")
+	model.Name = def.Name
+
+	local body
+	for _, spec in ipairs(def.Parts) do
+		local part = makePart(spec, 1)
+		part.Name = spec.Body and "Body" or "Detail"
+		part.Parent = model
+		if spec.Body then
+			body = part
+		end
+	end
+	body = body or model:FindFirstChildWhichIsA("BasePart")
+	model.PrimaryPart = body
+
+	addFace(model, def.Face or Vector3.new(0, 0, -1.5), def.FaceScale or 1)
+
+	if def.Glow then
+		local light = Instance.new("PointLight")
+		light.Color = def.Glow
+		light.Range = 12
+		light.Brightness = 1.5
+		light.Parent = body
+	end
+	if def.Sparkle then
+		local sparkles = Instance.new("Sparkles")
+		sparkles.SparkleColor = Color3.fromRGB(255, 230, 120)
+		sparkles.Parent = body
+	end
+
+	applyMutation(model, body, mutationName)
+	model:SetAttribute("PetId", petId)
+	model:SetAttribute("Mutation", mutationName or "Normal")
+	return model
+end
+
+-- Builds an egg in the colour of its rarity.
+function PetModels.BuildEgg(rarity)
+	local info = Config.Rarities[rarity]
+	local model = Instance.new("Model")
+	model.Name = rarity .. " Egg"
+
+	local shell = makePart({ Kind = "Ellipsoid", Size = Vector3.new(2, 2.6, 2), Color = info.Color }, 1)
+	shell.Name = "Shell"
+	shell.Parent = model
+	model.PrimaryPart = shell
+
+	local spotColor = info.Color:Lerp(Color3.new(1, 1, 1), 0.6)
+	local spots = {
+		Vector3.new(-0.45, 0.5, -0.85),
+		Vector3.new(0.5, -0.1, -0.88),
+		Vector3.new(-0.2, -0.6, -0.9),
+		Vector3.new(0.6, 0.7, 0.75),
+	}
+	for _, pos in ipairs(spots) do
+		local spot = makePart({ Kind = "Ellipsoid", Size = Vector3.new(0.5, 0.55, 0.2), Color = spotColor }, 1)
+		spot.Name = "Spot"
+		spot.CFrame = CFrame.lookAt(pos, pos * 2)
+		spot.Parent = model
+	end
+
+	if info.Order >= 5 then
+		local light = Instance.new("PointLight")
+		light.Color = info.Color
+		light.Range = 14
+		light.Brightness = 2
+		light.Parent = shell
+	end
+	if rarity == "Secret" then
+		local sparkles = Instance.new("Sparkles")
+		sparkles.SparkleColor = info.Color
+		sparkles.Parent = shell
+	end
+
+	model:SetAttribute("Rarity", rarity)
+	return model
+end
+
+-- Puts a floating name tag above a model. Returns the BillboardGui and its two labels.
+function PetModels.AddLabel(model, title, subtitle, titleColor, heightOffset)
+	local adornee = model.PrimaryPart
+	local gui = Instance.new("BillboardGui")
+	gui.Name = "Label"
+	gui.Size = UDim2.new(0, 220, 0, 54)
+	gui.StudsOffset = Vector3.new(0, heightOffset or 3, 0)
+	gui.MaxDistance = 80
+	gui.LightInfluence = 0
+	gui.Adornee = adornee
+
+	local titleLabel = Instance.new("TextLabel")
+	titleLabel.Name = "Title"
+	titleLabel.BackgroundTransparency = 1
+	titleLabel.Size = UDim2.new(1, 0, 0.55, 0)
+	titleLabel.Font = Enum.Font.FredokaOne
+	titleLabel.TextScaled = true
+	titleLabel.TextColor3 = titleColor or Color3.new(1, 1, 1)
+	titleLabel.TextStrokeTransparency = 0.2
+	titleLabel.Text = title
+	titleLabel.Parent = gui
+
+	local subLabel = Instance.new("TextLabel")
+	subLabel.Name = "Subtitle"
+	subLabel.BackgroundTransparency = 1
+	subLabel.Position = UDim2.new(0, 0, 0.55, 0)
+	subLabel.Size = UDim2.new(1, 0, 0.45, 0)
+	subLabel.Font = Enum.Font.GothamBold
+	subLabel.TextScaled = true
+	subLabel.TextColor3 = Color3.new(1, 1, 1)
+	subLabel.TextStrokeTransparency = 0.3
+	subLabel.Text = subtitle or ""
+	subLabel.Parent = gui
+
+	gui.Parent = adornee
+	return gui, titleLabel, subLabel
+end
+
+-- Moves a model so its bottom rests on `surfaceCFrame` (a point on top of a floor or pedestal)
+function PetModels.PlaceOnSurface(model, surfaceCFrame)
+	local bottomOffset = model:GetAttribute("BottomOffset")
+	if not bottomOffset then
+		local pivot = model:GetPivot()
+		local boxCFrame, boxSize = model:GetBoundingBox()
+		bottomOffset = pivot.Position.Y - (boxCFrame.Position.Y - boxSize.Y / 2)
+		model:SetAttribute("BottomOffset", bottomOffset)
+	end
+	model:PivotTo(surfaceCFrame * CFrame.new(0, bottomOffset, 0))
+end
+
+-- Height of a model in studs (used to place labels)
+function PetModels.GetHeight(model)
+	local _, size = model:GetBoundingBox()
+	return size.Y
+end
+
+return PetModels
+]]></ProtectedString></Properties></Item></Item></Item><Item class="ServerScriptService" referent="RBX0000000A"><Properties><string name="Name">ServerScriptService</string></Properties><Item class="Folder" referent="RBX00000009"><Properties><string name="Name">Server</string></Properties><Item class="ModuleScript" referent="RBX00000006"><Properties><string name="Name">DataService</string><ProtectedString name="Source"><![CDATA[-- DataService: loads and saves each player's coins, speed and squishies.
+-- In Studio, saving only works if "Enable Studio Access to API Services" is turned on
+-- (Game Settings > Security). Without it the game still runs, it just won't remember progress.
+
+local DataStoreService = game:GetService("DataStoreService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
+
+local DataService = {}
+
+local store
+local storeOk, storeErr = pcall(function()
+	store = DataStoreService:GetDataStore(Config.DataStoreName)
+end)
+if not storeOk then
+	warn("[DataService] Saving is off: " .. tostring(storeErr))
+end
+
+local profiles = {} -- [player] = data table
+
+local function defaultData()
+	return {
+		Coins = Config.StartingCoins,
+		SpeedLevel = 0,
+		Pets = {}, -- list of { Id = "Dumpy", Mutation = "Normal" }
+	}
+end
+
+local function sanitize(data)
+	local clean = defaultData()
+	if type(data) ~= "table" then
+		return clean
+	end
+	if type(data.Coins) == "number" then
+		clean.Coins = math.max(0, math.floor(data.Coins))
+	end
+	if type(data.SpeedLevel) == "number" then
+		clean.SpeedLevel = math.clamp(math.floor(data.SpeedLevel), 0, Config.MaxSpeedLevel)
+	end
+	if type(data.Pets) == "table" then
+		for _, pet in ipairs(data.Pets) do
+			if type(pet) == "table" and Config.PetsById[pet.Id] and #clean.Pets < Config.MaxPetsPerBase then
+				table.insert(clean.Pets, { Id = pet.Id, Mutation = Config.GetMutation(pet.Mutation).Name })
+			end
+		end
+	end
+	return clean
+end
+
+function DataService.Load(player)
+	local data
+	if store then
+		local ok, result = pcall(function()
+			return store:GetAsync("player_" .. player.UserId)
+		end)
+		if ok then
+			data = result
+		else
+			warn("[DataService] Could not load data for " .. player.Name .. ": " .. tostring(result))
+		end
+	end
+	local profile = sanitize(data)
+	profiles[player] = profile
+	return profile
+end
+
+function DataService.Get(player)
+	return profiles[player]
+end
+
+-- `pets` is the current list of squishies in the player's base (eggs still hatching count too,
+-- so nobody loses them by leaving early)
+function DataService.Save(player, pets)
+	local profile = profiles[player]
+	if not profile or not store then
+		return
+	end
+	if pets then
+		profile.Pets = pets
+	end
+	local toSave = {
+		Coins = profile.Coins,
+		SpeedLevel = profile.SpeedLevel,
+		Pets = profile.Pets,
+	}
+	local ok, err = pcall(function()
+		store:SetAsync("player_" .. player.UserId, toSave)
+	end)
+	if not ok then
+		warn("[DataService] Could not save data for " .. player.Name .. ": " .. tostring(err))
+	end
+end
+
+function DataService.Release(player)
+	profiles[player] = nil
+end
+
+return DataService
+]]></ProtectedString></Properties></Item><Item class="Script" referent="RBX00000007"><Properties><string name="Name">GameServer</string><ProtectedString name="Source"><![CDATA[-- GameServer: the main game loop for Steal a Squishy Egg.
+-- Bases, egg spawning, carrying, hatching, stealing, guardians, income and saving all live here.
+
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+local CollectionService = game:GetService("CollectionService")
+
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Config = require(Shared:WaitForChild("Config"))
+local PetModels = require(Shared:WaitForChild("PetModels"))
+local DataService = require(script.Parent:WaitForChild("DataService"))
+local MapBuilder = require(script.Parent:WaitForChild("MapBuilder"))
+
+local rng = Random.new()
+
+---------------------------------------------------------------------
+-- Remotes
+---------------------------------------------------------------------
+local remotes = Instance.new("Folder")
+remotes.Name = "Remotes"
+remotes.Parent = ReplicatedStorage
+
+local NotifyEvent = Instance.new("RemoteEvent")
+NotifyEvent.Name = "Notify"
+NotifyEvent.Parent = remotes
+
+local BuySpeedFunction = Instance.new("RemoteFunction")
+BuySpeedFunction.Name = "BuySpeed"
+BuySpeedFunction.Parent = remotes
+
+local LockBaseFunction = Instance.new("RemoteFunction")
+LockBaseFunction.Name = "LockBase"
+LockBaseFunction.Parent = remotes
+
+local function notify(player, text, color)
+	NotifyEvent:FireClient(player, text, color or Color3.new(1, 1, 1))
+end
+
+local function notifyAll(text, color)
+	NotifyEvent:FireAllClients(text, color or Color3.new(1, 1, 1))
+end
+
+local function now()
+	return workspace:GetServerTimeNow()
+end
+
+---------------------------------------------------------------------
+-- Map and state
+---------------------------------------------------------------------
+local map = MapBuilder.Build()
+
+local eggsFolder = Instance.new("Folder")
+eggsFolder.Name = "Eggs"
+eggsFolder.Parent = map.Folder
+
+local petsFolder = Instance.new("Folder")
+petsFolder.Name = "Pets"
+petsFolder.Parent = map.Folder
+
+local carriedFolder = Instance.new("Folder")
+carriedFolder.Name = "Carried"
+carriedFolder.Parent = map.Folder
+
+local plotOwner = {} -- [plotIndex] = player
+local playerPlot = {} -- [player] = plot
+local slots = {} -- [plotIndex] = { [slotIndex] = slot }
+local stored = {} -- [plotIndex] = coins waiting on the collect pad
+local lockedUntil = {} -- [plotIndex] = server time
+local carrying = {} -- [player] = carry info
+local lastCaught = {} -- [player] = time a guardian last caught them
+
+for i = 1, #map.Plots do
+	slots[i] = {}
+	stored[i] = 0
+	lockedUntil[i] = 0
+end
+
+---------------------------------------------------------------------
+-- Helpers
+---------------------------------------------------------------------
+local function getRoot(player)
+	local character = player.Character
+	return character and character:FindFirstChild("HumanoidRootPart")
+end
+
+local function getHumanoid(player)
+	local character = player.Character
+	return character and character:FindFirstChildOfClass("Humanoid")
+end
+
+local function setCoins(player, amount)
+	local profile = DataService.Get(player)
+	if not profile then
+		return
+	end
+	profile.Coins = math.max(0, math.floor(amount))
+	local leaderstats = player:FindFirstChild("leaderstats")
+	if leaderstats and leaderstats:FindFirstChild("Coins") then
+		leaderstats.Coins.Value = profile.Coins
+	end
+end
+
+local function addCoins(player, amount)
+	local profile = DataService.Get(player)
+	if profile then
+		setCoins(player, profile.Coins + amount)
+	end
+end
+
+local function updateWalkSpeed(player)
+	local humanoid = getHumanoid(player)
+	local profile = DataService.Get(player)
+	if not humanoid or not profile then
+		return
+	end
+	local speed = Config.GetWalkSpeed(profile.SpeedLevel)
+	if carrying[player] then
+		speed = speed * Config.CarrySpeedMultiplier
+	end
+	humanoid.WalkSpeed = speed
+end
+
+local function isInside(position, area, margin)
+	margin = margin or 0
+	return position.X >= area.MinX - margin and position.X <= area.MaxX + margin
+		and position.Z >= area.MinZ - margin and position.Z <= area.MaxZ + margin
+end
+
+local function countUsedSlots(plot)
+	local count = 0
+	for i = 1, Config.MaxPetsPerBase do
+		if slots[plot.Index][i] then
+			count = count + 1
+		end
+	end
+	return count
+end
+
+local function findFreeSlot(plot)
+	for i = 1, Config.MaxPetsPerBase do
+		if not slots[plot.Index][i] then
+			return i
+		end
+	end
+	return nil
+end
+
+local function rarityColor(rarity)
+	return Config.Rarities[rarity].Color
+end
+
+local function petDisplayName(petId, mutation)
+	local def = Config.PetsById[petId]
+	if mutation and mutation ~= "Normal" then
+		return mutation .. " " .. def.Name
+	end
+	return def.Name
+end
+
+---------------------------------------------------------------------
+-- Pedestal contents
+---------------------------------------------------------------------
+local onPetStealTriggered -- defined further down
+
+local function clearSlotModel(slot)
+	if slot and slot.Model then
+		slot.Model:Destroy()
+		slot.Model = nil
+	end
+end
+
+local function showPetInSlot(plot, slotIndex, slot)
+	clearSlotModel(slot)
+	local def = Config.PetsById[slot.PetId]
+	local model = PetModels.BuildPet(slot.PetId, slot.Mutation)
+	local pedestal = plot.Pedestals[slotIndex]
+	PetModels.PlaceOnSurface(model, pedestal.Surface)
+	model:SetAttribute("RestPivot", model:GetPivot())
+	CollectionService:AddTag(model, "SquishyPet")
+
+	local income = Config.GetPetIncome(slot.PetId, slot.Mutation)
+	PetModels.AddLabel(
+		model,
+		petDisplayName(slot.PetId, slot.Mutation),
+		def.Rarity .. "  •  $" .. Config.FormatNumber(income) .. "/s",
+		rarityColor(def.Rarity),
+		PetModels.GetHeight(model) / 2 + 2.5
+	)
+
+	local prompt = Instance.new("ProximityPrompt")
+	prompt.ActionText = "Steal"
+	prompt.ObjectText = def.Name
+	prompt.HoldDuration = Config.Rarities[def.Rarity].HoldTime * 2
+	prompt.MaxActivationDistance = 9
+	prompt.RequiresLineOfSight = false
+	local owner = plotOwner[plot.Index]
+	if owner then
+		prompt:SetAttribute("OwnerUserId", owner.UserId)
+	end
+	CollectionService:AddTag(prompt, "StealPrompt")
+	prompt.Triggered:Connect(function(thief)
+		onPetStealTriggered(thief, plot, slotIndex, slot)
+	end)
+	prompt.Parent = model.PrimaryPart
+
+	model.Parent = petsFolder
+	slot.Model = model
+end
+
+local function showEggInSlot(plot, slotIndex, slot)
+	clearSlotModel(slot)
+	local model = PetModels.BuildEgg(slot.Rarity)
+	PetModels.PlaceOnSurface(model, plot.Pedestals[slotIndex].Surface)
+	local _, _, subtitle = PetModels.AddLabel(model, slot.Rarity .. " Egg", "Hatching...", rarityColor(slot.Rarity), 3.2)
+	slot.Label = subtitle
+	model.Parent = petsFolder
+	slot.Model = model
+end
+
+local function putPetInBase(plot, petId, mutation)
+	local index = findFreeSlot(plot)
+	if not index then
+		return false
+	end
+	local slot = { State = "Pet", PetId = petId, Mutation = mutation }
+	slots[plot.Index][index] = slot
+	showPetInSlot(plot, index, slot)
+	return true
+end
+
+local function putEggInBase(plot, rarity)
+	local index = findFreeSlot(plot)
+	if not index then
+		return false
+	end
+	local slot = { State = "Egg", Rarity = rarity, HatchAt = now() + Config.Rarities[rarity].HatchTime }
+	slots[plot.Index][index] = slot
+	showEggInSlot(plot, index, slot)
+	return true
+end
+
+local function hatch(plot, slotIndex, slot)
+	local pet = Config.RollPetForRarity(slot.Rarity, rng)
+	local mutation = Config.RollMutation(rng)
+	slot.State = "Pet"
+	slot.PetId = pet.Id
+	slot.Mutation = mutation
+	slot.Rarity = nil
+	slot.HatchAt = nil
+	slot.Label = nil
+	showPetInSlot(plot, slotIndex, slot)
+
+	local owner = plotOwner[plot.Index]
+	local name = petDisplayName(pet.Id, mutation)
+	if owner then
+		notify(owner, "You hatched " .. name .. " (" .. pet.Rarity .. ")!", rarityColor(pet.Rarity))
+		if Config.Rarities[pet.Rarity].Order >= 5 then
+			notifyAll(owner.DisplayName .. " hatched a " .. string.upper(pet.Rarity) .. " " .. name .. "!", rarityColor(pet.Rarity))
+		end
+	end
+end
+
+-- Pets to save: hatched pets, plus eggs that are still hatching (rolled now so they aren't lost)
+local function collectPetsForSave(plot)
+	local list = {}
+	for i = 1, Config.MaxPetsPerBase do
+		local slot = slots[plot.Index][i]
+		if slot then
+			if slot.State == "Pet" then
+				table.insert(list, { Id = slot.PetId, Mutation = slot.Mutation })
+			elseif slot.State == "Egg" then
+				local pet = Config.RollPetForRarity(slot.Rarity, rng)
+				table.insert(list, { Id = pet.Id, Mutation = Config.RollMutation(rng) })
+			end
+		end
+	end
+	return list
+end
+
+---------------------------------------------------------------------
+-- Carrying eggs and stolen pets
+---------------------------------------------------------------------
+local function attachToPlayer(player, model)
+	local root = getRoot(player)
+	if not root then
+		model:Destroy()
+		return false
+	end
+	local primary = model.PrimaryPart
+	model:PivotTo(root.CFrame * CFrame.new(0, 4.5 + PetModels.GetHeight(model) / 2, 0))
+	model.Parent = carriedFolder -- still anchored here, so nothing falls
+	for _, item in ipairs(model:GetDescendants()) do
+		if item:IsA("BasePart") then
+			item.CanCollide = false
+			item.CanTouch = false
+			item.CanQuery = false
+			item.Massless = true
+			if item ~= primary then
+				local weld = Instance.new("WeldConstraint")
+				weld.Part0 = primary
+				weld.Part1 = item
+				weld.Parent = item
+			end
+		end
+	end
+	local carryWeld = Instance.new("WeldConstraint")
+	carryWeld.Name = "CarryWeld"
+	carryWeld.Part0 = root
+	carryWeld.Part1 = primary
+	carryWeld.Parent = primary
+	for _, item in ipairs(model:GetDescendants()) do
+		if item:IsA("BasePart") then
+			item.Anchored = false
+		end
+	end
+	return true
+end
+
+local function returnStolenPet(carry)
+	local owner = carry.FromPlayer
+	if owner and owner.Parent == Players and playerPlot[owner] == carry.FromPlot then
+		if putPetInBase(carry.FromPlot, carry.PetId, carry.Mutation) then
+			notify(owner, "Your " .. petDisplayName(carry.PetId, carry.Mutation) .. " came back home!", Color3.fromRGB(120, 255, 150))
+			return
+		end
+	end
+end
+
+-- Drops whatever the player carries. Stolen pets go back to their owner.
+local function dropCarry(player)
+	local carry = carrying[player]
+	if not carry then
+		return
+	end
+	carrying[player] = nil
+	if carry.Model then
+		carry.Model:Destroy()
+	end
+	player:SetAttribute("Carrying", nil)
+	updateWalkSpeed(player)
+	if carry.Kind == "Pet" and carry.FromPlayer then
+		returnStolenPet(carry)
+	end
+end
+
+local function startCarry(player, carry, model)
+	if not attachToPlayer(player, model) then
+		return false
+	end
+	carry.Model = model
+	carrying[player] = carry
+	player:SetAttribute("Carrying", carry.Label)
+	updateWalkSpeed(player)
+	return true
+end
+
+local function deliver(player, plot)
+	local carry = carrying[player]
+	local ok
+	if carry.Kind == "Egg" then
+		ok = putEggInBase(plot, carry.Rarity)
+	else
+		ok = putPetInBase(plot, carry.PetId, carry.Mutation)
+	end
+	if not ok then
+		if not carry.WarnedFull then
+			carry.WarnedFull = true
+			notify(player, "Your base is full!", Color3.fromRGB(255, 120, 120))
+		end
+		return
+	end
+	carrying[player] = nil
+	carry.Model:Destroy()
+	player:SetAttribute("Carrying", nil)
+	updateWalkSpeed(player)
+	if carry.Kind == "Egg" then
+		notify(player, "Egg is hatching!", rarityColor(carry.Rarity))
+	else
+		local def = Config.PetsById[carry.PetId]
+		notify(player, "You stole " .. petDisplayName(carry.PetId, carry.Mutation) .. "!", rarityColor(def.Rarity))
+		if carry.FromPlayer and carry.FromPlayer.Parent == Players then
+			notify(carry.FromPlayer, player.DisplayName .. " got away with your " .. def.Name .. "!", Color3.fromRGB(255, 120, 120))
+		end
+	end
+end
+
+---------------------------------------------------------------------
+-- Eggs in the field
+---------------------------------------------------------------------
+local function onEggTriggered(player, zone, nest, eggModel)
+	if nest.Egg ~= eggModel then
+		return
+	end
+	if carrying[player] then
+		notify(player, "Your hands are full!", Color3.fromRGB(255, 200, 120))
+		return
+	end
+	local plot = playerPlot[player]
+	if not plot then
+		return
+	end
+	if countUsedSlots(plot) >= Config.MaxPetsPerBase then
+		notify(player, "Your base is full! (" .. Config.MaxPetsPerBase .. " squishies max)", Color3.fromRGB(255, 120, 120))
+		return
+	end
+	local rarity = eggModel:GetAttribute("Rarity")
+	nest.Egg = nil
+	nest.NextSpawn = now() + Config.EggRespawnTime
+	eggModel:Destroy()
+
+	local carried = PetModels.BuildEgg(rarity)
+	if startCarry(player, { Kind = "Egg", Rarity = rarity, Label = rarity .. " Egg" }, carried) then
+		notify(player, "Got a " .. rarity .. " Egg! Run back to your base!", rarityColor(rarity))
+	end
+end
+
+local function spawnEgg(zone, nest)
+	local rarity = Config.WeightedPick(zone.Config.EggWeights, rng)
+	local model = PetModels.BuildEgg(rarity)
+	PetModels.PlaceOnSurface(model, nest.Surface)
+	PetModels.AddLabel(model, rarity .. " Egg", "", rarityColor(rarity), 3.2)
+
+	local prompt = Instance.new("ProximityPrompt")
+	prompt.ActionText = "Grab Egg"
+	prompt.ObjectText = rarity
+	prompt.HoldDuration = Config.Rarities[rarity].HoldTime
+	prompt.MaxActivationDistance = 10
+	prompt.RequiresLineOfSight = false
+	prompt.Triggered:Connect(function(player)
+		onEggTriggered(player, zone, nest, model)
+	end)
+	prompt.Parent = model.PrimaryPart
+
+	model.Parent = eggsFolder
+	nest.Egg = model
+end
+
+---------------------------------------------------------------------
+-- Stealing pets from other bases
+---------------------------------------------------------------------
+onPetStealTriggered = function(thief, plot, slotIndex, slot)
+	local owner = plotOwner[plot.Index]
+	if not owner or owner == thief then
+		return
+	end
+	if slots[plot.Index][slotIndex] ~= slot or slot.State ~= "Pet" then
+		return
+	end
+	if now() < lockedUntil[plot.Index] then
+		notify(thief, "This base is locked!", Color3.fromRGB(255, 120, 120))
+		return
+	end
+	if carrying[thief] then
+		notify(thief, "Your hands are full!", Color3.fromRGB(255, 200, 120))
+		return
+	end
+	local thiefPlot = playerPlot[thief]
+	if not thiefPlot or countUsedSlots(thiefPlot) >= Config.MaxPetsPerBase then
+		notify(thief, "Your base is full!", Color3.fromRGB(255, 120, 120))
+		return
+	end
+
+	slots[plot.Index][slotIndex] = nil
+	clearSlotModel(slot)
+
+	local carried = PetModels.BuildPet(slot.PetId, slot.Mutation)
+	local carry = {
+		Kind = "Pet",
+		PetId = slot.PetId,
+		Mutation = slot.Mutation,
+		FromPlayer = owner,
+		FromPlot = plot,
+		Label = Config.PetsById[slot.PetId].Name,
+	}
+	if startCarry(thief, carry, carried) then
+		local name = petDisplayName(slot.PetId, slot.Mutation)
+		notify(thief, "You grabbed " .. name .. "! Run to your base!", Color3.fromRGB(255, 220, 120))
+		notify(owner, thief.DisplayName .. " is stealing your " .. name .. "! Catch them!", Color3.fromRGB(255, 90, 90))
+	else
+		-- could not carry (no character): put it straight back
+		putPetInBase(plot, slot.PetId, slot.Mutation)
+	end
+end
+
+---------------------------------------------------------------------
+-- Guardians
+---------------------------------------------------------------------
+local guardians = {}
+
+local function buildGuardian(zone)
+	local g = zone.Config.Guardian
+	local model = Instance.new("Model")
+	model.Name = g.Name
+
+	local function gpart(kind, size, offset, color)
+		local p = Instance.new("Part")
+		p.Anchored = true
+		p.CanCollide = false
+		p.CanTouch = false
+		p.Material = Enum.Material.SmoothPlastic
+		p.Color = color
+		if kind == "Ball" then
+			p.Shape = Enum.PartType.Ball
+			p.Size = size
+		elseif kind == "Ellipsoid" then
+			p.Size = size
+			local mesh = Instance.new("SpecialMesh")
+			mesh.MeshType = Enum.MeshType.Sphere
+			mesh.Parent = p
+		elseif kind == "Cylinder" then
+			p.Shape = Enum.PartType.Cylinder
+			p.Size = Vector3.new(size.Y, size.X, size.Z)
+		else
+			p.Size = size
+		end
+		local cf = CFrame.new(offset)
+		if kind == "Cylinder" then
+			cf = cf * CFrame.Angles(0, 0, math.rad(90))
+		end
+		p.CFrame = cf
+		p.Parent = model
+		return p
+	end
+
+	local body = gpart("Ellipsoid", Vector3.new(7, 8, 6), Vector3.new(0, 4, 0), g.Color)
+	body.Name = "Body"
+	gpart("Ball", Vector3.new(5, 5, 5), Vector3.new(0, 9.5, 0), g.Color)
+	gpart("Ball", Vector3.new(1.8, 1.8, 1.8), Vector3.new(-2, 11.6, 0), g.Color)
+	gpart("Ball", Vector3.new(1.8, 1.8, 1.8), Vector3.new(2, 11.6, 0), g.Color)
+	gpart("Ball", Vector3.new(0.9, 0.9, 0.9), Vector3.new(-0.9, 10, -2.2), Color3.fromRGB(30, 25, 30))
+	gpart("Ball", Vector3.new(0.9, 0.9, 0.9), Vector3.new(0.9, 10, -2.2), Color3.fromRGB(30, 25, 30))
+	gpart("Ellipsoid", Vector3.new(1.8, 1.2, 1), Vector3.new(0, 9.1, -2.3), g.Color:Lerp(Color3.new(1, 1, 1), 0.5))
+	-- angry eyebrows
+	local brow1 = gpart("Block", Vector3.new(1.2, 0.25, 0.3), Vector3.new(-0.9, 10.8, -2.3), Color3.fromRGB(30, 25, 30))
+	brow1.CFrame = brow1.CFrame * CFrame.Angles(0, 0, math.rad(-20))
+	local brow2 = gpart("Block", Vector3.new(1.2, 0.25, 0.3), Vector3.new(0.9, 10.8, -2.3), Color3.fromRGB(30, 25, 30))
+	brow2.CFrame = brow2.CFrame * CFrame.Angles(0, 0, math.rad(20))
+	-- chef hat
+	gpart("Cylinder", Vector3.new(3.4, 1.6, 3.4), Vector3.new(0, 12.6, 0), Color3.new(1, 1, 1))
+	gpart("Ball", Vector3.new(4, 4, 4), Vector3.new(0, 14, 0), Color3.new(1, 1, 1))
+
+	model.PrimaryPart = body
+	model.WorldPivot = CFrame.new(0, 0, 0) -- pivot at the feet
+
+	local gui = PetModels.AddLabel(model, g.Name, "Guards the eggs!", Color3.fromRGB(255, 90, 90), 13)
+	gui.MaxDistance = 120
+
+	local start = Vector3.new(0, 0, (zone.MinZ + zone.MaxZ) / 2)
+	model:PivotTo(CFrame.new(start))
+	model.Parent = map.Folder
+
+	return {
+		Zone = zone,
+		Model = model,
+		Position = start,
+		Target = start,
+	}
+end
+
+for _, zone in ipairs(map.Zones) do
+	table.insert(guardians, buildGuardian(zone))
+end
+
+local function randomPointIn(zone)
+	return Vector3.new(
+		rng:NextNumber(zone.MinX + 15, zone.MaxX - 15),
+		0,
+		rng:NextNumber(zone.MinZ + 10, zone.MaxZ - 10)
+	)
+end
+
+local function updateGuardian(guardian, dt)
+	local zone = guardian.Zone
+	local g = zone.Config.Guardian
+
+	-- find the closest player carrying something inside this zone
+	local chaseTarget, chasePlayer
+	local closest = g.ChaseRange
+	for player in pairs(carrying) do
+		local root = getRoot(player)
+		if root and isInside(root.Position, zone, 5) then
+			local flat = Vector3.new(root.Position.X, 0, root.Position.Z)
+			local distance = (flat - guardian.Position).Magnitude
+			if distance < closest then
+				closest = distance
+				chaseTarget = flat
+				chasePlayer = player
+			end
+		end
+	end
+
+	local speed
+	local target
+	if chaseTarget then
+		target = chaseTarget
+		speed = g.ChaseSpeed
+	else
+		if (guardian.Target - guardian.Position).Magnitude < 3 then
+			guardian.Target = randomPointIn(zone)
+		end
+		target = guardian.Target
+		speed = g.PatrolSpeed
+	end
+
+	local offset = target - guardian.Position
+	local distance = offset.Magnitude
+	if distance > 0.05 then
+		local direction = offset.Unit
+		local step = math.min(distance, speed * dt)
+		local newPos = guardian.Position + direction * step
+		newPos = Vector3.new(
+			math.clamp(newPos.X, zone.MinX + 3, zone.MaxX - 3),
+			0,
+			math.clamp(newPos.Z, zone.MinZ + 3, zone.MaxZ - 3)
+		)
+		guardian.Position = newPos
+		local bob = math.abs(math.sin(os.clock() * 8)) * 0.6
+		guardian.Model:PivotTo(CFrame.lookAt(newPos, newPos + Vector3.new(direction.X, 0, direction.Z)) + Vector3.new(0, bob, 0))
+	end
+
+	-- caught!
+	if chasePlayer and closest < 5.5 then
+		local t = now()
+		if not lastCaught[chasePlayer] or t - lastCaught[chasePlayer] > 2 then
+			lastCaught[chasePlayer] = t
+			local carry = carrying[chasePlayer]
+			local what = carry and carry.Label or "it"
+			dropCarry(chasePlayer)
+			notify(chasePlayer, g.Name .. " caught you and took back the " .. what .. "!", Color3.fromRGB(255, 90, 90))
+		end
+	end
+end
+
+---------------------------------------------------------------------
+-- Players joining and leaving
+---------------------------------------------------------------------
+local function setupCharacter(player, character)
+	local root = character:WaitForChild("HumanoidRootPart", 10)
+	local humanoid = character:WaitForChild("Humanoid", 10)
+	if not root or not humanoid then
+		return
+	end
+	task.wait()
+	local plot = playerPlot[player]
+	if plot then
+		character:PivotTo(plot.SpawnCFrame)
+	end
+	updateWalkSpeed(player)
+	humanoid.Died:Connect(function()
+		dropCarry(player)
+	end)
+end
+
+local function onPlayerAdded(player)
+	local profile = DataService.Load(player)
+	if player.Parent ~= Players then
+		return
+	end
+
+	local leaderstats = Instance.new("Folder")
+	leaderstats.Name = "leaderstats"
+	local coins = Instance.new("IntValue")
+	coins.Name = "Coins"
+	coins.Value = profile.Coins
+	coins.Parent = leaderstats
+	leaderstats.Parent = player
+
+	player:SetAttribute("SpeedLevel", profile.SpeedLevel)
+	player:SetAttribute("LockedUntil", 0)
+	player:SetAttribute("LockReadyAt", 0)
+
+	-- give the player a free base
+	local plot
+	for i, p in ipairs(map.Plots) do
+		if not plotOwner[i] then
+			plot = p
+			break
+		end
+	end
+	if plot then
+		plotOwner[plot.Index] = player
+		playerPlot[player] = plot
+		player:SetAttribute("PlotIndex", plot.Index)
+		plot.SignLabel.Text = player.DisplayName .. "'s Base"
+
+		-- welcome gift for brand new players
+		if #profile.Pets == 0 and profile.Coins == 0 and profile.SpeedLevel == 0 then
+			table.insert(profile.Pets, { Id = "Dumpy", Mutation = "Normal" })
+			task.delay(3, function()
+				if player.Parent == Players then
+					notify(player, "Welcome! Here's a free Dumpy to start your collection!", Color3.fromRGB(255, 200, 230))
+				end
+			end)
+		end
+		for _, pet in ipairs(profile.Pets) do
+			putPetInBase(plot, pet.Id, pet.Mutation)
+		end
+	else
+		notify(player, "All bases are taken, sorry! Try another server.", Color3.fromRGB(255, 120, 120))
+	end
+
+	player.CharacterAdded:Connect(function(character)
+		setupCharacter(player, character)
+	end)
+	if player.Character then
+		task.spawn(setupCharacter, player, player.Character)
+	end
+end
+
+local function onPlayerRemoving(player)
+	dropCarry(player)
+	carrying[player] = nil
+	lastCaught[player] = nil
+
+	-- thieves carrying this player's pets keep them if they make it home
+	for _, carry in pairs(carrying) do
+		if carry.FromPlayer == player then
+			carry.FromPlayer = nil
+		end
+	end
+
+	local plot = playerPlot[player]
+	local pets
+	if plot then
+		addCoins(player, stored[plot.Index])
+		pets = collectPetsForSave(plot)
+	end
+	DataService.Save(player, pets)
+
+	if plot then
+		for i = 1, Config.MaxPetsPerBase do
+			clearSlotModel(slots[plot.Index][i])
+			slots[plot.Index][i] = nil
+		end
+		stored[plot.Index] = 0
+		lockedUntil[plot.Index] = 0
+		plot.Barrier.Transparency = 1
+		plot.CollectLabel.Text = "Collect: 0"
+		plot.SignLabel.Text = "Empty Base"
+		plotOwner[plot.Index] = nil
+		playerPlot[player] = nil
+	end
+	DataService.Release(player)
+end
+
+Players.PlayerAdded:Connect(onPlayerAdded)
+for _, player in ipairs(Players:GetPlayers()) do
+	task.spawn(onPlayerAdded, player)
+end
+Players.PlayerRemoving:Connect(onPlayerRemoving)
+
+game:BindToClose(function()
+	local running = 0
+	for _, player in ipairs(Players:GetPlayers()) do
+		running = running + 1
+		task.spawn(function()
+			local plot = playerPlot[player]
+			if plot then
+				addCoins(player, stored[plot.Index])
+				stored[plot.Index] = 0
+			end
+			DataService.Save(player, plot and collectPetsForSave(plot) or nil)
+			running = running - 1
+		end)
+	end
+	local waited = 0
+	while running > 0 and waited < 25 do
+		waited = waited + task.wait(0.5)
+	end
+end)
+
+---------------------------------------------------------------------
+-- Collect pads
+---------------------------------------------------------------------
+for _, plot in ipairs(map.Plots) do
+	plot.CollectPad.Touched:Connect(function(hit)
+		local player = Players:GetPlayerFromCharacter(hit.Parent)
+		if not player or playerPlot[player] ~= plot then
+			return
+		end
+		local amount = math.floor(stored[plot.Index])
+		if amount <= 0 then
+			return
+		end
+		stored[plot.Index] = stored[plot.Index] - amount
+		addCoins(player, amount)
+		plot.CollectLabel.Text = "Collect: 0"
+		notify(player, "+$" .. Config.FormatNumber(amount), Color3.fromRGB(255, 230, 90))
+	end)
+end
+
+---------------------------------------------------------------------
+-- Remotes: speed upgrade and base lock
+---------------------------------------------------------------------
+BuySpeedFunction.OnServerInvoke = function(player)
+	local profile = DataService.Get(player)
+	if not profile then
+		return false, "Still loading..."
+	end
+	if profile.SpeedLevel >= Config.MaxSpeedLevel then
+		return false, "You're already at max speed!"
+	end
+	local cost = Config.GetSpeedCost(profile.SpeedLevel)
+	if profile.Coins < cost then
+		return false, "You need $" .. Config.FormatNumber(cost) .. " for the next speed level."
+	end
+	setCoins(player, profile.Coins - cost)
+	profile.SpeedLevel = profile.SpeedLevel + 1
+	player:SetAttribute("SpeedLevel", profile.SpeedLevel)
+	updateWalkSpeed(player)
+	return true, "Speed level " .. profile.SpeedLevel .. "!"
+end
+
+LockBaseFunction.OnServerInvoke = function(player)
+	local plot = playerPlot[player]
+	if not plot then
+		return false, "You don't have a base."
+	end
+	local t = now()
+	local readyAt = player:GetAttribute("LockReadyAt") or 0
+	if t < readyAt then
+		return false, "Lock ready in " .. math.ceil(readyAt - t) .. "s"
+	end
+	lockedUntil[plot.Index] = t + Config.BaseLockDuration
+	player:SetAttribute("LockedUntil", lockedUntil[plot.Index])
+	player:SetAttribute("LockReadyAt", t + Config.BaseLockCooldown)
+	plot.Barrier.Transparency = 0.4
+	return true, "Base locked for " .. Config.BaseLockDuration .. "s!"
+end
+
+---------------------------------------------------------------------
+-- Main loops
+---------------------------------------------------------------------
+
+-- Every frame: guardians move, carriers get checked
+RunService.Heartbeat:Connect(function(dt)
+	for _, guardian in ipairs(guardians) do
+		updateGuardian(guardian, dt)
+	end
+
+	for player, carry in pairs(carrying) do
+		local root = getRoot(player)
+		if root then
+			-- delivered home?
+			local plot = playerPlot[player]
+			if plot and isInside(root.Position, plot) then
+				deliver(player, plot)
+			elseif carry.Kind == "Pet" and carry.FromPlayer then
+				-- the owner can tag the thief to get the pet back
+				local ownerRoot = getRoot(carry.FromPlayer)
+				if ownerRoot and (ownerRoot.Position - root.Position).Magnitude < 6 then
+					notify(player, carry.FromPlayer.DisplayName .. " caught you!", Color3.fromRGB(255, 90, 90))
+					dropCarry(player)
+				end
+			end
+		end
+	end
+end)
+
+-- Every quarter second: eggs spawn and hatch, locked bases push intruders out
+task.spawn(function()
+	while true do
+		local t = now()
+
+		for _, zone in ipairs(map.Zones) do
+			for _, nest in ipairs(zone.Nests) do
+				if not nest.Egg and t >= (nest.NextSpawn or 0) then
+					spawnEgg(zone, nest)
+				end
+			end
+		end
+
+		for _, plot in ipairs(map.Plots) do
+			for i = 1, Config.MaxPetsPerBase do
+				local slot = slots[plot.Index][i]
+				if slot and slot.State == "Egg" then
+					local left = slot.HatchAt - t
+					if left <= 0 then
+						hatch(plot, i, slot)
+					elseif slot.Label then
+						slot.Label.Text = "Hatching in " .. math.ceil(left) .. "s"
+					end
+				end
+			end
+
+			if lockedUntil[plot.Index] > 0 then
+				if t >= lockedUntil[plot.Index] then
+					lockedUntil[plot.Index] = 0
+					plot.Barrier.Transparency = 1
+				else
+					local owner = plotOwner[plot.Index]
+					for _, player in ipairs(Players:GetPlayers()) do
+						if player ~= owner then
+							local root = getRoot(player)
+							if root and isInside(root.Position, plot) then
+								player.Character:PivotTo(CFrame.new(root.Position.X, root.Position.Y, plot.FrontZ - 8))
+								notify(player, "That base is locked!", Color3.fromRGB(255, 120, 120))
+							end
+						end
+					end
+				end
+			end
+		end
+
+		task.wait(0.25)
+	end
+end)
+
+-- Every second: squishies earn coins
+task.spawn(function()
+	while true do
+		task.wait(1)
+		for _, plot in ipairs(map.Plots) do
+			if plotOwner[plot.Index] then
+				local income = 0
+				for i = 1, Config.MaxPetsPerBase do
+					local slot = slots[plot.Index][i]
+					if slot and slot.State == "Pet" then
+						income = income + Config.GetPetIncome(slot.PetId, slot.Mutation)
+					end
+				end
+				stored[plot.Index] = stored[plot.Index] + income
+				plot.CollectLabel.Text = "Collect: $" .. Config.FormatNumber(stored[plot.Index])
+			end
+		end
+	end
+end)
+
+-- Autosave every 2 minutes
+task.spawn(function()
+	while true do
+		task.wait(120)
+		for _, player in ipairs(Players:GetPlayers()) do
+			local plot = playerPlot[player]
+			if plot then
+				task.spawn(DataService.Save, player, collectPetsForSave(plot))
+			end
+		end
+	end
+end)
+
+print("[" .. Config.GameName .. "] Server ready!")
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX00000008"><Properties><string name="Name">MapBuilder</string><ProtectedString name="Source"><![CDATA[-- MapBuilder: builds the whole map from code when the server starts.
+-- Bases sit in a row at the south end; the egg field stretches north (toward negative Z)
+-- through three zones that get rarer and more dangerous the farther you go.
+
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Lighting = game:GetService("Lighting")
+local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
+
+local MapBuilder = {}
+
+local PLOT_SIZE = 40
+local PLOT_SPACING = 50
+local PLOT_Z = 70 -- centre of the plot row
+local FLOOR_TOP = 1 -- plots are 1 stud above the ground
+
+local plotColors = {
+	Color3.fromRGB(255, 205, 220),
+	Color3.fromRGB(205, 230, 255),
+	Color3.fromRGB(255, 240, 190),
+	Color3.fromRGB(210, 245, 210),
+	Color3.fromRGB(235, 215, 255),
+	Color3.fromRGB(255, 220, 190),
+	Color3.fromRGB(200, 245, 240),
+	Color3.fromRGB(245, 245, 245),
+}
+
+local function part(props, parent)
+	local p = Instance.new(props.ClassName or "Part")
+	p.Anchored = true
+	p.TopSurface = Enum.SurfaceType.Smooth
+	p.BottomSurface = Enum.SurfaceType.Smooth
+	p.Material = Enum.Material.SmoothPlastic
+	for key, value in pairs(props) do
+		if key ~= "ClassName" and key ~= "Shape" then
+			p[key] = value
+		end
+	end
+	if props.Shape then
+		p.Shape = props.Shape
+		if props.Size then
+			p.Size = props.Size
+		end
+	end
+	p.Parent = parent
+	return p
+end
+
+-- Vertical cylinder centred at `pos`
+local function cylinder(name, diameter, height, pos, color, parent)
+	local p = part({
+		Name = name,
+		Shape = Enum.PartType.Cylinder,
+		Size = Vector3.new(height, diameter, diameter),
+		CFrame = CFrame.new(pos) * CFrame.Angles(0, 0, math.rad(90)),
+		Color = color,
+	}, parent)
+	return p
+end
+
+local function addSignText(signPart, face, text, textColor)
+	local gui = Instance.new("SurfaceGui")
+	gui.Face = face
+	gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+	gui.PixelsPerStud = 40
+	gui.LightInfluence = 0
+	local label = Instance.new("TextLabel")
+	label.Name = "Text"
+	label.Size = UDim2.new(1, 0, 1, 0)
+	label.BackgroundTransparency = 1
+	label.Font = Enum.Font.FredokaOne
+	label.TextScaled = true
+	label.Text = text
+	label.TextColor3 = textColor or Color3.new(1, 1, 1)
+	label.TextStrokeTransparency = 0.3
+	label.Parent = gui
+	gui.Parent = signPart
+	return label
+end
+
+local function buildLighting()
+	Lighting.ClockTime = 14
+	Lighting.Brightness = 2.5
+	Lighting.OutdoorAmbient = Color3.fromRGB(150, 140, 160)
+	if not Lighting:FindFirstChildOfClass("Atmosphere") then
+		local atmosphere = Instance.new("Atmosphere")
+		atmosphere.Density = 0.25
+		atmosphere.Color = Color3.fromRGB(255, 230, 245)
+		atmosphere.Decay = Color3.fromRGB(200, 180, 255)
+		atmosphere.Parent = Lighting
+	end
+end
+
+local function buildGround(map)
+	part({
+		Name = "Ground",
+		Size = Vector3.new(800, 4, 800),
+		CFrame = CFrame.new(0, -2, -150),
+		Color = Color3.fromRGB(150, 215, 140),
+		Material = Enum.Material.Grass,
+	}, map)
+
+	-- Path between the bases and the field
+	part({
+		Name = "Path",
+		Size = Vector3.new(2 * Config.FieldHalfWidth + 60, 0.2, 70),
+		CFrame = CFrame.new(0, 0.1, 15),
+		Color = Color3.fromRGB(250, 235, 210),
+	}, map)
+
+	-- Invisible walls so nobody wanders off the map
+	local walls = {
+		{ Vector3.new(4, 60, 560), Vector3.new(-215, 30, -165) },
+		{ Vector3.new(4, 60, 560), Vector3.new(215, 30, -165) },
+		{ Vector3.new(434, 60, 4), Vector3.new(0, 30, -445) },
+		{ Vector3.new(434, 60, 4), Vector3.new(0, 30, 113) },
+	}
+	for _, w in ipairs(walls) do
+		part({ Name = "Boundary", Size = w[1], CFrame = CFrame.new(w[2]), Transparency = 1 }, map)
+	end
+
+	local spawn = Instance.new("SpawnLocation")
+	spawn.Anchored = true
+	spawn.Size = Vector3.new(8, 1, 8)
+	spawn.CFrame = CFrame.new(0, 0.5, 20)
+	spawn.Duration = 0
+	spawn.Transparency = 1
+	spawn.CanCollide = false
+	spawn.Parent = map
+end
+
+local function buildPlot(index, parent)
+	local cx = -((Config.MaxPlots - 1) * PLOT_SPACING) / 2 + (index - 1) * PLOT_SPACING
+	local folder = Instance.new("Model")
+	folder.Name = "Plot" .. index
+	folder.Parent = parent
+
+	local color = plotColors[(index - 1) % #plotColors + 1]
+	local frontZ = PLOT_Z - PLOT_SIZE / 2
+	local backZ = PLOT_Z + PLOT_SIZE / 2
+
+	part({
+		Name = "Floor",
+		Size = Vector3.new(PLOT_SIZE, FLOOR_TOP, PLOT_SIZE),
+		CFrame = CFrame.new(cx, FLOOR_TOP / 2, PLOT_Z),
+		Color = color,
+	}, folder)
+
+	-- Low walls on the sides and back
+	local wallColor = color:Lerp(Color3.new(0, 0, 0), 0.15)
+	part({ Name = "Wall", Size = Vector3.new(1, 4, PLOT_SIZE), CFrame = CFrame.new(cx - PLOT_SIZE / 2, FLOOR_TOP + 2, PLOT_Z), Color = wallColor }, folder)
+	part({ Name = "Wall", Size = Vector3.new(1, 4, PLOT_SIZE), CFrame = CFrame.new(cx + PLOT_SIZE / 2, FLOOR_TOP + 2, PLOT_Z), Color = wallColor }, folder)
+	part({ Name = "Wall", Size = Vector3.new(PLOT_SIZE, 4, 1), CFrame = CFrame.new(cx, FLOOR_TOP + 2, backZ), Color = wallColor }, folder)
+
+	-- Owner sign on the back wall
+	local sign = part({
+		Name = "Sign",
+		Size = Vector3.new(18, 4, 0.5),
+		CFrame = CFrame.new(cx, FLOOR_TOP + 6.5, backZ - 0.2),
+		Color = Color3.fromRGB(255, 255, 255),
+	}, folder)
+	local signLabel = addSignText(sign, Enum.NormalId.Front, "Empty Base", Color3.fromRGB(255, 120, 170))
+
+	-- Lock barrier across the open front (only visible while locked)
+	local barrier = part({
+		Name = "Barrier",
+		Size = Vector3.new(PLOT_SIZE, 8, 0.6),
+		CFrame = CFrame.new(cx, FLOOR_TOP + 4, frontZ),
+		Color = Color3.fromRGB(255, 70, 110),
+		Material = Enum.Material.ForceField,
+		Transparency = 1,
+		CanCollide = false,
+		CanQuery = false,
+		CanTouch = false,
+	}, folder)
+
+	-- Pedestals: two rows of five
+	local pedestals = {}
+	local xs = { -14, -7, 0, 7, 14 }
+	local rows = { PLOT_Z - 6, PLOT_Z + 10 }
+	for _, z in ipairs(rows) do
+		for _, xOffset in ipairs(xs) do
+			local pedestalTop = FLOOR_TOP + 1
+			local ped = cylinder("Pedestal", 4.5, 1, Vector3.new(cx + xOffset, FLOOR_TOP + 0.5, z), Color3.fromRGB(255, 255, 255), folder)
+			table.insert(pedestals, {
+				Part = ped,
+				Surface = CFrame.new(cx + xOffset, pedestalTop, z),
+			})
+		end
+	end
+
+	-- Collect pad near the entrance
+	local pad = part({
+		Name = "CollectPad",
+		Size = Vector3.new(6, 0.3, 6),
+		CFrame = CFrame.new(cx, FLOOR_TOP + 0.15, frontZ + 6),
+		Color = Color3.fromRGB(90, 230, 120),
+		Material = Enum.Material.Neon,
+		CanCollide = false,
+	}, folder)
+	local padGui = Instance.new("BillboardGui")
+	padGui.Size = UDim2.new(0, 160, 0, 40)
+	padGui.StudsOffset = Vector3.new(0, 3, 0)
+	padGui.MaxDistance = 70
+	padGui.LightInfluence = 0
+	local padLabel = Instance.new("TextLabel")
+	padLabel.Size = UDim2.new(1, 0, 1, 0)
+	padLabel.BackgroundTransparency = 1
+	padLabel.Font = Enum.Font.FredokaOne
+	padLabel.TextScaled = true
+	padLabel.TextColor3 = Color3.fromRGB(255, 230, 90)
+	padLabel.TextStrokeTransparency = 0.2
+	padLabel.Text = "Collect: 0"
+	padLabel.Parent = padGui
+	padGui.Parent = pad
+
+	return {
+		Index = index,
+		Model = folder,
+		CenterX = cx,
+		Pedestals = pedestals,
+		CollectPad = pad,
+		CollectLabel = padLabel,
+		SignLabel = signLabel,
+		Barrier = barrier,
+		SpawnCFrame = CFrame.lookAt(Vector3.new(cx, FLOOR_TOP + 3, PLOT_Z + 4), Vector3.new(cx, FLOOR_TOP + 3, 0)),
+		MinX = cx - PLOT_SIZE / 2,
+		MaxX = cx + PLOT_SIZE / 2,
+		MinZ = frontZ,
+		MaxZ = backZ,
+		FrontZ = frontZ,
+	}
+end
+
+local function decorate(zoneIndex, zone, folder, rng)
+	local count = 10
+	for _ = 1, count do
+		local x = rng:NextNumber(-Config.FieldHalfWidth + 5, Config.FieldHalfWidth - 5)
+		local z = rng:NextNumber(zone.ZEnd + 5, zone.ZStart - 5)
+		-- keep decorations near the edges so the middle stays open
+		if math.abs(x) < 60 then
+			x = x < 0 and x - 70 or x + 70
+		end
+		if zoneIndex == 1 then
+			-- giant lollipop
+			local height = rng:NextNumber(8, 14)
+			cylinder("Stick", 0.8, height, Vector3.new(x, height / 2, z), Color3.new(1, 1, 1), folder)
+			local candyColors = { Color3.fromRGB(255, 120, 170), Color3.fromRGB(120, 200, 255), Color3.fromRGB(255, 220, 90) }
+			part({
+				Name = "Lollipop",
+				Shape = Enum.PartType.Ball,
+				Size = Vector3.new(6, 6, 6),
+				CFrame = CFrame.new(x, height + 2.5, z),
+				Color = candyColors[rng:NextInteger(1, #candyColors)],
+			}, folder)
+		elseif zoneIndex == 2 then
+			-- giant cupcake
+			cylinder("CupcakeBase", 7, 4, Vector3.new(x, 2, z), Color3.fromRGB(240, 130, 160), folder)
+			local top = part({
+				Name = "Frosting",
+				Size = Vector3.new(8, 5, 8),
+				CFrame = CFrame.new(x, 5.5, z),
+				Color = Color3.fromRGB(255, 245, 250),
+			}, folder)
+			local mesh = Instance.new("SpecialMesh")
+			mesh.MeshType = Enum.MeshType.Sphere
+			mesh.Parent = top
+		else
+			-- glowing star crystal
+			local height = rng:NextNumber(6, 12)
+			part({
+				Name = "Crystal",
+				Size = Vector3.new(2.5, height, 2.5),
+				CFrame = CFrame.new(x, height / 2, z) * CFrame.Angles(0, rng:NextNumber(0, math.pi), math.rad(rng:NextNumber(-10, 10))),
+				Color = Color3.fromRGB(200, 170, 255),
+				Material = Enum.Material.Neon,
+				Transparency = 0.2,
+			}, folder)
+		end
+	end
+end
+
+local function buildZone(zoneIndex, zone, parent, rng)
+	local folder = Instance.new("Folder")
+	folder.Name = zone.Name
+	folder.Parent = parent
+
+	local length = zone.ZStart - zone.ZEnd
+	local centerZ = (zone.ZStart + zone.ZEnd) / 2
+	part({
+		Name = "ZoneFloor",
+		Size = Vector3.new(Config.FieldHalfWidth * 2, 0.2, length),
+		CFrame = CFrame.new(0, 0.1, centerZ),
+		Color = zone.FloorColor,
+	}, folder)
+
+	-- Archway sign at the start of the zone
+	local postColor = Color3.fromRGB(255, 255, 255)
+	part({ Name = "Post", Size = Vector3.new(2, 18, 2), CFrame = CFrame.new(-24, 9, zone.ZStart), Color = postColor }, folder)
+	part({ Name = "Post", Size = Vector3.new(2, 18, 2), CFrame = CFrame.new(24, 9, zone.ZStart), Color = postColor }, folder)
+	local sign = part({
+		Name = "ZoneSign",
+		Size = Vector3.new(50, 6, 1),
+		CFrame = CFrame.new(0, 19, zone.ZStart),
+		Color = zone.FloorColor:Lerp(Color3.new(0, 0, 0), 0.25),
+	}, folder)
+	local rarityText = {}
+	for rarity in pairs(zone.EggWeights) do
+		table.insert(rarityText, rarity)
+	end
+	table.sort(rarityText, function(a, b)
+		return Config.Rarities[a].Order < Config.Rarities[b].Order
+	end)
+	addSignText(sign, Enum.NormalId.Back, zone.Name .. "  (" .. table.concat(rarityText, ", ") .. ")")
+	addSignText(sign, Enum.NormalId.Front, zone.Name)
+
+	-- Nests, spread out so they never overlap
+	local nests = {}
+	local attempts = 0
+	while #nests < zone.Nests and attempts < 500 do
+		attempts = attempts + 1
+		local pos = Vector3.new(
+			rng:NextNumber(-Config.FieldHalfWidth + 20, Config.FieldHalfWidth - 20),
+			0,
+			rng:NextNumber(zone.ZEnd + 12, zone.ZStart - 12)
+		)
+		local tooClose = false
+		for _, other in ipairs(nests) do
+			if (other.Position - pos).Magnitude < 22 then
+				tooClose = true
+				break
+			end
+		end
+		if not tooClose then
+			local nestPart = cylinder("Nest", 5, 0.8, pos + Vector3.new(0, 0.4, 0), Color3.fromRGB(140, 95, 55), folder)
+			nestPart.Material = Enum.Material.WoodPlanks
+			table.insert(nests, {
+				Position = pos,
+				Surface = CFrame.new(pos + Vector3.new(0, 0.8, 0)) * CFrame.Angles(0, rng:NextNumber(0, 2 * math.pi), 0),
+				Egg = nil,
+			})
+		end
+	end
+
+	decorate(zoneIndex, zone, folder, rng)
+
+	return {
+		Index = zoneIndex,
+		Config = zone,
+		Folder = folder,
+		Nests = nests,
+		MinX = -Config.FieldHalfWidth,
+		MaxX = Config.FieldHalfWidth,
+		MinZ = zone.ZEnd,
+		MaxZ = zone.ZStart,
+	}
+end
+
+function MapBuilder.Build()
+	buildLighting()
+
+	local map = Instance.new("Folder")
+	map.Name = "Map"
+	map.Parent = workspace
+
+	buildGround(map)
+
+	local plotsFolder = Instance.new("Folder")
+	plotsFolder.Name = "Plots"
+	plotsFolder.Parent = map
+	local plots = {}
+	for i = 1, Config.MaxPlots do
+		plots[i] = buildPlot(i, plotsFolder)
+	end
+
+	local zonesFolder = Instance.new("Folder")
+	zonesFolder.Name = "Zones"
+	zonesFolder.Parent = map
+	local rng = Random.new(2026) -- fixed seed: the map looks the same every time
+	local zones = {}
+	for i, zone in ipairs(Config.Zones) do
+		zones[i] = buildZone(i, zone, zonesFolder, rng)
+	end
+
+	return {
+		Folder = map,
+		Plots = plots,
+		Zones = zones,
+	}
+end
+
+return MapBuilder
+]]></ProtectedString></Properties></Item></Item></Item><Item class="StarterPlayer" referent="RBX0000000D"><Properties><string name="Name">StarterPlayer</string></Properties><Item class="StarterPlayerScripts" referent="RBX0000000C"><Properties><string name="Name">StarterPlayerScripts</string></Properties><Item class="LocalScript" referent="RBX0000000B"><Properties><string name="Name">HUD</string><ProtectedString name="Source"><![CDATA[-- HUD: the player's screen (coins, speed upgrade, base lock, messages)
+-- plus little client-side effects: bouncing squishies and rainbow colours.
+
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
+local CollectionService = game:GetService("CollectionService")
+
+local player = Players.LocalPlayer
+local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
+local remotes = ReplicatedStorage:WaitForChild("Remotes")
+local NotifyEvent = remotes:WaitForChild("Notify")
+local BuySpeedFunction = remotes:WaitForChild("BuySpeed")
+local LockBaseFunction = remotes:WaitForChild("LockBase")
+
+---------------------------------------------------------------------
+-- UI helpers
+---------------------------------------------------------------------
+local PINK = Color3.fromRGB(255, 120, 170)
+local DARK = Color3.fromRGB(45, 30, 60)
+
+local function corner(parent, radius)
+	local c = Instance.new("UICorner")
+	c.CornerRadius = UDim.new(0, radius or 12)
+	c.Parent = parent
+	return c
+end
+
+local function stroke(parent, color, thickness)
+	local s = Instance.new("UIStroke")
+	s.Color = color or Color3.new(1, 1, 1)
+	s.Thickness = thickness or 3
+	s.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	s.Parent = parent
+	return s
+end
+
+local function label(parent, props)
+	local l = Instance.new("TextLabel")
+	l.BackgroundTransparency = 1
+	l.Font = Enum.Font.FredokaOne
+	l.TextColor3 = Color3.new(1, 1, 1)
+	l.TextScaled = true
+	l.TextStrokeTransparency = 0.4
+	for key, value in pairs(props) do
+		l[key] = value
+	end
+	l.Parent = parent
+	return l
+end
+
+local function button(parent, props)
+	local b = Instance.new("TextButton")
+	b.Font = Enum.Font.FredokaOne
+	b.TextColor3 = Color3.new(1, 1, 1)
+	b.TextScaled = true
+	b.AutoButtonColor = true
+	b.TextStrokeTransparency = 0.5
+	for key, value in pairs(props) do
+		b[key] = value
+	end
+	corner(b, 14)
+	stroke(b, Color3.new(1, 1, 1), 3)
+	local pad = Instance.new("UIPadding")
+	pad.PaddingTop = UDim.new(0, 6)
+	pad.PaddingBottom = UDim.new(0, 6)
+	pad.PaddingLeft = UDim.new(0, 8)
+	pad.PaddingRight = UDim.new(0, 8)
+	pad.Parent = b
+	b.Parent = parent
+	return b
+end
+
+---------------------------------------------------------------------
+-- Build the screen
+---------------------------------------------------------------------
+local gui = Instance.new("ScreenGui")
+gui.Name = "HUD"
+gui.ResetOnSpawn = false
+gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+gui.Parent = player:WaitForChild("PlayerGui")
+
+-- Coins (top centre)
+local coinFrame = Instance.new("Frame")
+coinFrame.AnchorPoint = Vector2.new(0.5, 0)
+coinFrame.Position = UDim2.new(0.5, 0, 0, 8)
+coinFrame.Size = UDim2.new(0, 220, 0, 52)
+coinFrame.BackgroundColor3 = DARK
+coinFrame.BackgroundTransparency = 0.15
+coinFrame.Parent = gui
+corner(coinFrame, 16)
+stroke(coinFrame, Color3.fromRGB(255, 220, 90), 3)
+local coinLabel = label(coinFrame, {
+	Size = UDim2.new(1, -16, 1, -10),
+	Position = UDim2.new(0, 8, 0, 5),
+	Text = "$0",
+	TextColor3 = Color3.fromRGB(255, 225, 90),
+})
+
+-- Carrying banner (under the coins)
+local carryLabel = label(gui, {
+	AnchorPoint = Vector2.new(0.5, 0),
+	Position = UDim2.new(0.5, 0, 0, 66),
+	Size = UDim2.new(0, 420, 0, 34),
+	Text = "",
+	Visible = false,
+	TextColor3 = Color3.fromRGB(255, 240, 150),
+	TextStrokeTransparency = 0,
+})
+
+-- Buttons (bottom left)
+local buttonColumn = Instance.new("Frame")
+buttonColumn.BackgroundTransparency = 1
+buttonColumn.AnchorPoint = Vector2.new(0, 1)
+buttonColumn.Position = UDim2.new(0, 12, 1, -12)
+buttonColumn.Size = UDim2.new(0, 230, 0, 140)
+buttonColumn.Parent = gui
+local layout = Instance.new("UIListLayout")
+layout.Padding = UDim.new(0, 10)
+layout.VerticalAlignment = Enum.VerticalAlignment.Bottom
+layout.Parent = buttonColumn
+
+local speedButton = button(buttonColumn, {
+	Size = UDim2.new(1, 0, 0, 60),
+	BackgroundColor3 = Color3.fromRGB(80, 170, 255),
+	Text = "Speed",
+	LayoutOrder = 1,
+})
+local lockButton = button(buttonColumn, {
+	Size = UDim2.new(1, 0, 0, 60),
+	BackgroundColor3 = PINK,
+	Text = "Lock Base",
+	LayoutOrder = 2,
+})
+
+-- Notifications (stack under the carry banner)
+local notifyList = Instance.new("Frame")
+notifyList.BackgroundTransparency = 1
+notifyList.AnchorPoint = Vector2.new(0.5, 0)
+notifyList.Position = UDim2.new(0.5, 0, 0, 104)
+notifyList.Size = UDim2.new(0, 520, 0, 200)
+notifyList.Parent = gui
+local notifyLayout = Instance.new("UIListLayout")
+notifyLayout.Padding = UDim.new(0, 4)
+notifyLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+notifyLayout.SortOrder = Enum.SortOrder.LayoutOrder
+notifyLayout.Parent = notifyList
+
+local notifyCount = 0
+local function showNotification(text, color)
+	notifyCount = notifyCount + 1
+	local l = label(notifyList, {
+		Size = UDim2.new(1, 0, 0, 30),
+		Text = text,
+		TextColor3 = color or Color3.new(1, 1, 1),
+		TextStrokeTransparency = 0,
+		LayoutOrder = notifyCount,
+	})
+	-- keep at most 5 messages
+	local children = {}
+	for _, child in ipairs(notifyList:GetChildren()) do
+		if child:IsA("TextLabel") then
+			table.insert(children, child)
+		end
+	end
+	if #children > 5 then
+		table.sort(children, function(a, b)
+			return a.LayoutOrder < b.LayoutOrder
+		end)
+		children[1]:Destroy()
+	end
+	task.delay(3.5, function()
+		if l.Parent then
+			local tween = TweenService:Create(l, TweenInfo.new(0.5), { TextTransparency = 1, TextStrokeTransparency = 1 })
+			tween:Play()
+			tween.Completed:Wait()
+			l:Destroy()
+		end
+	end)
+end
+NotifyEvent.OnClientEvent:Connect(showNotification)
+
+-- How to play (shown once when you join)
+local help = Instance.new("Frame")
+help.AnchorPoint = Vector2.new(0.5, 0.5)
+help.Position = UDim2.new(0.5, 0, 0.5, 0)
+help.Size = UDim2.new(0, 420, 0, 300)
+help.BackgroundColor3 = DARK
+help.BackgroundTransparency = 0.05
+help.Parent = gui
+corner(help, 20)
+stroke(help, PINK, 4)
+label(help, {
+	Size = UDim2.new(1, -20, 0, 44),
+	Position = UDim2.new(0, 10, 0, 10),
+	Text = Config.GameName,
+	TextColor3 = PINK,
+})
+label(help, {
+	Size = UDim2.new(1, -30, 0, 170),
+	Position = UDim2.new(0, 15, 0, 60),
+	TextScaled = false,
+	TextSize = 18,
+	TextWrapped = true,
+	TextXAlignment = Enum.TextXAlignment.Left,
+	TextYAlignment = Enum.TextYAlignment.Top,
+	Font = Enum.Font.GothamBold,
+	Text = "1. Run into the egg field and grab an egg.\n"
+		.. "2. Bring it back to your base - watch out for the guardians!\n"
+		.. "3. Eggs hatch into squishies that make money.\n"
+		.. "4. Step on the green pad to collect your coins.\n"
+		.. "5. Buy speed to reach the rare eggs far away.\n"
+		.. "6. Steal squishies from other bases... and lock yours!",
+})
+local closeHelp = button(help, {
+	AnchorPoint = Vector2.new(0.5, 1),
+	Position = UDim2.new(0.5, 0, 1, -14),
+	Size = UDim2.new(0, 160, 0, 46),
+	BackgroundColor3 = Color3.fromRGB(90, 210, 120),
+	Text = "Let's go!",
+})
+closeHelp.MouseButton1Click:Connect(function()
+	help.Visible = false
+end)
+
+---------------------------------------------------------------------
+-- Live updates
+---------------------------------------------------------------------
+local function updateCoins()
+	local leaderstats = player:FindFirstChild("leaderstats")
+	local coins = leaderstats and leaderstats:FindFirstChild("Coins")
+	if coins then
+		coinLabel.Text = "$" .. Config.FormatNumber(coins.Value)
+	end
+end
+
+local function updateSpeedButton()
+	local level = player:GetAttribute("SpeedLevel") or 0
+	if level >= Config.MaxSpeedLevel then
+		speedButton.Text = "Speed MAX"
+	else
+		speedButton.Text = "Speed Lv " .. level .. "  ($" .. Config.FormatNumber(Config.GetSpeedCost(level)) .. ")"
+	end
+end
+
+local function updateCarry()
+	local carryingWhat = player:GetAttribute("Carrying")
+	if carryingWhat then
+		carryLabel.Text = "Carrying " .. carryingWhat .. "  - run home!"
+		carryLabel.Visible = true
+	else
+		carryLabel.Visible = false
+	end
+end
+
+task.spawn(function()
+	local leaderstats = player:WaitForChild("leaderstats")
+	local coins = leaderstats:WaitForChild("Coins")
+	coins.Changed:Connect(updateCoins)
+	updateCoins()
+end)
+player:GetAttributeChangedSignal("SpeedLevel"):Connect(updateSpeedButton)
+player:GetAttributeChangedSignal("Carrying"):Connect(updateCarry)
+updateSpeedButton()
+updateCarry()
+
+local busy = false
+speedButton.MouseButton1Click:Connect(function()
+	if busy then
+		return
+	end
+	busy = true
+	local ok, message = BuySpeedFunction:InvokeServer()
+	showNotification(message, ok and Color3.fromRGB(120, 220, 255) or Color3.fromRGB(255, 140, 140))
+	busy = false
+end)
+
+lockButton.MouseButton1Click:Connect(function()
+	if busy then
+		return
+	end
+	busy = true
+	local ok, message = LockBaseFunction:InvokeServer()
+	showNotification(message, ok and PINK or Color3.fromRGB(255, 140, 140))
+	busy = false
+end)
+
+-- Lock button countdown
+task.spawn(function()
+	while true do
+		local t = workspace:GetServerTimeNow()
+		local lockedUntil = player:GetAttribute("LockedUntil") or 0
+		local readyAt = player:GetAttribute("LockReadyAt") or 0
+		if t < lockedUntil then
+			lockButton.Text = "Locked! " .. math.ceil(lockedUntil - t) .. "s"
+			lockButton.BackgroundColor3 = Color3.fromRGB(255, 70, 110)
+		elseif t < readyAt then
+			lockButton.Text = "Lock ready in " .. math.ceil(readyAt - t) .. "s"
+			lockButton.BackgroundColor3 = Color3.fromRGB(150, 120, 150)
+		else
+			lockButton.Text = "Lock Base"
+			lockButton.BackgroundColor3 = PINK
+		end
+		task.wait(0.25)
+	end
+end)
+
+---------------------------------------------------------------------
+-- Hide the "Steal" prompt on your own squishies
+---------------------------------------------------------------------
+local function checkPrompt(prompt)
+	if prompt:GetAttribute("OwnerUserId") == player.UserId then
+		prompt.Enabled = false
+	end
+end
+for _, prompt in ipairs(CollectionService:GetTagged("StealPrompt")) do
+	checkPrompt(prompt)
+end
+CollectionService:GetInstanceAddedSignal("StealPrompt"):Connect(checkPrompt)
+
+---------------------------------------------------------------------
+-- Squishy bounce + rainbow mutation
+---------------------------------------------------------------------
+local bouncing = {} -- [model] = phase offset
+local function trackPet(model)
+	bouncing[model] = math.random() * math.pi * 2
+end
+for _, model in ipairs(CollectionService:GetTagged("SquishyPet")) do
+	trackPet(model)
+end
+CollectionService:GetInstanceAddedSignal("SquishyPet"):Connect(trackPet)
+CollectionService:GetInstanceRemovedSignal("SquishyPet"):Connect(function(model)
+	bouncing[model] = nil
+end)
+
+RunService.RenderStepped:Connect(function()
+	local t = os.clock()
+	for model, phase in pairs(bouncing) do
+		if not model.Parent then
+			bouncing[model] = nil
+		else
+			local rest = model:GetAttribute("RestPivot")
+			if rest then
+				local hop = math.abs(math.sin(t * 2.5 + phase)) * 0.5
+				model:PivotTo(rest * CFrame.new(0, hop, 0))
+			end
+			if model:GetAttribute("Rainbow") and model.PrimaryPart then
+				model.PrimaryPart.Color = Color3.fromHSV((t * 0.25 + phase) % 1, 0.6, 1)
+			end
+		end
+	end
+end)
+]]></ProtectedString></Properties></Item></Item></Item></roblox>
