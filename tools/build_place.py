@@ -94,6 +94,17 @@ def assets_folder():
     return '<Item class="Folder" referent="%s"><Properties><string name="Name">Assets</string></Properties>%s</Item>' % (ref(), "".join(items))
 
 
+def shared_strings():
+    """One <SharedStrings> block with each md5 only once."""
+    seen = {}
+    for chunk in SHARED:
+        for m in re.finditer(r'<SharedString md5="([^"]+)"\s*(?:/>|>.*?</SharedString>)', chunk, re.S):
+            seen.setdefault(m.group(1), m.group(0))
+    if not seen:
+        return ""
+    return "<SharedStrings>%s</SharedStrings>" % "".join(seen.values())
+
+
 def main():
     src = os.path.join(ROOT, "src")
     body = "".join(
@@ -113,7 +124,7 @@ def main():
         '<roblox xmlns:xmime="http://www.w3.org/2005/05/xmlmime" '
         'xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" '
         'xsi:noNamespaceSchemaLocation="http://www.roblox.com/roblox.xsd" version="4">'
-        "%s%s</roblox>" % (body, ("<SharedStrings>%s</SharedStrings>" % "".join(SHARED)) if SHARED else "")
+        "%s%s</roblox>" % (body, shared_strings())
     )
     os.makedirs(os.path.dirname(OUT), exist_ok=True)
     with open(OUT, "w", encoding="utf-8") as f:

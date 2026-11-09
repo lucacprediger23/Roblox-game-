@@ -2451,18 +2451,18 @@ c2g=</BinaryString>
 				<Properties>
 					<token name="LevelOfDetail">0</token>
 					<CoordinateFrame name="ModelMeshCFrame">
-						<X>0</X>
-						<Y>0</Y>
-						<Z>0</Z>
-						<R00>1</R00>
-						<R01>0</R01>
-						<R02>0</R02>
-						<R10>0</R10>
-						<R11>1</R11>
-						<R12>0</R12>
-						<R20>0</R20>
-						<R21>0</R21>
-						<R22>1</R22>
+						<X>11.4961281</X>
+						<Y>-6.45777512</Y>
+						<Z>10.8224382</Z>
+						<R00>0.743331194</R00>
+						<R01>1.63634013e-06</R01>
+						<R02>0.668922305</R02>
+						<R10>0.226738527</R10>
+						<R11>0.9407897</R11>
+						<R12>-0.25195545</R12>
+						<R20>-0.629332423</R20>
+						<R21>0.338966638</R21>
+						<R22>0.699337304</R22>
 					</CoordinateFrame>
 					<SharedString name="ModelMeshData">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
 					<Vector3 name="ModelMeshSize">
@@ -2473,22 +2473,22 @@ c2g=</BinaryString>
 					<token name="ModelStreamingMode">0</token>
 					<bool name="NeedsPivotMigration">false</bool>
 					<Ref name="PrimaryPart">null</Ref>
-					<float name="ScaleFactor">5.06921482</float>
+					<float name="ScaleFactor">6.86938</float>
 					<SharedString name="SlimHash">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
 					<OptionalCoordinateFrame name="WorldPivotData">
 						<CFrame>
-							<X>-0.0152709</X>
-							<Y>2.01582193</Y>
-							<Z>-5.00881386</Z>
-							<R00>1</R00>
+							<X>8.1342907</X>
+							<Y>-3.30285406</Y>
+							<Z>8.01240063</Z>
+							<R00>0.743332088</R00>
 							<R01>0</R01>
-							<R02>0</R02>
-							<R10>0</R10>
-							<R11>1</R11>
-							<R12>0</R12>
-							<R20>0</R20>
-							<R21>0</R21>
-							<R22>1</R22>
+							<R02>0.668922603</R02>
+							<R10>0.226738885</R10>
+							<R11>0.940800309</R11>
+							<R12>-0.251960844</R12>
+							<R20>-0.629322588</R20>
+							<R21>0.338961333</R21>
+							<R22>0.699327111</R22>
 						</CFrame>
 					</OptionalCoordinateFrame>
 					<BinaryString name="AttributesSerialize">BAAAABAAAABSQlhfQUlfR0VORVJBVEVEAwEUAAAAUkJYX0FJX0dFTkVSQVRJT05fSUQCJAAA
@@ -2530,22 +2530,22 @@ c2g=</BinaryString>
 						<token name="ModelStreamingMode">0</token>
 						<bool name="NeedsPivotMigration">false</bool>
 						<Ref name="PrimaryPart">null</Ref>
-						<float name="ScaleFactor">5.06921482</float>
+						<float name="ScaleFactor">6.86938</float>
 						<SharedString name="SlimHash">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
 						<OptionalCoordinateFrame name="WorldPivotData">
 							<CFrame>
-								<X>-0.0152709</X>
-								<Y>2.01582193</Y>
-								<Z>-5.00881386</Z>
-								<R00>1</R00>
+								<X>8.1342907</X>
+								<Y>-3.30285406</Y>
+								<Z>8.01240063</Z>
+								<R00>0.743332088</R00>
 								<R01>0</R01>
-								<R02>0</R02>
-								<R10>0</R10>
-								<R11>1</R11>
-								<R12>0</R12>
-								<R20>0</R20>
-								<R21>0</R21>
-								<R22>1</R22>
+								<R02>0.668922603</R02>
+								<R10>0.226738885</R10>
+								<R11>0.940800309</R11>
+								<R12>-0.251960844</R12>
+								<R20>-0.629322588</R20>
+								<R21>0.338961333</R21>
+								<R22>0.699327111</R22>
 							</CFrame>
 						</OptionalCoordinateFrame>
 						<BinaryString name="AttributesSerialize" />
@@ -2609,18 +2609,18 @@ c2g=</BinaryString>
 							<token name="BottomSurface">0</token>
 							<token name="BottomSurfaceInput">0</token>
 							<CoordinateFrame name="CFrame">
-								<X>0</X>
-								<Y>2.31240225</Y>
-								<Z>-5</Z>
-								<R00>1</R00>
+								<X>8.15766239</X>
+								<Y>-2.9230628</Y>
+								<Z>8.14395905</Z>
+								<R00>0.743332088</R00>
 								<R01>0</R01>
-								<R02>0</R02>
-								<R10>0</R10>
-								<R11>1</R11>
-								<R12>0</R12>
-								<R20>0</R20>
-								<R21>0</R21>
-								<R22>1</R22>
+								<R02>0.668922603</R02>
+								<R10>0.226738885</R10>
+								<R11>0.940800309</R11>
+								<R12>-0.251960844</R12>
+								<R20>-0.629322588</R20>
+								<R21>0.338961333</R21>
+								<R22>0.699327111</R22>
 							</CoordinateFrame>
 							<bool name="CanCollide">true</bool>
 							<bool name="CanQuery">true</bool>
@@ -2681,9 +2681,9 @@ c2g=</BinaryString>
 								<Z>0</Z>
 							</Vector3>
 							<Vector3 name="size">
-								<X>5.77136183</X>
-								<Y>3.3751955</Y>
-								<Z>9.74023342</Z>
+								<X>7.82087183</X>
+								<Y>4.57378531</Y>
+								<Z>13.1991577</Z>
 							</Vector3>
 							<BinaryString name="AttributesSerialize" />
 							<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
@@ -2723,22 +2723,22 @@ c2g=</BinaryString>
 						<token name="ModelStreamingMode">0</token>
 						<bool name="NeedsPivotMigration">false</bool>
 						<Ref name="PrimaryPart">null</Ref>
-						<float name="ScaleFactor">5.06921482</float>
+						<float name="ScaleFactor">6.86938</float>
 						<SharedString name="SlimHash">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
 						<OptionalCoordinateFrame name="WorldPivotData">
 							<CFrame>
-								<X>-0.0152709</X>
-								<Y>2.01582193</Y>
-								<Z>-5.00881386</Z>
-								<R00>1</R00>
+								<X>8.1342907</X>
+								<Y>-3.30285406</Y>
+								<Z>8.01240063</Z>
+								<R00>0.743332088</R00>
 								<R01>0</R01>
-								<R02>0</R02>
-								<R10>0</R10>
-								<R11>1</R11>
-								<R12>0</R12>
-								<R20>0</R20>
-								<R21>0</R21>
-								<R22>1</R22>
+								<R02>0.668922603</R02>
+								<R10>0.226738885</R10>
+								<R11>0.940800309</R11>
+								<R12>-0.251960844</R12>
+								<R20>-0.629322588</R20>
+								<R21>0.338961333</R21>
+								<R22>0.699327111</R22>
 							</CFrame>
 						</OptionalCoordinateFrame>
 						<BinaryString name="AttributesSerialize" />
@@ -2802,18 +2802,18 @@ c2g=</BinaryString>
 							<token name="BottomSurface">0</token>
 							<token name="BottomSurfaceInput">0</token>
 							<CoordinateFrame name="CFrame">
-								<X>-2.31280255</X>
-								<Y>1.06542516</Y>
-								<Z>-7.84268284</Z>
-								<R00>1</R00>
+								<X>3.2511692</X>
+								<Y>-4.25285816</Y>
+								<Z>6.84962749</Z>
+								<R00>0.743332088</R00>
 								<R01>0</R01>
-								<R02>0</R02>
-								<R10>0</R10>
-								<R11>1</R11>
-								<R12>0</R12>
-								<R20>0</R20>
-								<R21>0</R21>
-								<R22>1</R22>
+								<R02>0.668922603</R02>
+								<R10>0.226738885</R10>
+								<R11>0.940800309</R11>
+								<R12>-0.251960844</R12>
+								<R20>-0.629322588</R20>
+								<R21>0.338961333</R21>
+								<R22>0.699327111</R22>
 							</CoordinateFrame>
 							<bool name="CanCollide">true</bool>
 							<bool name="CanQuery">true</bool>
@@ -2874,9 +2874,9 @@ c2g=</BinaryString>
 								<Z>0</Z>
 							</Vector3>
 							<Vector3 name="size">
-								<X>1.02239609</X>
-								<Y>2.12005782</Y>
-								<Z>2.0968976</Z>
+								<X>1.38546658</X>
+								<Y>2.87292695</Y>
+								<Z>2.84154201</Z>
 							</Vector3>
 							<BinaryString name="AttributesSerialize" />
 							<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
@@ -2916,22 +2916,22 @@ c2g=</BinaryString>
 						<token name="ModelStreamingMode">0</token>
 						<bool name="NeedsPivotMigration">false</bool>
 						<Ref name="PrimaryPart">null</Ref>
-						<float name="ScaleFactor">5.06921482</float>
+						<float name="ScaleFactor">6.86938</float>
 						<SharedString name="SlimHash">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
 						<OptionalCoordinateFrame name="WorldPivotData">
 							<CFrame>
-								<X>-0.0152709</X>
-								<Y>2.01582193</Y>
-								<Z>-5.00881386</Z>
-								<R00>1</R00>
+								<X>8.1342907</X>
+								<Y>-3.30285406</Y>
+								<Z>8.01240063</Z>
+								<R00>0.743332088</R00>
 								<R01>0</R01>
-								<R02>0</R02>
-								<R10>0</R10>
-								<R11>1</R11>
-								<R12>0</R12>
-								<R20>0</R20>
-								<R21>0</R21>
-								<R22>1</R22>
+								<R02>0.668922603</R02>
+								<R10>0.226738885</R10>
+								<R11>0.940800309</R11>
+								<R12>-0.251960844</R12>
+								<R20>-0.629322588</R20>
+								<R21>0.338961333</R21>
+								<R22>0.699327111</R22>
 							</CFrame>
 						</OptionalCoordinateFrame>
 						<BinaryString name="AttributesSerialize" />
@@ -2995,18 +2995,18 @@ c2g=</BinaryString>
 							<token name="BottomSurface">0</token>
 							<token name="BottomSurfaceInput">0</token>
 							<CoordinateFrame name="CFrame">
-								<X>2.3079474</X>
-								<Y>1.06434798</Y>
-								<Z>-7.84104633</Z>
-								<R00>1</R00>
+								<X>7.90714359</X>
+								<Y>-2.83502865</Y>
+								<Z>2.91008091</Z>
+								<R00>0.743332088</R00>
 								<R01>0</R01>
-								<R02>0</R02>
-								<R10>0</R10>
-								<R11>1</R11>
-								<R12>0</R12>
-								<R20>0</R20>
-								<R21>0</R21>
-								<R22>1</R22>
+								<R02>0.668922603</R02>
+								<R10>0.226738885</R10>
+								<R11>0.940800309</R11>
+								<R12>-0.251960844</R12>
+								<R20>-0.629322588</R20>
+								<R21>0.338961333</R21>
+								<R22>0.699327111</R22>
 							</CoordinateFrame>
 							<bool name="CanCollide">true</bool>
 							<bool name="CanQuery">true</bool>
@@ -3067,9 +3067,9 @@ c2g=</BinaryString>
 								<Z>0</Z>
 							</Vector3>
 							<Vector3 name="size">
-								<X>1.01529956</X>
-								<Y>2.12308383</Y>
-								<Z>2.09828472</Z>
+								<X>1.37584984</X>
+								<Y>2.87702727</Y>
+								<Z>2.8434217</Z>
 							</Vector3>
 							<BinaryString name="AttributesSerialize" />
 							<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
@@ -3109,22 +3109,22 @@ c2g=</BinaryString>
 						<token name="ModelStreamingMode">0</token>
 						<bool name="NeedsPivotMigration">false</bool>
 						<Ref name="PrimaryPart">null</Ref>
-						<float name="ScaleFactor">5.06921482</float>
+						<float name="ScaleFactor">6.86938</float>
 						<SharedString name="SlimHash">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
 						<OptionalCoordinateFrame name="WorldPivotData">
 							<CFrame>
-								<X>-0.0152709</X>
-								<Y>2.01582193</Y>
-								<Z>-5.00881386</Z>
-								<R00>1</R00>
+								<X>8.1342907</X>
+								<Y>-3.30285406</Y>
+								<Z>8.01240063</Z>
+								<R00>0.743332088</R00>
 								<R01>0</R01>
-								<R02>0</R02>
-								<R10>0</R10>
-								<R11>1</R11>
-								<R12>0</R12>
-								<R20>0</R20>
-								<R21>0</R21>
-								<R22>1</R22>
+								<R02>0.668922603</R02>
+								<R10>0.226738885</R10>
+								<R11>0.940800309</R11>
+								<R12>-0.251960844</R12>
+								<R20>-0.629322588</R20>
+								<R21>0.338961333</R21>
+								<R22>0.699327111</R22>
 							</CFrame>
 						</OptionalCoordinateFrame>
 						<BinaryString name="AttributesSerialize" />
@@ -3188,18 +3188,18 @@ c2g=</BinaryString>
 							<token name="BottomSurface">0</token>
 							<token name="BottomSurfaceInput">0</token>
 							<CoordinateFrame name="CFrame">
-								<X>-2.30822849</X>
-								<Y>1.06703353</Y>
-								<Z>-2.11717939</Z>
-								<R00>1</R00>
+								<X>8.4457655</X>
+								<Y>-6.20429802</Y>
+								<Z>12.2723541</Z>
+								<R00>0.743332088</R00>
 								<R01>0</R01>
-								<R02>0</R02>
-								<R10>0</R10>
-								<R11>1</R11>
-								<R12>0</R12>
-								<R20>0</R20>
-								<R21>0</R21>
-								<R22>1</R22>
+								<R02>0.668922603</R02>
+								<R10>0.226738885</R10>
+								<R11>0.940800309</R11>
+								<R12>-0.251960844</R12>
+								<R20>-0.629322588</R20>
+								<R21>0.338961333</R21>
+								<R22>0.699327111</R22>
 							</CoordinateFrame>
 							<bool name="CanCollide">true</bool>
 							<bool name="CanQuery">true</bool>
@@ -3260,9 +3260,9 @@ c2g=</BinaryString>
 								<Z>0</Z>
 							</Vector3>
 							<Vector3 name="size">
-								<X>1.01413095</X>
-								<Y>2.13009667</Y>
-								<Z>2.11534238</Z>
+								<X>1.37426627</X>
+								<Y>2.88653064</Y>
+								<Z>2.86653686</Z>
 							</Vector3>
 							<BinaryString name="AttributesSerialize" />
 							<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
@@ -3302,22 +3302,22 @@ c2g=</BinaryString>
 						<token name="ModelStreamingMode">0</token>
 						<bool name="NeedsPivotMigration">false</bool>
 						<Ref name="PrimaryPart">null</Ref>
-						<float name="ScaleFactor">5.06921482</float>
+						<float name="ScaleFactor">6.86938</float>
 						<SharedString name="SlimHash">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
 						<OptionalCoordinateFrame name="WorldPivotData">
 							<CFrame>
-								<X>-0.0152709</X>
-								<Y>2.01582193</Y>
-								<Z>-5.00881386</Z>
-								<R00>1</R00>
+								<X>8.1342907</X>
+								<Y>-3.30285406</Y>
+								<Z>8.01240063</Z>
+								<R00>0.743332088</R00>
 								<R01>0</R01>
-								<R02>0</R02>
-								<R10>0</R10>
-								<R11>1</R11>
-								<R12>0</R12>
-								<R20>0</R20>
-								<R21>0</R21>
-								<R22>1</R22>
+								<R02>0.668922603</R02>
+								<R10>0.226738885</R10>
+								<R11>0.940800309</R11>
+								<R12>-0.251960844</R12>
+								<R20>-0.629322588</R20>
+								<R21>0.338961333</R21>
+								<R22>0.699327111</R22>
 							</CFrame>
 						</OptionalCoordinateFrame>
 						<BinaryString name="AttributesSerialize" />
@@ -3381,18 +3381,18 @@ c2g=</BinaryString>
 							<token name="BottomSurface">0</token>
 							<token name="BottomSurfaceInput">0</token>
 							<CoordinateFrame name="CFrame">
-								<X>2.3087604</X>
-								<Y>1.06516528</Y>
-								<Z>-2.11792564</Z>
-								<R00>1</R00>
+								<X>13.0957918</X>
+								<Y>-4.78781891</Y>
+								<Z>8.33339405</Z>
+								<R00>0.743332088</R00>
 								<R01>0</R01>
-								<R02>0</R02>
-								<R10>0</R10>
-								<R11>1</R11>
-								<R12>0</R12>
-								<R20>0</R20>
-								<R21>0</R21>
-								<R22>1</R22>
+								<R02>0.668922603</R02>
+								<R10>0.226738885</R10>
+								<R11>0.940800309</R11>
+								<R12>-0.251960844</R12>
+								<R20>-0.629322588</R20>
+								<R21>0.338961333</R21>
+								<R22>0.699327111</R22>
 							</CoordinateFrame>
 							<bool name="CanCollide">true</bool>
 							<bool name="CanQuery">true</bool>
@@ -3453,9 +3453,9 @@ c2g=</BinaryString>
 								<Z>0</Z>
 							</Vector3>
 							<Vector3 name="size">
-								<X>1.0138278</X>
-								<Y>2.13033032</Y>
-								<Z>2.11520624</Z>
+								<X>1.37385559</X>
+								<Y>2.88684726</Y>
+								<Z>2.86635256</Z>
 							</Vector3>
 							<BinaryString name="AttributesSerialize" />
 							<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
@@ -3495,22 +3495,22 @@ c2g=</BinaryString>
 						<token name="ModelStreamingMode">0</token>
 						<bool name="NeedsPivotMigration">false</bool>
 						<Ref name="PrimaryPart">null</Ref>
-						<float name="ScaleFactor">5.06921482</float>
+						<float name="ScaleFactor">6.86938</float>
 						<SharedString name="SlimHash">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
 						<OptionalCoordinateFrame name="WorldPivotData">
 							<CFrame>
-								<X>-0.0152709</X>
-								<Y>2.01582193</Y>
-								<Z>-5.00881386</Z>
-								<R00>1</R00>
+								<X>8.1342907</X>
+								<Y>-3.30285406</Y>
+								<Z>8.01240063</Z>
+								<R00>0.743332088</R00>
 								<R01>0</R01>
-								<R02>0</R02>
-								<R10>0</R10>
-								<R11>1</R11>
-								<R12>0</R12>
-								<R20>0</R20>
-								<R21>0</R21>
-								<R22>1</R22>
+								<R02>0.668922603</R02>
+								<R10>0.226738885</R10>
+								<R11>0.940800309</R11>
+								<R12>-0.251960844</R12>
+								<R20>-0.629322588</R20>
+								<R21>0.338961333</R21>
+								<R22>0.699327111</R22>
 							</CFrame>
 						</OptionalCoordinateFrame>
 						<BinaryString name="AttributesSerialize" />
@@ -3574,18 +3574,18 @@ c2g=</BinaryString>
 							<token name="BottomSurface">0</token>
 							<token name="BottomSurfaceInput">0</token>
 							<CoordinateFrame name="CFrame">
-								<X>-0.00253752084</X>
-								<Y>2.83820796</Y>
-								<Z>-7.65864563</Z>
-								<R00>1</R00>
+								<X>5.74512768</X>
+								<Y>-1.34573674</Y>
+								<Z>5.86812353</Z>
+								<R00>0.743332088</R00>
 								<R01>0</R01>
-								<R02>0</R02>
-								<R10>0</R10>
-								<R11>1</R11>
-								<R12>0</R12>
-								<R20>0</R20>
-								<R21>0</R21>
-								<R22>1</R22>
+								<R02>0.668922603</R02>
+								<R10>0.226738885</R10>
+								<R11>0.940800309</R11>
+								<R12>-0.251960844</R12>
+								<R20>-0.629322588</R20>
+								<R21>0.338961333</R21>
+								<R22>0.699327111</R22>
 							</CoordinateFrame>
 							<bool name="CanCollide">true</bool>
 							<bool name="CanQuery">true</bool>
@@ -3646,9 +3646,9 @@ c2g=</BinaryString>
 								<Z>0</Z>
 							</Vector3>
 							<Vector3 name="size">
-								<X>4.97255707</X>
-								<Y>0.466846883</Y>
-								<Z>2.94683552</Z>
+								<X>6.7383976</X>
+								<Y>0.632632256</Y>
+								<Z>3.99330759</Z>
 							</Vector3>
 							<BinaryString name="AttributesSerialize" />
 							<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
@@ -3667,18 +3667,18 @@ c2g=</BinaryString>
 				<Properties>
 					<token name="LevelOfDetail">0</token>
 					<CoordinateFrame name="ModelMeshCFrame">
-						<X>0</X>
-						<Y>0</Y>
-						<Z>0</Z>
-						<R00>1</R00>
-						<R01>0</R01>
-						<R02>0</R02>
-						<R10>0</R10>
-						<R11>1</R11>
-						<R12>0</R12>
-						<R20>0</R20>
-						<R21>0</R21>
-						<R22>1</R22>
+						<X>6.10186005</X>
+						<Y>-1.19776869</Y>
+						<Z>-11.8312006</Z>
+						<R00>0.999914408</R00>
+						<R01>-0.000673436734</R01>
+						<R02>0.0129475687</R02>
+						<R10>0.000672326656</R10>
+						<R11>1.00000501</R11>
+						<R12>-8.71285738e-05</R12>
+						<R20>-0.012947537</R20>
+						<R21>-8.71336815e-05</R21>
+						<R22>0.999915957</R22>
 					</CoordinateFrame>
 					<SharedString name="ModelMeshData">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
 					<Vector3 name="ModelMeshSize">
@@ -3693,18 +3693,18 @@ c2g=</BinaryString>
 					<SharedString name="SlimHash">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
 					<OptionalCoordinateFrame name="WorldPivotData">
 						<CFrame>
-							<X>-0.0190775469</X>
-							<Y>2.00978827</Y>
-							<Z>-5.01834059</Z>
-							<R00>1</R00>
-							<R01>0</R01>
-							<R02>0</R02>
-							<R10>0</R10>
+							<X>6.0164566</X>
+							<Y>0.812452793</Y>
+							<Z>-16.8490582</Z>
+							<R00>0.999915898</R00>
+							<R01>-0.000672353781</R01>
+							<R02>0.012947564</R02>
+							<R10>0.000672297436</R10>
 							<R11>1</R11>
 							<R12>0</R12>
-							<R20>0</R20>
+							<R20>-0.0129475659</R20>
 							<R21>0</R21>
-							<R22>1</R22>
+							<R22>0.999916196</R22>
 						</CFrame>
 					</OptionalCoordinateFrame>
 					<BinaryString name="AttributesSerialize">BAAAABAAAABSQlhfQUlfR0VORVJBVEVEAwEUAAAAUkJYX0FJX0dFTkVSQVRJT05fSUQCJAAA
@@ -3750,18 +3750,18 @@ c2g=</BinaryString>
 						<SharedString name="SlimHash">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
 						<OptionalCoordinateFrame name="WorldPivotData">
 							<CFrame>
-								<X>-0.0190775469</X>
-								<Y>2.00978827</Y>
-								<Z>-5.01834059</Z>
-								<R00>1</R00>
-								<R01>0</R01>
-								<R02>0</R02>
-								<R10>0</R10>
+								<X>6.0164566</X>
+								<Y>0.812452793</Y>
+								<Z>-16.8490582</Z>
+								<R00>0.999915898</R00>
+								<R01>-0.000672353781</R01>
+								<R02>0.012947564</R02>
+								<R10>0.000672297436</R10>
 								<R11>1</R11>
 								<R12>0</R12>
-								<R20>0</R20>
+								<R20>-0.0129475659</R20>
 								<R21>0</R21>
-								<R22>1</R22>
+								<R22>0.999916196</R22>
 							</CFrame>
 						</OptionalCoordinateFrame>
 						<BinaryString name="AttributesSerialize" />
@@ -3825,18 +3825,18 @@ c2g=</BinaryString>
 							<token name="BottomSurface">0</token>
 							<token name="BottomSurfaceInput">0</token>
 							<CoordinateFrame name="CFrame">
-								<X>0</X>
-								<Y>2.18555236</Y>
-								<Z>-5</Z>
-								<R00>1</R00>
-								<R01>0</R01>
-								<R02>0</R02>
-								<R10>0</R10>
+								<X>6.03565168</X>
+								<Y>0.988229692</Y>
+								<Z>-16.8309669</Z>
+								<R00>0.999915898</R00>
+								<R01>-0.000672353781</R01>
+								<R02>0.012947564</R02>
+								<R10>0.000672297436</R10>
 								<R11>1</R11>
 								<R12>0</R12>
-								<R20>0</R20>
+								<R20>-0.0129475659</R20>
 								<R21>0</R21>
-								<R22>1</R22>
+								<R22>0.999916196</R22>
 							</CoordinateFrame>
 							<bool name="CanCollide">true</bool>
 							<bool name="CanQuery">true</bool>
@@ -3943,18 +3943,18 @@ c2g=</BinaryString>
 						<SharedString name="SlimHash">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
 						<OptionalCoordinateFrame name="WorldPivotData">
 							<CFrame>
-								<X>-0.0190775469</X>
-								<Y>2.00978827</Y>
-								<Z>-5.01834059</Z>
-								<R00>1</R00>
-								<R01>0</R01>
-								<R02>0</R02>
-								<R10>0</R10>
+								<X>6.0164566</X>
+								<Y>0.812452793</Y>
+								<Z>-16.8490582</Z>
+								<R00>0.999915898</R00>
+								<R01>-0.000672353781</R01>
+								<R02>0.012947564</R02>
+								<R10>0.000672297436</R10>
 								<R11>1</R11>
 								<R12>0</R12>
-								<R20>0</R20>
+								<R20>-0.0129475659</R20>
 								<R21>0</R21>
-								<R22>1</R22>
+								<R22>0.999916196</R22>
 							</CFrame>
 						</OptionalCoordinateFrame>
 						<BinaryString name="AttributesSerialize" />
@@ -4018,18 +4018,18 @@ c2g=</BinaryString>
 							<token name="BottomSurface">0</token>
 							<token name="BottomSurfaceInput">0</token>
 							<CoordinateFrame name="CFrame">
-								<X>-2.75341225</X>
-								<Y>1.12046647</Y>
-								<Z>-8.17359924</Z>
-								<R00>1</R00>
-								<R01>0</R01>
-								<R02>0</R02>
-								<R10>0</R10>
+								<X>3.24209714</X>
+								<Y>-0.0787072778</Y>
+								<Z>-19.9686489</Z>
+								<R00>0.999915898</R00>
+								<R01>-0.000672353781</R01>
+								<R02>0.012947564</R02>
+								<R10>0.000672297436</R10>
 								<R11>1</R11>
 								<R12>0</R12>
-								<R20>0</R20>
+								<R20>-0.0129475659</R20>
 								<R21>0</R21>
-								<R22>1</R22>
+								<R22>0.999916196</R22>
 							</CoordinateFrame>
 							<bool name="CanCollide">true</bool>
 							<bool name="CanQuery">true</bool>
@@ -4136,18 +4136,18 @@ c2g=</BinaryString>
 						<SharedString name="SlimHash">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
 						<OptionalCoordinateFrame name="WorldPivotData">
 							<CFrame>
-								<X>-0.0190775469</X>
-								<Y>2.00978827</Y>
-								<Z>-5.01834059</Z>
-								<R00>1</R00>
-								<R01>0</R01>
-								<R02>0</R02>
-								<R10>0</R10>
+								<X>6.0164566</X>
+								<Y>0.812452793</Y>
+								<Z>-16.8490582</Z>
+								<R00>0.999915898</R00>
+								<R01>-0.000672353781</R01>
+								<R02>0.012947564</R02>
+								<R10>0.000672297436</R10>
 								<R11>1</R11>
 								<R12>0</R12>
-								<R20>0</R20>
+								<R20>-0.0129475659</R20>
 								<R21>0</R21>
-								<R22>1</R22>
+								<R22>0.999916196</R22>
 							</CFrame>
 						</OptionalCoordinateFrame>
 						<BinaryString name="AttributesSerialize" />
@@ -4211,18 +4211,18 @@ c2g=</BinaryString>
 							<token name="BottomSurface">0</token>
 							<token name="BottomSurfaceInput">0</token>
 							<CoordinateFrame name="CFrame">
-								<X>2.74015689</X>
-								<Y>1.12252784</Y>
-								<Z>-8.17228699</Z>
-								<R00>1</R00>
-								<R01>0</R01>
-								<R02>0</R02>
-								<R10>0</R10>
+								<X>8.73521996</X>
+								<Y>-0.0729526281</Y>
+								<Z>-20.0384655</Z>
+								<R00>0.999915898</R00>
+								<R01>-0.000672353781</R01>
+								<R02>0.012947564</R02>
+								<R10>0.000672297436</R10>
 								<R11>1</R11>
 								<R12>0</R12>
-								<R20>0</R20>
+								<R20>-0.0129475659</R20>
 								<R21>0</R21>
-								<R22>1</R22>
+								<R22>0.999916196</R22>
 							</CoordinateFrame>
 							<bool name="CanCollide">true</bool>
 							<bool name="CanQuery">true</bool>
@@ -4329,18 +4329,18 @@ c2g=</BinaryString>
 						<SharedString name="SlimHash">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
 						<OptionalCoordinateFrame name="WorldPivotData">
 							<CFrame>
-								<X>-0.0190775469</X>
-								<Y>2.00978827</Y>
-								<Z>-5.01834059</Z>
-								<R00>1</R00>
-								<R01>0</R01>
-								<R02>0</R02>
-								<R10>0</R10>
+								<X>6.0164566</X>
+								<Y>0.812452793</Y>
+								<Z>-16.8490582</Z>
+								<R00>0.999915898</R00>
+								<R01>-0.000672353781</R01>
+								<R02>0.012947564</R02>
+								<R10>0.000672297436</R10>
 								<R11>1</R11>
 								<R12>0</R12>
-								<R20>0</R20>
+								<R20>-0.0129475659</R20>
 								<R21>0</R21>
-								<R22>1</R22>
+								<R22>0.999916196</R22>
 							</CFrame>
 						</OptionalCoordinateFrame>
 						<BinaryString name="AttributesSerialize" />
@@ -4404,18 +4404,18 @@ c2g=</BinaryString>
 							<token name="BottomSurface">0</token>
 							<token name="BottomSurfaceInput">0</token>
 							<CoordinateFrame name="CFrame">
-								<X>-2.77653027</X>
-								<Y>1.12434638</Y>
-								<Z>-1.69446206</Z>
-								<R00>1</R00>
-								<R01>0</R01>
-								<R02>0</R02>
-								<R10>0</R10>
+								<X>3.30286765</X>
+								<Y>-0.0748428702</Y>
+								<Z>-13.4897556</Z>
+								<R00>0.999915898</R00>
+								<R01>-0.000672353781</R01>
+								<R02>0.012947564</R02>
+								<R10>0.000672297436</R10>
 								<R11>1</R11>
 								<R12>0</R12>
-								<R20>0</R20>
+								<R20>-0.0129475659</R20>
 								<R21>0</R21>
-								<R22>1</R22>
+								<R22>0.999916196</R22>
 							</CoordinateFrame>
 							<bool name="CanCollide">true</bool>
 							<bool name="CanQuery">true</bool>
@@ -4522,18 +4522,18 @@ c2g=</BinaryString>
 						<SharedString name="SlimHash">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
 						<OptionalCoordinateFrame name="WorldPivotData">
 							<CFrame>
-								<X>-0.0190775469</X>
-								<Y>2.00978827</Y>
-								<Z>-5.01834059</Z>
-								<R00>1</R00>
-								<R01>0</R01>
-								<R02>0</R02>
-								<R10>0</R10>
+								<X>6.0164566</X>
+								<Y>0.812452793</Y>
+								<Z>-16.8490582</Z>
+								<R00>0.999915898</R00>
+								<R01>-0.000672353781</R01>
+								<R02>0.012947564</R02>
+								<R10>0.000672297436</R10>
 								<R11>1</R11>
 								<R12>0</R12>
-								<R20>0</R20>
+								<R20>-0.0129475659</R20>
 								<R21>0</R21>
-								<R22>1</R22>
+								<R22>0.999916196</R22>
 							</CFrame>
 						</OptionalCoordinateFrame>
 						<BinaryString name="AttributesSerialize" />
@@ -4597,18 +4597,18 @@ c2g=</BinaryString>
 							<token name="BottomSurface">0</token>
 							<token name="BottomSurfaceInput">0</token>
 							<CoordinateFrame name="CFrame">
-								<X>2.74684167</X>
-								<Y>1.12306821</Y>
-								<Z>-1.69362688</Z>
-								<R00>1</R00>
-								<R01>0</R01>
-								<R02>0</R02>
-								<R10>0</R10>
+								<X>8.82578659</X>
+								<Y>-0.0724077225</Y>
+								<Z>-13.5604353</Z>
+								<R00>0.999915898</R00>
+								<R01>-0.000672353781</R01>
+								<R02>0.012947564</R02>
+								<R10>0.000672297436</R10>
 								<R11>1</R11>
 								<R12>0</R12>
-								<R20>0</R20>
+								<R20>-0.0129475659</R20>
 								<R21>0</R21>
-								<R22>1</R22>
+								<R22>0.999916196</R22>
 							</CoordinateFrame>
 							<bool name="CanCollide">true</bool>
 							<bool name="CanQuery">true</bool>
@@ -4715,18 +4715,18 @@ c2g=</BinaryString>
 						<SharedString name="SlimHash">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
 						<OptionalCoordinateFrame name="WorldPivotData">
 							<CFrame>
-								<X>-0.0190775469</X>
-								<Y>2.00978827</Y>
-								<Z>-5.01834059</Z>
-								<R00>1</R00>
-								<R01>0</R01>
-								<R02>0</R02>
-								<R10>0</R10>
+								<X>6.0164566</X>
+								<Y>0.812452793</Y>
+								<Z>-16.8490582</Z>
+								<R00>0.999915898</R00>
+								<R01>-0.000672353781</R01>
+								<R02>0.012947564</R02>
+								<R10>0.000672297436</R10>
 								<R11>1</R11>
 								<R12>0</R12>
-								<R20>0</R20>
+								<R20>-0.0129475659</R20>
 								<R21>0</R21>
-								<R22>1</R22>
+								<R22>0.999916196</R22>
 							</CFrame>
 						</OptionalCoordinateFrame>
 						<BinaryString name="AttributesSerialize" />
@@ -4790,18 +4790,18 @@ c2g=</BinaryString>
 							<token name="BottomSurface">0</token>
 							<token name="BottomSurfaceInput">0</token>
 							<CoordinateFrame name="CFrame">
-								<X>-0.00631675217</X>
-								<Y>2.13181257</Y>
-								<Z>-8.88508034</Z>
-								<R00>1</R00>
-								<R01>0</R01>
-								<R02>0</R02>
-								<R10>0</R10>
+								<X>5.97906923</X>
+								<Y>0.934485674</Y>
+								<Z>-20.7156391</Z>
+								<R00>0.999915898</R00>
+								<R01>-0.000672353781</R01>
+								<R02>0.012947564</R02>
+								<R10>0.000672297436</R10>
 								<R11>1</R11>
 								<R12>0</R12>
-								<R20>0</R20>
+								<R20>-0.0129475659</R20>
 								<R21>0</R21>
-								<R22>1</R22>
+								<R22>0.999916196</R22>
 							</CoordinateFrame>
 							<bool name="CanCollide">true</bool>
 							<bool name="CanQuery">true</bool>
@@ -4883,18 +4883,18 @@ c2g=</BinaryString>
 				<Properties>
 					<token name="LevelOfDetail">0</token>
 					<CoordinateFrame name="ModelMeshCFrame">
-						<X>0</X>
-						<Y>0</Y>
-						<Z>0</Z>
-						<R00>1</R00>
-						<R01>0</R01>
-						<R02>0</R02>
-						<R10>0</R10>
-						<R11>1</R11>
-						<R12>0</R12>
-						<R20>0</R20>
-						<R21>0</R21>
-						<R22>1</R22>
+						<X>-1.99875331</X>
+						<Y>4.51704597</Y>
+						<Z>-0.319897771</Z>
+						<R00>0.955973804</R00>
+						<R01>-0.293456405</R01>
+						<R02>3.4677214e-07</R02>
+						<R10>0.293453306</R10>
+						<R11>0.955974102</R11>
+						<R12>-0.00320694735</R12>
+						<R20>0.000941482256</R20>
+						<R21>0.0030658578</R21>
+						<R22>1.00000024</R22>
 					</CoordinateFrame>
 					<SharedString name="ModelMeshData">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
 					<Vector3 name="ModelMeshSize">
@@ -4909,18 +4909,18 @@ c2g=</BinaryString>
 					<SharedString name="SlimHash">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
 					<OptionalCoordinateFrame name="WorldPivotData">
 						<CFrame>
-							<X>-0.00802169181</X>
-							<Y>2.72916007</Y>
-							<Z>-5.01088476</Z>
-							<R00>1</R00>
-							<R01>0</R01>
-							<R02>0</R02>
-							<R10>0</R10>
-							<R11>1</R11>
-							<R12>0</R12>
-							<R20>0</R20>
-							<R21>0</R21>
-							<R22>1</R22>
+							<X>-2.80731297</X>
+							<Y>7.13976765</Y>
+							<Z>-5.32242441</Z>
+							<R00>0.955973089</R00>
+							<R01>-0.293454558</R01>
+							<R02>8.32276678e-11</R02>
+							<R10>0.293453068</R10>
+							<R11>0.955968142</R11>
+							<R12>-0.0032070356</R12>
+							<R20>0.000941119215</R20>
+							<R21>0.00306583964</R21>
+							<R22>0.999994874</R22>
 						</CFrame>
 					</OptionalCoordinateFrame>
 					<BinaryString name="AttributesSerialize">BAAAABAAAABSQlhfQUlfR0VORVJBVEVEAwEUAAAAUkJYX0FJX0dFTkVSQVRJT05fSUQCJAAA
@@ -4966,18 +4966,18 @@ c2g=</BinaryString>
 						<SharedString name="SlimHash">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
 						<OptionalCoordinateFrame name="WorldPivotData">
 							<CFrame>
-								<X>-0.00802169181</X>
-								<Y>2.72916007</Y>
-								<Z>-5.01088476</Z>
-								<R00>1</R00>
-								<R01>0</R01>
-								<R02>0</R02>
-								<R10>0</R10>
-								<R11>1</R11>
-								<R12>0</R12>
-								<R20>0</R20>
-								<R21>0</R21>
-								<R22>1</R22>
+								<X>-2.80731297</X>
+								<Y>7.13976765</Y>
+								<Z>-5.32242441</Z>
+								<R00>0.955973089</R00>
+								<R01>-0.293454558</R01>
+								<R02>8.32276678e-11</R02>
+								<R10>0.293453068</R10>
+								<R11>0.955968142</R11>
+								<R12>-0.0032070356</R12>
+								<R20>0.000941119215</R20>
+								<R21>0.00306583964</R21>
+								<R22>0.999994874</R22>
 							</CFrame>
 						</OptionalCoordinateFrame>
 						<BinaryString name="AttributesSerialize" />
@@ -5041,18 +5041,18 @@ c2g=</BinaryString>
 							<token name="BottomSurface">0</token>
 							<token name="BottomSurfaceInput">0</token>
 							<CoordinateFrame name="CFrame">
-								<X>0.00121951103</X>
-								<Y>3.08999538</Y>
-								<Z>-5</Z>
-								<R00>1</R00>
-								<R01>0</R01>
-								<R02>0</R02>
-								<R10>0</R10>
-								<R11>1</R11>
-								<R12>0</R12>
-								<R20>0</R20>
-								<R21>0</R21>
-								<R22>1</R22>
+								<X>-2.90436745</X>
+								<Y>7.48739147</Y>
+								<Z>-5.3104248</Z>
+								<R00>0.955973089</R00>
+								<R01>-0.293454558</R01>
+								<R02>8.32276678e-11</R02>
+								<R10>0.293453068</R10>
+								<R11>0.955968142</R11>
+								<R12>-0.0032070356</R12>
+								<R20>0.000941119215</R20>
+								<R21>0.00306583964</R21>
+								<R22>0.999994874</R22>
 							</CoordinateFrame>
 							<bool name="CanCollide">true</bool>
 							<bool name="CanQuery">true</bool>
@@ -5159,18 +5159,18 @@ c2g=</BinaryString>
 						<SharedString name="SlimHash">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
 						<OptionalCoordinateFrame name="WorldPivotData">
 							<CFrame>
-								<X>-0.00802169181</X>
-								<Y>2.72916007</Y>
-								<Z>-5.01088476</Z>
-								<R00>1</R00>
-								<R01>0</R01>
-								<R02>0</R02>
-								<R10>0</R10>
-								<R11>1</R11>
-								<R12>0</R12>
-								<R20>0</R20>
-								<R21>0</R21>
-								<R22>1</R22>
+								<X>-2.80731297</X>
+								<Y>7.13976765</Y>
+								<Z>-5.32242441</Z>
+								<R00>0.955973089</R00>
+								<R01>-0.293454558</R01>
+								<R02>8.32276678e-11</R02>
+								<R10>0.293453068</R10>
+								<R11>0.955968142</R11>
+								<R12>-0.0032070356</R12>
+								<R20>0.000941119215</R20>
+								<R21>0.00306583964</R21>
+								<R22>0.999994874</R22>
 							</CFrame>
 						</OptionalCoordinateFrame>
 						<BinaryString name="AttributesSerialize" />
@@ -5234,18 +5234,18 @@ c2g=</BinaryString>
 							<token name="BottomSurface">0</token>
 							<token name="BottomSurfaceInput">0</token>
 							<CoordinateFrame name="CFrame">
-								<X>-1.49282169</X>
-								<Y>1.00510573</Y>
-								<Z>-6.62931347</Z>
-								<R00>1</R00>
-								<R01>0</R01>
-								<R02>0</R02>
-								<R10>0</R10>
-								<R11>1</R11>
-								<R12>0</R12>
-								<R20>0</R20>
-								<R21>0</R21>
-								<R22>1</R22>
+								<X>-3.72081017</X>
+								<Y>5.0610981</Y>
+								<Z>-6.94752789</Z>
+								<R00>0.955973089</R00>
+								<R01>-0.293454558</R01>
+								<R02>8.32276678e-11</R02>
+								<R10>0.293453068</R10>
+								<R11>0.955968142</R11>
+								<R12>-0.0032070356</R12>
+								<R20>0.000941119215</R20>
+								<R21>0.00306583964</R21>
+								<R22>0.999994874</R22>
 							</CoordinateFrame>
 							<bool name="CanCollide">true</bool>
 							<bool name="CanQuery">true</bool>
@@ -5352,18 +5352,18 @@ c2g=</BinaryString>
 						<SharedString name="SlimHash">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
 						<OptionalCoordinateFrame name="WorldPivotData">
 							<CFrame>
-								<X>-0.00802169181</X>
-								<Y>2.72916007</Y>
-								<Z>-5.01088476</Z>
-								<R00>1</R00>
-								<R01>0</R01>
-								<R02>0</R02>
-								<R10>0</R10>
-								<R11>1</R11>
-								<R12>0</R12>
-								<R20>0</R20>
-								<R21>0</R21>
-								<R22>1</R22>
+								<X>-2.80731297</X>
+								<Y>7.13976765</Y>
+								<Z>-5.32242441</Z>
+								<R00>0.955973089</R00>
+								<R01>-0.293454558</R01>
+								<R02>8.32276678e-11</R02>
+								<R10>0.293453068</R10>
+								<R11>0.955968142</R11>
+								<R12>-0.0032070356</R12>
+								<R20>0.000941119215</R20>
+								<R21>0.00306583964</R21>
+								<R22>0.999994874</R22>
 							</CFrame>
 						</OptionalCoordinateFrame>
 						<BinaryString name="AttributesSerialize" />
@@ -5427,18 +5427,18 @@ c2g=</BinaryString>
 							<token name="BottomSurface">0</token>
 							<token name="BottomSurfaceInput">0</token>
 							<CoordinateFrame name="CFrame">
-								<X>1.49178433</X>
-								<Y>1.00961185</Y>
-								<Z>-6.62779713</Z>
-								<R00>1</R00>
-								<R01>0</R01>
-								<R02>0</R02>
-								<R10>0</R10>
-								<R11>1</R11>
-								<R12>0</R12>
-								<R20>0</R20>
-								<R21>0</R21>
-								<R22>1</R22>
+								<X>-0.868929386</X>
+								<Y>5.94124269</Y>
+								<Z>-6.94318867</Z>
+								<R00>0.955973089</R00>
+								<R01>-0.293454558</R01>
+								<R02>8.32276678e-11</R02>
+								<R10>0.293453068</R10>
+								<R11>0.955968142</R11>
+								<R12>-0.0032070356</R12>
+								<R20>0.000941119215</R20>
+								<R21>0.00306583964</R21>
+								<R22>0.999994874</R22>
 							</CoordinateFrame>
 							<bool name="CanCollide">true</bool>
 							<bool name="CanQuery">true</bool>
@@ -5545,18 +5545,18 @@ c2g=</BinaryString>
 						<SharedString name="SlimHash">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
 						<OptionalCoordinateFrame name="WorldPivotData">
 							<CFrame>
-								<X>-0.00802169181</X>
-								<Y>2.72916007</Y>
-								<Z>-5.01088476</Z>
-								<R00>1</R00>
-								<R01>0</R01>
-								<R02>0</R02>
-								<R10>0</R10>
-								<R11>1</R11>
-								<R12>0</R12>
-								<R20>0</R20>
-								<R21>0</R21>
-								<R22>1</R22>
+								<X>-2.80731297</X>
+								<Y>7.13976765</Y>
+								<Z>-5.32242441</Z>
+								<R00>0.955973089</R00>
+								<R01>-0.293454558</R01>
+								<R02>8.32276678e-11</R02>
+								<R10>0.293453068</R10>
+								<R11>0.955968142</R11>
+								<R12>-0.0032070356</R12>
+								<R20>0.000941119215</R20>
+								<R21>0.00306583964</R21>
+								<R22>0.999994874</R22>
 							</CFrame>
 						</OptionalCoordinateFrame>
 						<BinaryString name="AttributesSerialize" />
@@ -5620,18 +5620,18 @@ c2g=</BinaryString>
 							<token name="BottomSurface">0</token>
 							<token name="BottomSurfaceInput">0</token>
 							<CoordinateFrame name="CFrame">
-								<X>-1.49232614</X>
-								<Y>1.00753152</Y>
-								<Z>-3.21435285</Z>
-								<R00>1</R00>
-								<R01>0</R01>
-								<R02>0</R02>
-								<R10>0</R10>
-								<R11>1</R11>
-								<R12>0</R12>
-								<R20>0</R20>
-								<R21>0</R21>
-								<R22>1</R22>
+								<X>-3.72104836</X>
+								<Y>5.0526104</Y>
+								<Z>-3.5325768</Z>
+								<R00>0.955973089</R00>
+								<R01>-0.293454558</R01>
+								<R02>8.32276678e-11</R02>
+								<R10>0.293453068</R10>
+								<R11>0.955968142</R11>
+								<R12>-0.0032070356</R12>
+								<R20>0.000941119215</R20>
+								<R21>0.00306583964</R21>
+								<R22>0.999994874</R22>
 							</CoordinateFrame>
 							<bool name="CanCollide">true</bool>
 							<bool name="CanQuery">true</bool>
@@ -5738,18 +5738,18 @@ c2g=</BinaryString>
 						<SharedString name="SlimHash">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
 						<OptionalCoordinateFrame name="WorldPivotData">
 							<CFrame>
-								<X>-0.00802169181</X>
-								<Y>2.72916007</Y>
-								<Z>-5.01088476</Z>
-								<R00>1</R00>
-								<R01>0</R01>
-								<R02>0</R02>
-								<R10>0</R10>
-								<R11>1</R11>
-								<R12>0</R12>
-								<R20>0</R20>
-								<R21>0</R21>
-								<R22>1</R22>
+								<X>-2.80731297</X>
+								<Y>7.13976765</Y>
+								<Z>-5.32242441</Z>
+								<R00>0.955973089</R00>
+								<R01>-0.293454558</R01>
+								<R02>8.32276678e-11</R02>
+								<R10>0.293453068</R10>
+								<R11>0.955968142</R11>
+								<R12>-0.0032070356</R12>
+								<R20>0.000941119215</R20>
+								<R21>0.00306583964</R21>
+								<R22>0.999994874</R22>
 							</CFrame>
 						</OptionalCoordinateFrame>
 						<BinaryString name="AttributesSerialize" />
@@ -5813,18 +5813,18 @@ c2g=</BinaryString>
 							<token name="BottomSurface">0</token>
 							<token name="BottomSurfaceInput">0</token>
 							<CoordinateFrame name="CFrame">
-								<X>1.48851585</X>
-								<Y>1.01153862</Y>
-								<Z>-3.22113252</Z>
-								<R00>1</R00>
-								<R01>0</R01>
-								<R02>0</R02>
-								<R10>0</R10>
-								<R11>1</R11>
-								<R12>0</R12>
-								<R20>0</R20>
-								<R21>0</R21>
-								<R22>1</R22>
+								<X>-0.87261951</X>
+								<Y>5.93120003</Y>
+								<Z>-3.53653908</Z>
+								<R00>0.955973089</R00>
+								<R01>-0.293454558</R01>
+								<R02>8.32276678e-11</R02>
+								<R10>0.293453068</R10>
+								<R11>0.955968142</R11>
+								<R12>-0.0032070356</R12>
+								<R20>0.000941119215</R20>
+								<R21>0.00306583964</R21>
+								<R22>0.999994874</R22>
 							</CoordinateFrame>
 							<bool name="CanCollide">true</bool>
 							<bool name="CanQuery">true</bool>
@@ -5931,18 +5931,18 @@ c2g=</BinaryString>
 						<SharedString name="SlimHash">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
 						<OptionalCoordinateFrame name="WorldPivotData">
 							<CFrame>
-								<X>-0.00802169181</X>
-								<Y>2.72916007</Y>
-								<Z>-5.01088476</Z>
-								<R00>1</R00>
-								<R01>0</R01>
-								<R02>0</R02>
-								<R10>0</R10>
-								<R11>1</R11>
-								<R12>0</R12>
-								<R20>0</R20>
-								<R21>0</R21>
-								<R22>1</R22>
+								<X>-2.80731297</X>
+								<Y>7.13976765</Y>
+								<Z>-5.32242441</Z>
+								<R00>0.955973089</R00>
+								<R01>-0.293454558</R01>
+								<R02>8.32276678e-11</R02>
+								<R10>0.293453068</R10>
+								<R11>0.955968142</R11>
+								<R12>-0.0032070356</R12>
+								<R20>0.000941119215</R20>
+								<R21>0.00306583964</R21>
+								<R22>0.999994874</R22>
 							</CFrame>
 						</OptionalCoordinateFrame>
 						<BinaryString name="AttributesSerialize" />
@@ -6006,18 +6006,18 @@ c2g=</BinaryString>
 							<token name="BottomSurface">0</token>
 							<token name="BottomSurfaceInput">0</token>
 							<CoordinateFrame name="CFrame">
-								<X>0.00215855846</X>
-								<Y>3.10092211</Y>
-								<Z>-6.79737091</Z>
-								<R00>1</R00>
-								<R01>0</R01>
-								<R02>0</R02>
-								<R10>0</R10>
-								<R11>1</R11>
-								<R12>0</R12>
-								<R20>0</R20>
-								<R21>0</R21>
-								<R22>1</R22>
+								<X>-2.90667629</X>
+								<Y>7.50387716</Y>
+								<Z>-7.10775185</Z>
+								<R00>0.955973089</R00>
+								<R01>-0.293454558</R01>
+								<R02>8.32276678e-11</R02>
+								<R10>0.293453068</R10>
+								<R11>0.955968142</R11>
+								<R12>-0.0032070356</R12>
+								<R20>0.000941119215</R20>
+								<R21>0.00306583964</R21>
+								<R22>0.999994874</R22>
 							</CoordinateFrame>
 							<bool name="CanCollide">true</bool>
 							<bool name="CanQuery">true</bool>
@@ -7315,18 +7315,18 @@ c2g=</BinaryString>
 				<Properties>
 					<token name="LevelOfDetail">0</token>
 					<CoordinateFrame name="ModelMeshCFrame">
-						<X>0</X>
-						<Y>0</Y>
-						<Z>0</Z>
-						<R00>1</R00>
-						<R01>0</R01>
-						<R02>0</R02>
-						<R10>0</R10>
-						<R11>1</R11>
-						<R12>0</R12>
-						<R20>0</R20>
-						<R21>0</R21>
-						<R22>1</R22>
+						<X>-3.10420752</X>
+						<Y>6.47056055</Y>
+						<Z>9.40662193</Z>
+						<R00>0.999928117</R00>
+						<R01>-6.10016286e-08</R01>
+						<R02>-0.012111567</R02>
+						<R10>0.00837601256</R10>
+						<R11>0.722301304</R11>
+						<R12>0.691527784</R12>
+						<R20>0.00874838978</R20>
+						<R21>-0.691575229</R21>
+						<R22>0.722251713</R22>
 					</CoordinateFrame>
 					<SharedString name="ModelMeshData">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
 					<Vector3 name="ModelMeshSize">
@@ -7341,18 +7341,18 @@ c2g=</BinaryString>
 					<SharedString name="SlimHash">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
 					<OptionalCoordinateFrame name="WorldPivotData">
 						<CFrame>
-							<X>-0.0138111021</X>
-							<Y>2.24561238</Y>
-							<Z>-5.009377</Z>
-							<R00>1</R00>
+							<X>-3.05734754</X>
+							<Y>4.62833071</Y>
+							<Z>4.2354579</Z>
+							<R00>0.999926627</R00>
 							<R01>0</R01>
-							<R02>0</R02>
-							<R10>0</R10>
-							<R11>1</R11>
-							<R12>0</R12>
-							<R20>0</R20>
-							<R21>0</R21>
-							<R22>1</R22>
+							<R02>-0.0121115791</R02>
+							<R10>0.00837608706</R10>
+							<R11>0.722302973</R11>
+							<R12>0.691525936</R12>
+							<R20>0.00874823052</R20>
+							<R21>-0.691576719</R21>
+							<R22>0.722249925</R22>
 						</CFrame>
 					</OptionalCoordinateFrame>
 					<BinaryString name="AttributesSerialize">BAAAABAAAABSQlhfQUlfR0VORVJBVEVEAwEUAAAAUkJYX0FJX0dFTkVSQVRJT05fSUQCJAAA
@@ -7398,18 +7398,18 @@ c2g=</BinaryString>
 						<SharedString name="SlimHash">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
 						<OptionalCoordinateFrame name="WorldPivotData">
 							<CFrame>
-								<X>-0.0138111021</X>
-								<Y>2.24561238</Y>
-								<Z>-5.009377</Z>
-								<R00>1</R00>
+								<X>-3.05734754</X>
+								<Y>4.62833071</Y>
+								<Z>4.2354579</Z>
+								<R00>0.999926627</R00>
 								<R01>0</R01>
-								<R02>0</R02>
-								<R10>0</R10>
-								<R11>1</R11>
-								<R12>0</R12>
-								<R20>0</R20>
-								<R21>0</R21>
-								<R22>1</R22>
+								<R02>-0.0121115791</R02>
+								<R10>0.00837608706</R10>
+								<R11>0.722302973</R11>
+								<R12>0.691525936</R12>
+								<R20>0.00874823052</R20>
+								<R21>-0.691576719</R21>
+								<R22>0.722249925</R22>
 							</CFrame>
 						</OptionalCoordinateFrame>
 						<BinaryString name="AttributesSerialize" />
@@ -7473,18 +7473,18 @@ c2g=</BinaryString>
 							<token name="BottomSurface">0</token>
 							<token name="BottomSurfaceInput">0</token>
 							<CoordinateFrame name="CFrame">
-								<X>0.00074505806</X>
-								<Y>2.72596908</Y>
-								<Z>-5</Z>
-								<R00>1</R00>
+								<X>-3.04290605</X>
+								<Y>4.98190022</Y>
+								<Z>3.91015434</Z>
+								<R00>0.999926627</R00>
 								<R01>0</R01>
-								<R02>0</R02>
-								<R10>0</R10>
-								<R11>1</R11>
-								<R12>0</R12>
-								<R20>0</R20>
-								<R21>0</R21>
-								<R22>1</R22>
+								<R02>-0.0121115791</R02>
+								<R10>0.00837608706</R10>
+								<R11>0.722302973</R11>
+								<R12>0.691525936</R12>
+								<R20>0.00874823052</R20>
+								<R21>-0.691576719</R21>
+								<R22>0.722249925</R22>
 							</CoordinateFrame>
 							<bool name="CanCollide">true</bool>
 							<bool name="CanQuery">true</bool>
@@ -7591,18 +7591,18 @@ c2g=</BinaryString>
 						<SharedString name="SlimHash">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
 						<OptionalCoordinateFrame name="WorldPivotData">
 							<CFrame>
-								<X>-0.0138111021</X>
-								<Y>2.24561238</Y>
-								<Z>-5.009377</Z>
-								<R00>1</R00>
+								<X>-3.05734754</X>
+								<Y>4.62833071</Y>
+								<Z>4.2354579</Z>
+								<R00>0.999926627</R00>
 								<R01>0</R01>
-								<R02>0</R02>
-								<R10>0</R10>
-								<R11>1</R11>
-								<R12>0</R12>
-								<R20>0</R20>
-								<R21>0</R21>
-								<R22>1</R22>
+								<R02>-0.0121115791</R02>
+								<R10>0.00837608706</R10>
+								<R11>0.722302973</R11>
+								<R12>0.691525936</R12>
+								<R20>0.00874823052</R20>
+								<R21>-0.691576719</R21>
+								<R22>0.722249925</R22>
 							</CFrame>
 						</OptionalCoordinateFrame>
 						<BinaryString name="AttributesSerialize" />
@@ -7666,18 +7666,18 @@ c2g=</BinaryString>
 							<token name="BottomSurface">0</token>
 							<token name="BottomSurfaceInput">0</token>
 							<CoordinateFrame name="CFrame">
-								<X>-1.49618304</X>
-								<Y>0.855067134</Y>
-								<Z>-7.1512022</Z>
-								<R00>1</R00>
+								<X>-4.51366997</X>
+								<Y>2.1303916</Y>
+								<Z>3.63722539</Z>
+								<R00>0.999926627</R00>
 								<R01>0</R01>
-								<R02>0</R02>
-								<R10>0</R10>
-								<R11>1</R11>
-								<R12>0</R12>
-								<R20>0</R20>
-								<R21>0</R21>
-								<R22>1</R22>
+								<R02>-0.0121115791</R02>
+								<R10>0.00837608706</R10>
+								<R11>0.722302973</R11>
+								<R12>0.691525936</R12>
+								<R20>0.00874823052</R20>
+								<R21>-0.691576719</R21>
+								<R22>0.722249925</R22>
 							</CoordinateFrame>
 							<bool name="CanCollide">true</bool>
 							<bool name="CanQuery">true</bool>
@@ -7784,18 +7784,18 @@ c2g=</BinaryString>
 						<SharedString name="SlimHash">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
 						<OptionalCoordinateFrame name="WorldPivotData">
 							<CFrame>
-								<X>-0.0138111021</X>
-								<Y>2.24561238</Y>
-								<Z>-5.009377</Z>
-								<R00>1</R00>
+								<X>-3.05734754</X>
+								<Y>4.62833071</Y>
+								<Z>4.2354579</Z>
+								<R00>0.999926627</R00>
 								<R01>0</R01>
-								<R02>0</R02>
-								<R10>0</R10>
-								<R11>1</R11>
-								<R12>0</R12>
-								<R20>0</R20>
-								<R21>0</R21>
-								<R22>1</R22>
+								<R02>-0.0121115791</R02>
+								<R10>0.00837608706</R10>
+								<R11>0.722302973</R11>
+								<R12>0.691525936</R12>
+								<R20>0.00874823052</R20>
+								<R21>-0.691576719</R21>
+								<R22>0.722249925</R22>
 							</CFrame>
 						</OptionalCoordinateFrame>
 						<BinaryString name="AttributesSerialize" />
@@ -7859,18 +7859,18 @@ c2g=</BinaryString>
 							<token name="BottomSurface">0</token>
 							<token name="BottomSurfaceInput">0</token>
 							<CoordinateFrame name="CFrame">
-								<X>1.48689926</X>
-								<Y>0.857236505</Y>
-								<Z>-7.1515646</Z>
-								<R00>1</R00>
+								<X>-1.53080201</X>
+								<Y>2.15669441</Y>
+								<Z>3.66156006</Z>
+								<R00>0.999926627</R00>
 								<R01>0</R01>
-								<R02>0</R02>
-								<R10>0</R10>
-								<R11>1</R11>
-								<R12>0</R12>
-								<R20>0</R20>
-								<R21>0</R21>
-								<R22>1</R22>
+								<R02>-0.0121115791</R02>
+								<R10>0.00837608706</R10>
+								<R11>0.722302973</R11>
+								<R12>0.691525936</R12>
+								<R20>0.00874823052</R20>
+								<R21>-0.691576719</R21>
+								<R22>0.722249925</R22>
 							</CoordinateFrame>
 							<bool name="CanCollide">true</bool>
 							<bool name="CanQuery">true</bool>
@@ -7977,18 +7977,18 @@ c2g=</BinaryString>
 						<SharedString name="SlimHash">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
 						<OptionalCoordinateFrame name="WorldPivotData">
 							<CFrame>
-								<X>-0.0138111021</X>
-								<Y>2.24561238</Y>
-								<Z>-5.009377</Z>
-								<R00>1</R00>
+								<X>-3.05734754</X>
+								<Y>4.62833071</Y>
+								<Z>4.2354579</Z>
+								<R00>0.999926627</R00>
 								<R01>0</R01>
-								<R02>0</R02>
-								<R10>0</R10>
-								<R11>1</R11>
-								<R12>0</R12>
-								<R20>0</R20>
-								<R21>0</R21>
-								<R22>1</R22>
+								<R02>-0.0121115791</R02>
+								<R10>0.00837608706</R10>
+								<R11>0.722302973</R11>
+								<R12>0.691525936</R12>
+								<R20>0.00874823052</R20>
+								<R21>-0.691576719</R21>
+								<R22>0.722249925</R22>
 							</CFrame>
 						</OptionalCoordinateFrame>
 						<BinaryString name="AttributesSerialize" />
@@ -8052,18 +8052,18 @@ c2g=</BinaryString>
 							<token name="BottomSurface">0</token>
 							<token name="BottomSurfaceInput">0</token>
 							<CoordinateFrame name="CFrame">
-								<X>-1.49898529</X>
-								<Y>0.862402916</Y>
-								<Z>-3.23288155</Z>
-								<R00>1</R00>
+								<X>-4.56392908</X>
+								<Y>4.84528732</Y>
+								<Z>6.46213436</Z>
+								<R00>0.999926627</R00>
 								<R01>0</R01>
-								<R02>0</R02>
-								<R10>0</R10>
-								<R11>1</R11>
-								<R12>0</R12>
-								<R20>0</R20>
-								<R21>0</R21>
-								<R22>1</R22>
+								<R02>-0.0121115791</R02>
+								<R10>0.00837608706</R10>
+								<R11>0.722302973</R11>
+								<R12>0.691525936</R12>
+								<R20>0.00874823052</R20>
+								<R21>-0.691576719</R21>
+								<R22>0.722249925</R22>
 							</CoordinateFrame>
 							<bool name="CanCollide">true</bool>
 							<bool name="CanQuery">true</bool>
@@ -8170,18 +8170,18 @@ c2g=</BinaryString>
 						<SharedString name="SlimHash">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
 						<OptionalCoordinateFrame name="WorldPivotData">
 							<CFrame>
-								<X>-0.0138111021</X>
-								<Y>2.24561238</Y>
-								<Z>-5.009377</Z>
-								<R00>1</R00>
+								<X>-3.05734754</X>
+								<Y>4.62833071</Y>
+								<Z>4.2354579</Z>
+								<R00>0.999926627</R00>
 								<R01>0</R01>
-								<R02>0</R02>
-								<R10>0</R10>
-								<R11>1</R11>
-								<R12>0</R12>
-								<R20>0</R20>
-								<R21>0</R21>
-								<R22>1</R22>
+								<R02>-0.0121115791</R02>
+								<R10>0.00837608706</R10>
+								<R11>0.722302973</R11>
+								<R12>0.691525936</R12>
+								<R20>0.00874823052</R20>
+								<R21>-0.691576719</R21>
+								<R22>0.722249925</R22>
 							</CFrame>
 						</OptionalCoordinateFrame>
 						<BinaryString name="AttributesSerialize" />
@@ -8245,18 +8245,18 @@ c2g=</BinaryString>
 							<token name="BottomSurface">0</token>
 							<token name="BottomSurfaceInput">0</token>
 							<CoordinateFrame name="CFrame">
-								<X>1.48927116</X>
-								<Y>0.863510847</Y>
-								<Z>-3.23186398</Z>
-								<R00>1</R00>
+								<X>-1.57590389</X>
+								<Y>4.87182093</Y>
+								<Z>6.48824501</Z>
+								<R00>0.999926627</R00>
 								<R01>0</R01>
-								<R02>0</R02>
-								<R10>0</R10>
-								<R11>1</R11>
-								<R12>0</R12>
-								<R20>0</R20>
-								<R21>0</R21>
-								<R22>1</R22>
+								<R02>-0.0121115791</R02>
+								<R10>0.00837608706</R10>
+								<R11>0.722302973</R11>
+								<R12>0.691525936</R12>
+								<R20>0.00874823052</R20>
+								<R21>-0.691576719</R21>
+								<R22>0.722249925</R22>
 							</CoordinateFrame>
 							<bool name="CanCollide">true</bool>
 							<bool name="CanQuery">true</bool>
@@ -8363,18 +8363,18 @@ c2g=</BinaryString>
 						<SharedString name="SlimHash">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
 						<OptionalCoordinateFrame name="WorldPivotData">
 							<CFrame>
-								<X>-0.0138111021</X>
-								<Y>2.24561238</Y>
-								<Z>-5.009377</Z>
-								<R00>1</R00>
+								<X>-3.05734754</X>
+								<Y>4.62833071</Y>
+								<Z>4.2354579</Z>
+								<R00>0.999926627</R00>
 								<R01>0</R01>
-								<R02>0</R02>
-								<R10>0</R10>
-								<R11>1</R11>
-								<R12>0</R12>
-								<R20>0</R20>
-								<R21>0</R21>
-								<R22>1</R22>
+								<R02>-0.0121115791</R02>
+								<R10>0.00837608706</R10>
+								<R11>0.722302973</R11>
+								<R12>0.691525936</R12>
+								<R20>0.00874823052</R20>
+								<R21>-0.691576719</R21>
+								<R22>0.722249925</R22>
 							</CFrame>
 						</OptionalCoordinateFrame>
 						<BinaryString name="AttributesSerialize" />
@@ -8438,18 +8438,18 @@ c2g=</BinaryString>
 							<token name="BottomSurface">0</token>
 							<token name="BottomSurfaceInput">0</token>
 							<CoordinateFrame name="CFrame">
-								<X>0.00053424621</X>
-								<Y>2.91343164</Y>
-								<Z>-7.53442526</Z>
-								<R00>1</R00>
+								<X>-3.01242089</X>
+								<Y>3.3646822</Y>
+								<Z>1.95001912</Z>
+								<R00>0.999926627</R00>
 								<R01>0</R01>
-								<R02>0</R02>
-								<R10>0</R10>
-								<R11>1</R11>
-								<R12>0</R12>
-								<R20>0</R20>
-								<R21>0</R21>
-								<R22>1</R22>
+								<R02>-0.0121115791</R02>
+								<R10>0.00837608706</R10>
+								<R11>0.722302973</R11>
+								<R12>0.691525936</R12>
+								<R20>0.00874823052</R20>
+								<R21>-0.691576719</R21>
+								<R22>0.722249925</R22>
 							</CoordinateFrame>
 							<bool name="CanCollide">true</bool>
 							<bool name="CanQuery">true</bool>
@@ -13397,7 +13397,7 @@ c2g=</BinaryString>
 					<CoordinateFrame name="ModelMeshCFrame">
 						<X>0</X>
 						<Y>0</Y>
-						<Z>0</Z>
+						<Z>-15.999999</Z>
 						<R00>1</R00>
 						<R01>0</R01>
 						<R02>0</R02>
@@ -13423,7 +13423,7 @@ c2g=</BinaryString>
 						<CFrame>
 							<X>-0.0233837236</X>
 							<Y>2.01727104</Y>
-							<Z>-5.02016163</Z>
+							<Z>-21.0201607</Z>
 							<R00>1</R00>
 							<R01>0</R01>
 							<R02>0</R02>
@@ -13480,7 +13480,7 @@ c2g=</BinaryString>
 							<CFrame>
 								<X>-0.0233837236</X>
 								<Y>2.01727104</Y>
-								<Z>-5.02016163</Z>
+								<Z>-21.0201607</Z>
 								<R00>1</R00>
 								<R01>0</R01>
 								<R02>0</R02>
@@ -13555,7 +13555,7 @@ c2g=</BinaryString>
 							<CoordinateFrame name="CFrame">
 								<X>0</X>
 								<Y>2.2628808</Y>
-								<Z>-5</Z>
+								<Z>-21</Z>
 								<R00>1</R00>
 								<R01>0</R01>
 								<R02>0</R02>
@@ -13673,7 +13673,7 @@ c2g=</BinaryString>
 							<CFrame>
 								<X>-0.0233837236</X>
 								<Y>2.01727104</Y>
-								<Z>-5.02016163</Z>
+								<Z>-21.0201607</Z>
 								<R00>1</R00>
 								<R01>0</R01>
 								<R02>0</R02>
@@ -13747,8 +13747,8 @@ c2g=</BinaryString>
 							<token name="BottomSurfaceInput">0</token>
 							<CoordinateFrame name="CFrame">
 								<X>-2.22587013</X>
-								<Y>0.987489223</Y>
-								<Z>-8.78948975</Z>
+								<Y>0.987489343</Y>
+								<Z>-24.7894878</Z>
 								<R00>1</R00>
 								<R01>0</R01>
 								<R02>0</R02>
@@ -13866,7 +13866,7 @@ c2g=</BinaryString>
 							<CFrame>
 								<X>-0.0233837236</X>
 								<Y>2.01727104</Y>
-								<Z>-5.02016163</Z>
+								<Z>-21.0201607</Z>
 								<R00>1</R00>
 								<R01>0</R01>
 								<R02>0</R02>
@@ -13941,7 +13941,7 @@ c2g=</BinaryString>
 							<CoordinateFrame name="CFrame">
 								<X>2.20951438</X>
 								<Y>0.985903263</Y>
-								<Z>-8.78557301</Z>
+								<Z>-24.7855721</Z>
 								<R00>1</R00>
 								<R01>0</R01>
 								<R02>0</R02>
@@ -14059,7 +14059,7 @@ c2g=</BinaryString>
 							<CFrame>
 								<X>-0.0233837236</X>
 								<Y>2.01727104</Y>
-								<Z>-5.02016163</Z>
+								<Z>-21.0201607</Z>
 								<R00>1</R00>
 								<R01>0</R01>
 								<R02>0</R02>
@@ -14134,7 +14134,7 @@ c2g=</BinaryString>
 							<CoordinateFrame name="CFrame">
 								<X>-2.22735524</X>
 								<Y>0.983769059</Y>
-								<Z>-1.50358415</Z>
+								<Z>-17.5035839</Z>
 								<R00>1</R00>
 								<R01>0</R01>
 								<R02>0</R02>
@@ -14252,7 +14252,7 @@ c2g=</BinaryString>
 							<CFrame>
 								<X>-0.0233837236</X>
 								<Y>2.01727104</Y>
-								<Z>-5.02016163</Z>
+								<Z>-21.0201607</Z>
 								<R00>1</R00>
 								<R01>0</R01>
 								<R02>0</R02>
@@ -14326,8 +14326,8 @@ c2g=</BinaryString>
 							<token name="BottomSurfaceInput">0</token>
 							<CoordinateFrame name="CFrame">
 								<X>2.21065283</X>
-								<Y>0.987854481</Y>
-								<Z>-1.50936747</Z>
+								<Y>0.9878546</Y>
+								<Z>-17.509367</Z>
 								<R00>1</R00>
 								<R01>0</R01>
 								<R02>0</R02>
@@ -14445,7 +14445,7 @@ c2g=</BinaryString>
 							<CFrame>
 								<X>-0.0233837236</X>
 								<Y>2.01727104</Y>
-								<Z>-5.02016163</Z>
+								<Z>-21.0201607</Z>
 								<R00>1</R00>
 								<R01>0</R01>
 								<R02>0</R02>
@@ -14518,9 +14518,9 @@ c2g=</BinaryString>
 							<token name="BottomSurface">0</token>
 							<token name="BottomSurfaceInput">0</token>
 							<CoordinateFrame name="CFrame">
-								<X>-0.00381622068</X>
-								<Y>3.7429049</Y>
-								<Z>-9.39843845</Z>
+								<X>-0.00381622091</X>
+								<Y>3.74290466</Y>
+								<Z>-25.3984375</Z>
 								<R00>1</R00>
 								<R01>0</R01>
 								<R02>0</R02>
@@ -17043,18 +17043,18 @@ c2g=</BinaryString>
 				<Properties>
 					<token name="LevelOfDetail">0</token>
 					<CoordinateFrame name="ModelMeshCFrame">
-						<X>0</X>
-						<Y>0</Y>
-						<Z>0</Z>
-						<R00>1</R00>
-						<R01>0</R01>
-						<R02>0</R02>
-						<R10>0</R10>
-						<R11>1</R11>
-						<R12>0</R12>
-						<R20>0</R20>
-						<R21>0</R21>
-						<R22>1</R22>
+						<X>-3.61126542</X>
+						<Y>8.39183426</Y>
+						<Z>-6.84534502</Z>
+						<R00>1.00000048</R00>
+						<R01>3.73693183e-08</R01>
+						<R02>-0.000472779968</R02>
+						<R10>0.000328486844</R10>
+						<R11>0.71907413</R11>
+						<R12>0.694934905</R12>
+						<R20>0.000339917256</R20>
+						<R21>-0.694942474</R21>
+						<R22>0.719066381</R22>
 					</CoordinateFrame>
 					<SharedString name="ModelMeshData">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
 					<Vector3 name="ModelMeshSize">
@@ -17069,18 +17069,18 @@ c2g=</BinaryString>
 					<SharedString name="SlimHash">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
 					<OptionalCoordinateFrame name="WorldPivotData">
 						<CFrame>
-							<X>-0.0124286134</X>
-							<Y>2.01653528</Y>
-							<Z>-5.01250124</Z>
-							<R00>1</R00>
+							<X>-3.62132454</X>
+							<Y>6.35850334</Y>
+							<Z>-11.8510485</Z>
+							<R00>0.999999881</R00>
 							<R01>0</R01>
-							<R02>0</R02>
-							<R10>0</R10>
-							<R11>1</R11>
-							<R12>0</R12>
-							<R20>0</R20>
-							<R21>0</R21>
-							<R22>1</R22>
+							<R02>-0.000472701038</R02>
+							<R10>0.00032849799</R10>
+							<R11>0.719069541</R11>
+							<R12>0.694938004</R12>
+							<R20>0.000339904946</R20>
+							<R21>-0.694938123</R21>
+							<R22>0.719069421</R22>
 						</CFrame>
 					</OptionalCoordinateFrame>
 					<BinaryString name="AttributesSerialize">BAAAABAAAABSQlhfQUlfR0VORVJBVEVEAwEUAAAAUkJYX0FJX0dFTkVSQVRJT05fSUQCJAAA
@@ -17126,18 +17126,18 @@ c2g=</BinaryString>
 						<SharedString name="SlimHash">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
 						<OptionalCoordinateFrame name="WorldPivotData">
 							<CFrame>
-								<X>-0.0124286134</X>
-								<Y>2.01653528</Y>
-								<Z>-5.01250124</Z>
-								<R00>1</R00>
+								<X>-3.62132454</X>
+								<Y>6.35850334</Y>
+								<Z>-11.8510485</Z>
+								<R00>0.999999881</R00>
 								<R01>0</R01>
-								<R02>0</R02>
-								<R10>0</R10>
-								<R11>1</R11>
-								<R12>0</R12>
-								<R20>0</R20>
-								<R21>0</R21>
-								<R22>1</R22>
+								<R02>-0.000472701038</R02>
+								<R10>0.00032849799</R10>
+								<R11>0.719069541</R11>
+								<R12>0.694938004</R12>
+								<R20>0.000339904946</R20>
+								<R21>-0.694938123</R21>
+								<R22>0.719069421</R22>
 							</CFrame>
 						</OptionalCoordinateFrame>
 						<BinaryString name="AttributesSerialize" />
@@ -17201,18 +17201,18 @@ c2g=</BinaryString>
 							<token name="BottomSurface">0</token>
 							<token name="BottomSurfaceInput">0</token>
 							<CoordinateFrame name="CFrame">
-								<X>0</X>
-								<Y>2.20865726</Y>
-								<Z>-5</Z>
-								<R00>1</R00>
+								<X>-3.60890174</X>
+								<Y>6.50534391</Y>
+								<Z>-11.9755678</Z>
+								<R00>0.999999881</R00>
 								<R01>0</R01>
-								<R02>0</R02>
-								<R10>0</R10>
-								<R11>1</R11>
-								<R12>0</R12>
-								<R20>0</R20>
-								<R21>0</R21>
-								<R22>1</R22>
+								<R02>-0.000472701038</R02>
+								<R10>0.00032849799</R10>
+								<R11>0.719069541</R11>
+								<R12>0.694938004</R12>
+								<R20>0.000339904946</R20>
+								<R21>-0.694938123</R21>
+								<R22>0.719069421</R22>
 							</CoordinateFrame>
 							<bool name="CanCollide">true</bool>
 							<bool name="CanQuery">true</bool>
@@ -17319,18 +17319,18 @@ c2g=</BinaryString>
 						<SharedString name="SlimHash">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
 						<OptionalCoordinateFrame name="WorldPivotData">
 							<CFrame>
-								<X>-0.0124286134</X>
-								<Y>2.01653528</Y>
-								<Z>-5.01250124</Z>
-								<R00>1</R00>
+								<X>-3.62132454</X>
+								<Y>6.35850334</Y>
+								<Z>-11.8510485</Z>
+								<R00>0.999999881</R00>
 								<R01>0</R01>
-								<R02>0</R02>
-								<R10>0</R10>
-								<R11>1</R11>
-								<R12>0</R12>
-								<R20>0</R20>
-								<R21>0</R21>
-								<R22>1</R22>
+								<R02>-0.000472701038</R02>
+								<R10>0.00032849799</R10>
+								<R11>0.719069541</R11>
+								<R12>0.694938004</R12>
+								<R20>0.000339904946</R20>
+								<R21>-0.694938123</R21>
+								<R22>0.719069421</R22>
 							</CFrame>
 						</OptionalCoordinateFrame>
 						<BinaryString name="AttributesSerialize" />
@@ -17394,18 +17394,18 @@ c2g=</BinaryString>
 							<token name="BottomSurface">0</token>
 							<token name="BottomSurfaceInput">0</token>
 							<CoordinateFrame name="CFrame">
-								<X>-2.38642526</X>
-								<Y>1.27275157</Y>
-								<Z>-7.8202877</Z>
-								<R00>1</R00>
+								<X>-5.99399376</X>
+								<Y>3.8716538</Y>
+								<Z>-13.3539648</Z>
+								<R00>0.999999881</R00>
 								<R01>0</R01>
-								<R02>0</R02>
-								<R10>0</R10>
-								<R11>1</R11>
-								<R12>0</R12>
-								<R20>0</R20>
-								<R21>0</R21>
-								<R22>1</R22>
+								<R02>-0.000472701038</R02>
+								<R10>0.00032849799</R10>
+								<R11>0.719069541</R11>
+								<R12>0.694938004</R12>
+								<R20>0.000339904946</R20>
+								<R21>-0.694938123</R21>
+								<R22>0.719069421</R22>
 							</CoordinateFrame>
 							<bool name="CanCollide">true</bool>
 							<bool name="CanQuery">true</bool>
@@ -17512,18 +17512,18 @@ c2g=</BinaryString>
 						<SharedString name="SlimHash">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
 						<OptionalCoordinateFrame name="WorldPivotData">
 							<CFrame>
-								<X>-0.0124286134</X>
-								<Y>2.01653528</Y>
-								<Z>-5.01250124</Z>
-								<R00>1</R00>
+								<X>-3.62132454</X>
+								<Y>6.35850334</Y>
+								<Z>-11.8510485</Z>
+								<R00>0.999999881</R00>
 								<R01>0</R01>
-								<R02>0</R02>
-								<R10>0</R10>
-								<R11>1</R11>
-								<R12>0</R12>
-								<R20>0</R20>
-								<R21>0</R21>
-								<R22>1</R22>
+								<R02>-0.000472701038</R02>
+								<R10>0.00032849799</R10>
+								<R11>0.719069541</R11>
+								<R12>0.694938004</R12>
+								<R20>0.000339904946</R20>
+								<R21>-0.694938123</R21>
+								<R22>0.719069421</R22>
 							</CFrame>
 						</OptionalCoordinateFrame>
 						<BinaryString name="AttributesSerialize" />
@@ -17587,18 +17587,18 @@ c2g=</BinaryString>
 							<token name="BottomSurface">0</token>
 							<token name="BottomSurfaceInput">0</token>
 							<CoordinateFrame name="CFrame">
-								<X>2.39498758</X>
-								<Y>1.27256453</Y>
-								<Z>-7.81871891</Z>
-								<R00>1</R00>
+								<X>-1.21258211</X>
+								<Y>3.87418032</Y>
+								<Z>-13.3510818</Z>
+								<R00>0.999999881</R00>
 								<R01>0</R01>
-								<R02>0</R02>
-								<R10>0</R10>
-								<R11>1</R11>
-								<R12>0</R12>
-								<R20>0</R20>
-								<R21>0</R21>
-								<R22>1</R22>
+								<R02>-0.000472701038</R02>
+								<R10>0.00032849799</R10>
+								<R11>0.719069541</R11>
+								<R12>0.694938004</R12>
+								<R20>0.000339904946</R20>
+								<R21>-0.694938123</R21>
+								<R22>0.719069421</R22>
 							</CoordinateFrame>
 							<bool name="CanCollide">true</bool>
 							<bool name="CanQuery">true</bool>
@@ -17705,18 +17705,18 @@ c2g=</BinaryString>
 						<SharedString name="SlimHash">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
 						<OptionalCoordinateFrame name="WorldPivotData">
 							<CFrame>
-								<X>-0.0124286134</X>
-								<Y>2.01653528</Y>
-								<Z>-5.01250124</Z>
-								<R00>1</R00>
+								<X>-3.62132454</X>
+								<Y>6.35850334</Y>
+								<Z>-11.8510485</Z>
+								<R00>0.999999881</R00>
 								<R01>0</R01>
-								<R02>0</R02>
-								<R10>0</R10>
-								<R11>1</R11>
-								<R12>0</R12>
-								<R20>0</R20>
-								<R21>0</R21>
-								<R22>1</R22>
+								<R02>-0.000472701038</R02>
+								<R10>0.00032849799</R10>
+								<R11>0.719069541</R11>
+								<R12>0.694938004</R12>
+								<R20>0.000339904946</R20>
+								<R21>-0.694938123</R21>
+								<R22>0.719069421</R22>
 							</CFrame>
 						</OptionalCoordinateFrame>
 						<BinaryString name="AttributesSerialize" />
@@ -17780,18 +17780,18 @@ c2g=</BinaryString>
 							<token name="BottomSurface">0</token>
 							<token name="BottomSurfaceInput">0</token>
 							<CoordinateFrame name="CFrame">
-								<X>-2.39300108</X>
-								<Y>1.2770617</Y>
-								<Z>-2.26395679</Z>
-								<R00>1</R00>
+								<X>-6.00319576</X>
+								<Y>7.73605633</Y>
+								<Z>-9.36157513</Z>
+								<R00>0.999999881</R00>
 								<R01>0</R01>
-								<R02>0</R02>
-								<R10>0</R10>
-								<R11>1</R11>
-								<R12>0</R12>
-								<R20>0</R20>
-								<R21>0</R21>
-								<R22>1</R22>
+								<R02>-0.000472701038</R02>
+								<R10>0.00032849799</R10>
+								<R11>0.719069541</R11>
+								<R12>0.694938004</R12>
+								<R20>0.000339904946</R20>
+								<R21>-0.694938123</R21>
+								<R22>0.719069421</R22>
 							</CoordinateFrame>
 							<bool name="CanCollide">true</bool>
 							<bool name="CanQuery">true</bool>
@@ -17898,18 +17898,18 @@ c2g=</BinaryString>
 						<SharedString name="SlimHash">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
 						<OptionalCoordinateFrame name="WorldPivotData">
 							<CFrame>
-								<X>-0.0124286134</X>
-								<Y>2.01653528</Y>
-								<Z>-5.01250124</Z>
-								<R00>1</R00>
+								<X>-3.62132454</X>
+								<Y>6.35850334</Y>
+								<Z>-11.8510485</Z>
+								<R00>0.999999881</R00>
 								<R01>0</R01>
-								<R02>0</R02>
-								<R10>0</R10>
-								<R11>1</R11>
-								<R12>0</R12>
-								<R20>0</R20>
-								<R21>0</R21>
-								<R22>1</R22>
+								<R02>-0.000472701038</R02>
+								<R10>0.00032849799</R10>
+								<R11>0.719069541</R11>
+								<R12>0.694938004</R12>
+								<R20>0.000339904946</R20>
+								<R21>-0.694938123</R21>
+								<R22>0.719069421</R22>
 							</CFrame>
 						</OptionalCoordinateFrame>
 						<BinaryString name="AttributesSerialize" />
@@ -17973,18 +17973,18 @@ c2g=</BinaryString>
 							<token name="BottomSurface">0</token>
 							<token name="BottomSurfaceInput">0</token>
 							<CoordinateFrame name="CFrame">
-								<X>2.39825797</X>
-								<Y>1.27491999</Y>
-								<Z>-2.26406336</Z>
-								<R00>1</R00>
+								<X>-1.21193743</X>
+								<Y>7.73601627</Y>
+								<Z>-9.35853481</Z>
+								<R00>0.999999881</R00>
 								<R01>0</R01>
-								<R02>0</R02>
-								<R10>0</R10>
-								<R11>1</R11>
-								<R12>0</R12>
-								<R20>0</R20>
-								<R21>0</R21>
-								<R22>1</R22>
+								<R02>-0.000472701038</R02>
+								<R10>0.00032849799</R10>
+								<R11>0.719069541</R11>
+								<R12>0.694938004</R12>
+								<R20>0.000339904946</R20>
+								<R21>-0.694938123</R21>
+								<R22>0.719069421</R22>
 							</CoordinateFrame>
 							<bool name="CanCollide">true</bool>
 							<bool name="CanQuery">true</bool>
@@ -18091,18 +18091,18 @@ c2g=</BinaryString>
 						<SharedString name="SlimHash">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
 						<OptionalCoordinateFrame name="WorldPivotData">
 							<CFrame>
-								<X>-0.0124286134</X>
-								<Y>2.01653528</Y>
-								<Z>-5.01250124</Z>
-								<R00>1</R00>
+								<X>-3.62132454</X>
+								<Y>6.35850334</Y>
+								<Z>-11.8510485</Z>
+								<R00>0.999999881</R00>
 								<R01>0</R01>
-								<R02>0</R02>
-								<R10>0</R10>
-								<R11>1</R11>
-								<R12>0</R12>
-								<R20>0</R20>
-								<R21>0</R21>
-								<R22>1</R22>
+								<R02>-0.000472701038</R02>
+								<R10>0.00032849799</R10>
+								<R11>0.719069541</R11>
+								<R12>0.694938004</R12>
+								<R20>0.000339904946</R20>
+								<R21>-0.694938123</R21>
+								<R22>0.719069421</R22>
 							</CFrame>
 						</OptionalCoordinateFrame>
 						<BinaryString name="AttributesSerialize" />
@@ -18166,18 +18166,18 @@ c2g=</BinaryString>
 							<token name="BottomSurface">0</token>
 							<token name="BottomSurfaceInput">0</token>
 							<CoordinateFrame name="CFrame">
-								<X>0.00362743624</X>
-								<Y>2.32304502</Y>
-								<Z>-8.27334499</Z>
-								<R00>1</R00>
+								<X>-3.6037271</X>
+								<Y>4.31282616</Y>
+								<Z>-14.4088211</Z>
+								<R00>0.999999881</R00>
 								<R01>0</R01>
-								<R02>0</R02>
-								<R10>0</R10>
-								<R11>1</R11>
-								<R12>0</R12>
-								<R20>0</R20>
-								<R21>0</R21>
-								<R22>1</R22>
+								<R02>-0.000472701038</R02>
+								<R10>0.00032849799</R10>
+								<R11>0.719069541</R11>
+								<R12>0.694938004</R12>
+								<R20>0.000339904946</R20>
+								<R21>-0.694938123</R21>
+								<R22>0.719069421</R22>
 							</CoordinateFrame>
 							<bool name="CanCollide">true</bool>
 							<bool name="CanQuery">true</bool>
@@ -18259,18 +18259,18 @@ c2g=</BinaryString>
 				<Properties>
 					<token name="LevelOfDetail">0</token>
 					<CoordinateFrame name="ModelMeshCFrame">
-						<X>0</X>
-						<Y>0</Y>
-						<Z>0</Z>
-						<R00>1</R00>
-						<R01>0</R01>
-						<R02>0</R02>
-						<R10>0</R10>
-						<R11>1</R11>
-						<R12>0</R12>
-						<R20>0</R20>
-						<R21>0</R21>
-						<R22>1</R22>
+						<X>6.00675154</X>
+						<Y>-3.40505075</Y>
+						<Z>0.905598879</Z>
+						<R00>0.927918613</R00>
+						<R01>0.372200489</R01>
+						<R02>0.0208146945</R02>
+						<R10>-0.372106522</R10>
+						<R11>0.928152561</R11>
+						<R12>-0.00834689848</R12>
+						<R20>-0.0224259198</R20>
+						<R21>-1.51601913e-08</R21>
+						<R22>0.999749005</R22>
 					</CoordinateFrame>
 					<SharedString name="ModelMeshData">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
 					<Vector3 name="ModelMeshSize">
@@ -18285,18 +18285,18 @@ c2g=</BinaryString>
 					<SharedString name="SlimHash">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
 					<OptionalCoordinateFrame name="WorldPivotData">
 						<CFrame>
-							<X>-0.0190694127</X>
-							<Y>2.01460934</Y>
-							<Z>-5.01558733</Z>
-							<R00>1</R00>
-							<R01>0</R01>
-							<R02>0</R02>
-							<R10>0</R10>
-							<R11>1</R11>
-							<R12>0</R12>
-							<R20>0</R20>
+							<X>6.63449764</X>
+							<Y>-1.48622608</Y>
+							<Z>-4.10830307</Z>
+							<R00>0.92791903</R00>
+							<R01>0.37220028</R01>
+							<R02>0.0208146404</R02>
+							<R10>-0.372106671</R10>
+							<R11>0.928152442</R11>
+							<R12>-0.00834692083</R12>
+							<R20>-0.0224258862</R20>
 							<R21>0</R21>
-							<R22>1</R22>
+							<R22>0.999748528</R22>
 						</CFrame>
 					</OptionalCoordinateFrame>
 					<BinaryString name="AttributesSerialize">BAAAABAAAABSQlhfQUlfR0VORVJBVEVEAwEUAAAAUkJYX0FJX0dFTkVSQVRJT05fSUQCJAAA
@@ -18342,18 +18342,18 @@ c2g=</BinaryString>
 						<SharedString name="SlimHash">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
 						<OptionalCoordinateFrame name="WorldPivotData">
 							<CFrame>
-								<X>-0.0190694127</X>
-								<Y>2.01460934</Y>
-								<Z>-5.01558733</Z>
-								<R00>1</R00>
-								<R01>0</R01>
-								<R02>0</R02>
-								<R10>0</R10>
-								<R11>1</R11>
-								<R12>0</R12>
-								<R20>0</R20>
+								<X>6.63449764</X>
+								<Y>-1.48622608</Y>
+								<Z>-4.10830307</Z>
+								<R00>0.92791903</R00>
+								<R01>0.37220028</R01>
+								<R02>0.0208146404</R02>
+								<R10>-0.372106671</R10>
+								<R11>0.928152442</R11>
+								<R12>-0.00834692083</R12>
+								<R20>-0.0224258862</R20>
 								<R21>0</R21>
-								<R22>1</R22>
+								<R22>0.999748528</R22>
 							</CFrame>
 						</OptionalCoordinateFrame>
 						<BinaryString name="AttributesSerialize" />
@@ -18417,18 +18417,18 @@ c2g=</BinaryString>
 							<token name="BottomSurface">0</token>
 							<token name="BottomSurfaceInput">0</token>
 							<CoordinateFrame name="CFrame">
-								<X>0</X>
-								<Y>2.16287804</Y>
-								<Z>-5</Z>
-								<R00>1</R00>
-								<R01>0</R01>
-								<R02>0</R02>
-								<R10>0</R10>
-								<R11>1</R11>
-								<R12>0</R12>
-								<R20>0</R20>
+								<X>6.70770264</X>
+								<Y>-1.35583615</Y>
+								<Z>-4.09314728</Z>
+								<R00>0.92791903</R00>
+								<R01>0.37220028</R01>
+								<R02>0.0208146404</R02>
+								<R10>-0.372106671</R10>
+								<R11>0.928152442</R11>
+								<R12>-0.00834692083</R12>
+								<R20>-0.0224258862</R20>
 								<R21>0</R21>
-								<R22>1</R22>
+								<R22>0.999748528</R22>
 							</CoordinateFrame>
 							<bool name="CanCollide">true</bool>
 							<bool name="CanQuery">true</bool>
@@ -18535,18 +18535,18 @@ c2g=</BinaryString>
 						<SharedString name="SlimHash">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
 						<OptionalCoordinateFrame name="WorldPivotData">
 							<CFrame>
-								<X>-0.0190694127</X>
-								<Y>2.01460934</Y>
-								<Z>-5.01558733</Z>
-								<R00>1</R00>
-								<R01>0</R01>
-								<R02>0</R02>
-								<R10>0</R10>
-								<R11>1</R11>
-								<R12>0</R12>
-								<R20>0</R20>
+								<X>6.63449764</X>
+								<Y>-1.48622608</Y>
+								<Z>-4.10830307</Z>
+								<R00>0.92791903</R00>
+								<R01>0.37220028</R01>
+								<R02>0.0208146404</R02>
+								<R10>-0.372106671</R10>
+								<R11>0.928152442</R11>
+								<R12>-0.00834692083</R12>
+								<R20>-0.0224258862</R20>
 								<R21>0</R21>
-								<R22>1</R22>
+								<R22>0.999748528</R22>
 							</CFrame>
 						</OptionalCoordinateFrame>
 						<BinaryString name="AttributesSerialize" />
@@ -18610,18 +18610,18 @@ c2g=</BinaryString>
 							<token name="BottomSurface">0</token>
 							<token name="BottomSurfaceInput">0</token>
 							<CoordinateFrame name="CFrame">
-								<X>-3.23207688</X>
-								<Y>1.18598163</Y>
-								<Z>-7.32278013</Z>
-								<R00>1</R00>
-								<R01>0</R01>
-								<R02>0</R02>
-								<R10>0</R10>
-								<R11>1</R11>
-								<R12>0</R12>
-								<R20>0</R20>
+								<X>3.29664803</X>
+								<Y>-1.04047942</Y>
+								<Z>-6.34286118</Z>
+								<R00>0.92791903</R00>
+								<R01>0.37220028</R01>
+								<R02>0.0208146404</R02>
+								<R10>-0.372106671</R10>
+								<R11>0.928152442</R11>
+								<R12>-0.00834692083</R12>
+								<R20>-0.0224258862</R20>
 								<R21>0</R21>
-								<R22>1</R22>
+								<R22>0.999748528</R22>
 							</CoordinateFrame>
 							<bool name="CanCollide">true</bool>
 							<bool name="CanQuery">true</bool>
@@ -18728,18 +18728,18 @@ c2g=</BinaryString>
 						<SharedString name="SlimHash">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
 						<OptionalCoordinateFrame name="WorldPivotData">
 							<CFrame>
-								<X>-0.0190694127</X>
-								<Y>2.01460934</Y>
-								<Z>-5.01558733</Z>
-								<R00>1</R00>
-								<R01>0</R01>
-								<R02>0</R02>
-								<R10>0</R10>
-								<R11>1</R11>
-								<R12>0</R12>
-								<R20>0</R20>
+								<X>6.63449764</X>
+								<Y>-1.48622608</Y>
+								<Z>-4.10830307</Z>
+								<R00>0.92791903</R00>
+								<R01>0.37220028</R01>
+								<R02>0.0208146404</R02>
+								<R10>-0.372106671</R10>
+								<R11>0.928152442</R11>
+								<R12>-0.00834692083</R12>
+								<R20>-0.0224258862</R20>
 								<R21>0</R21>
-								<R22>1</R22>
+								<R22>0.999748528</R22>
 							</CFrame>
 						</OptionalCoordinateFrame>
 						<BinaryString name="AttributesSerialize" />
@@ -18803,18 +18803,18 @@ c2g=</BinaryString>
 							<token name="BottomSurface">0</token>
 							<token name="BottomSurfaceInput">0</token>
 							<CoordinateFrame name="CFrame">
-								<X>3.22279215</X>
-								<Y>1.18429983</Y>
-								<Z>-7.32516813</Z>
-								<R00>1</R00>
-								<R01>0</R01>
-								<R02>0</R02>
-								<R10>0</R10>
-								<R11>1</R11>
-								<R12>0</R12>
-								<R20>0</R20>
+								<X>9.28556824</X>
+								<Y>-3.44392014</Y>
+								<Z>-6.49000454</Z>
+								<R00>0.92791903</R00>
+								<R01>0.37220028</R01>
+								<R02>0.0208146404</R02>
+								<R10>-0.372106671</R10>
+								<R11>0.928152442</R11>
+								<R12>-0.00834692083</R12>
+								<R20>-0.0224258862</R20>
 								<R21>0</R21>
-								<R22>1</R22>
+								<R22>0.999748528</R22>
 							</CoordinateFrame>
 							<bool name="CanCollide">true</bool>
 							<bool name="CanQuery">true</bool>
@@ -18921,18 +18921,18 @@ c2g=</BinaryString>
 						<SharedString name="SlimHash">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
 						<OptionalCoordinateFrame name="WorldPivotData">
 							<CFrame>
-								<X>-0.0190694127</X>
-								<Y>2.01460934</Y>
-								<Z>-5.01558733</Z>
-								<R00>1</R00>
-								<R01>0</R01>
-								<R02>0</R02>
-								<R10>0</R10>
-								<R11>1</R11>
-								<R12>0</R12>
-								<R20>0</R20>
+								<X>6.63449764</X>
+								<Y>-1.48622608</Y>
+								<Z>-4.10830307</Z>
+								<R00>0.92791903</R00>
+								<R01>0.37220028</R01>
+								<R02>0.0208146404</R02>
+								<R10>-0.372106671</R10>
+								<R11>0.928152442</R11>
+								<R12>-0.00834692083</R12>
+								<R20>-0.0224258862</R20>
 								<R21>0</R21>
-								<R22>1</R22>
+								<R22>0.999748528</R22>
 							</CFrame>
 						</OptionalCoordinateFrame>
 						<BinaryString name="AttributesSerialize" />
@@ -18996,18 +18996,18 @@ c2g=</BinaryString>
 							<token name="BottomSurface">0</token>
 							<token name="BottomSurfaceInput">0</token>
 							<CoordinateFrame name="CFrame">
-								<X>-3.23210216</X>
-								<Y>1.19598055</Y>
-								<Z>-2.28122377</Z>
-								<R00>1</R00>
-								<R01>0</R01>
-								<R02>0</R02>
-								<R10>0</R10>
-								<R11>1</R11>
-								<R12>0</R12>
-								<R20>0</R20>
+								<X>3.4052844</X>
+								<Y>-1.07327104</Y>
+								<Z>-1.30257201</Z>
+								<R00>0.92791903</R00>
+								<R01>0.37220028</R01>
+								<R02>0.0208146404</R02>
+								<R10>-0.372106671</R10>
+								<R11>0.928152442</R11>
+								<R12>-0.00834692083</R12>
+								<R20>-0.0224258862</R20>
 								<R21>0</R21>
-								<R22>1</R22>
+								<R22>0.999748528</R22>
 							</CoordinateFrame>
 							<bool name="CanCollide">true</bool>
 							<bool name="CanQuery">true</bool>
@@ -19114,18 +19114,18 @@ c2g=</BinaryString>
 						<SharedString name="SlimHash">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
 						<OptionalCoordinateFrame name="WorldPivotData">
 							<CFrame>
-								<X>-0.0190694127</X>
-								<Y>2.01460934</Y>
-								<Z>-5.01558733</Z>
-								<R00>1</R00>
-								<R01>0</R01>
-								<R02>0</R02>
-								<R10>0</R10>
-								<R11>1</R11>
-								<R12>0</R12>
-								<R20>0</R20>
+								<X>6.63449764</X>
+								<Y>-1.48622608</Y>
+								<Z>-4.10830307</Z>
+								<R00>0.92791903</R00>
+								<R01>0.37220028</R01>
+								<R02>0.0208146404</R02>
+								<R10>-0.372106671</R10>
+								<R11>0.928152442</R11>
+								<R12>-0.00834692083</R12>
+								<R20>-0.0224258862</R20>
 								<R21>0</R21>
-								<R22>1</R22>
+								<R22>0.999748528</R22>
 							</CFrame>
 						</OptionalCoordinateFrame>
 						<BinaryString name="AttributesSerialize" />
@@ -19189,18 +19189,18 @@ c2g=</BinaryString>
 							<token name="BottomSurface">0</token>
 							<token name="BottomSurfaceInput">0</token>
 							<CoordinateFrame name="CFrame">
-								<X>3.21514559</X>
-								<Y>1.19615138</Y>
-								<Z>-2.28346324</Z>
-								<R00>1</R00>
-								<R01>0</R01>
-								<R02>0</R02>
-								<R10>0</R10>
-								<R11>1</R11>
-								<R12>0</R12>
-								<R20>0</R20>
+								<X>9.38782501</X>
+								<Y>-3.47215748</Y>
+								<Z>-1.44939613</Z>
+								<R00>0.92791903</R00>
+								<R01>0.37220028</R01>
+								<R02>0.0208146404</R02>
+								<R10>-0.372106671</R10>
+								<R11>0.928152442</R11>
+								<R12>-0.00834692083</R12>
+								<R20>-0.0224258862</R20>
 								<R21>0</R21>
-								<R22>1</R22>
+								<R22>0.999748528</R22>
 							</CoordinateFrame>
 							<bool name="CanCollide">true</bool>
 							<bool name="CanQuery">true</bool>
@@ -19307,18 +19307,18 @@ c2g=</BinaryString>
 						<SharedString name="SlimHash">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
 						<OptionalCoordinateFrame name="WorldPivotData">
 							<CFrame>
-								<X>-0.0190694127</X>
-								<Y>2.01460934</Y>
-								<Z>-5.01558733</Z>
-								<R00>1</R00>
-								<R01>0</R01>
-								<R02>0</R02>
-								<R10>0</R10>
-								<R11>1</R11>
-								<R12>0</R12>
-								<R20>0</R20>
+								<X>6.63449764</X>
+								<Y>-1.48622608</Y>
+								<Z>-4.10830307</Z>
+								<R00>0.92791903</R00>
+								<R01>0.37220028</R01>
+								<R02>0.0208146404</R02>
+								<R10>-0.372106671</R10>
+								<R11>0.928152442</R11>
+								<R12>-0.00834692083</R12>
+								<R20>-0.0224258862</R20>
 								<R21>0</R21>
-								<R22>1</R22>
+								<R22>0.999748528</R22>
 							</CFrame>
 						</OptionalCoordinateFrame>
 						<BinaryString name="AttributesSerialize" />
@@ -19382,18 +19382,18 @@ c2g=</BinaryString>
 							<token name="BottomSurface">0</token>
 							<token name="BottomSurfaceInput">0</token>
 							<CoordinateFrame name="CFrame">
-								<X>-0.00897629373</X>
-								<Y>2.08880258</Y>
-								<Z>-7.61799908</Z>
-								<R00>1</R00>
-								<R01>0</R01>
-								<R02>0</R02>
-								<R10>0</R10>
-								<R11>1</R11>
-								<R12>0</R12>
-								<R20>0</R20>
+								<X>6.61730957</X>
+								<Y>-1.39939702</Y>
+								<Z>-6.71028662</Z>
+								<R00>0.92791903</R00>
+								<R01>0.37220028</R01>
+								<R02>0.0208146404</R02>
+								<R10>-0.372106671</R10>
+								<R11>0.928152442</R11>
+								<R12>-0.00834692083</R12>
+								<R20>-0.0224258862</R20>
 								<R21>0</R21>
-								<R22>1</R22>
+								<R22>0.999748528</R22>
 							</CoordinateFrame>
 							<bool name="CanCollide">true</bool>
 							<bool name="CanQuery">true</bool>
@@ -19472,7 +19472,7 @@ c2g=</BinaryString>
 				</Item>
 			</Item>
 		</Item>
-	<SharedStrings><SharedString md5="AiGzA3QsdmG/A7ZMyx8T+Q==">Q1NHUEhTCAAAAAIAKLUv/WD8Hv26AHpT3VA6EBDtTQeoSrY1i1zoBvMCgqCYOF02xYbS6jCO
+		<SharedStrings><SharedString md5="AiGzA3QsdmG/A7ZMyx8T+Q==">Q1NHUEhTCAAAAAIAKLUv/WD8Hv26AHpT3VA6EBDtTQeoSrY1i1zoBvMCgqCYOF02xYbS6jCO
 30M88vW09XKrWB3Z4FpGSQGdaPpeBaaBZDW+r8vaAQoF/gT0BHufVENBJ/tLcFR0pafhnX66
 0YxtyN5LKfcAryh8Qigo8Q+3R4oEMgaLzWkutg95nLMTOslDN2ZFo9c+xgKaUynZx6U/EDBA
 7HZLCJBGmNBku7RiYf5K5rwLKTqUgP7+z7zjFp7wfbzy0z3Gn9Sl9tPhzEc72n7SeUxnMlHj

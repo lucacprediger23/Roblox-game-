@@ -6,6 +6,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Lighting = game:GetService("Lighting")
 local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
+local Props = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Props"))
 
 local MapBuilder = {}
 
@@ -174,6 +175,10 @@ end
 
 local function lowPolyTree(parent, pos, scale)
 	scale = scale or 1
+	local name = Props.Pick({ "Tree1", "Tree2" }, rng)
+	if name and Props.Place(name, parent, CFrame.new(pos) * CFrame.Angles(0, rng:NextNumber(0, 6.28), 0), { Height = 15 * scale }) then
+		return
+	end
 	local trunkColor = Color3.fromRGB(120, 78, 52)
 	local h = 7 * scale
 	local lean = rng:NextNumber(-0.12, 0.12)
@@ -217,6 +222,9 @@ local function planter(parent, cf, length, withCypress)
 end
 
 local function streetLamp(parent, pos, facing)
+	if Props.Place("StreetLamp", parent, CFrame.new(pos) * CFrame.Angles(0, facing > 0 and math.pi or 0, 0), { Height = 14, Solid = true }) then
+		return
+	end
 	column(parent, "LampPole", 13, 0.5, CFrame.new(pos + Vector3.new(0, 6.5, 0)), NAVY, Enum.Material.Metal, true)
 	deco(parent, "LampArm", Vector3.new(0.35, 0.35, 2.6), CFrame.new(pos + Vector3.new(0, 12.9, facing * 1.2)), NAVY, Enum.Material.Metal)
 	local head = deco(parent, "LampHead", Vector3.new(1.3, 0.5, 1.8), CFrame.new(pos + Vector3.new(0, 12.7, facing * 2.4)), NAVY, Enum.Material.Metal)
@@ -381,6 +389,39 @@ local function buildWorld(map)
 		streetLamp(map, Vector3.new(x, 0.8, -95), -1)
 		streetLamp(map, Vector3.new(x + 27, 0.8, -121.5), 1)
 	end
+	-- street furniture between the lamps
+	for x = -385, 385, 55 do
+		Props.Place("Bench", map, CFrame.new(x + 14, 0.8, -88.6), { Width = 6, Solid = true })
+		Props.Place("TrashBin", map, CFrame.new(x + 20, 0.8, -88.6), { Height = 3.4, Solid = true })
+		Props.Place("FireHydrant", map, CFrame.new(x - 9, 0.8, -94.2), { Height = 2.6, Solid = true })
+		Props.Place("Bench", map, CFrame.new(x + 41, 0.8, -127.4) * CFrame.Angles(0, math.pi, 0), { Width = 6, Solid = true })
+		Props.Place("FlowerBed", map, CFrame.new(x + 34, 0.8, -127.8), { Width = 6 })
+	end
+	-- pine forest and rocks on the cliff terraces
+	if Props.Has("Tree3") then
+		-- pines are detailed models, so only the two terraces nearest the plots get them
+		for _, row in ipairs({ { 158, 18 }, { -172, 18 } }) do
+			for x = -520, 520, 30 do
+				local px = x + rng:NextNumber(-8, 8)
+				Props.Place("Tree3", map, CFrame.new(px, 0, row[1] + rng:NextNumber(-6, 6)) * CFrame.Angles(0, rng:NextNumber(0, 6.28), 0), { Height = row[2] * rng:NextNumber(0.8, 1.25), Ground = true })
+			end
+		end
+	end
+	-- leafy trees on the higher terraces
+	if Props.Has("Tree2") or Props.Has("Tree1") then
+		for _, row in ipairs({ { 198, 20 }, { 240, 24 }, { -203, 20 }, { -248, 24 } }) do
+			for x = -540, 540, 26 do
+				local name = Props.Pick({ "Tree1", "Tree2" }, rng)
+				Props.Place(name, map, CFrame.new(x + rng:NextNumber(-9, 9), 0, row[1] + rng:NextNumber(-8, 8)) * CFrame.Angles(0, rng:NextNumber(0, 6.28), 0), { Height = row[2] * rng:NextNumber(0.8, 1.2), Ground = true })
+			end
+		end
+	end
+	if Props.Has("Rock") then
+		for _ = 1, 40 do
+			local side = rng:NextNumber() < 0.5 and 1 or -1
+			Props.Place("Rock", map, CFrame.new(rng:NextNumber(-500, 500), 0, side * rng:NextNumber(150, 240)) * CFrame.Angles(0, rng:NextNumber(0, 6.28), 0), { Width = rng:NextNumber(4, 10), Ground = true })
+		end
+	end
 	-- trees along the far sidewalk and behind the yards
 	for x = -400, 400, 16 do
 		lowPolyTree(map, Vector3.new(x + rng:NextNumber(-3, 3), 0, -137 - rng:NextNumber(0, 10)), rng:NextNumber(0.9, 1.25))
@@ -460,6 +501,26 @@ local function buildPlot(index, parent)
 			deco(m, "Pilaster", Vector3.new(1.4, 15.8, 2.2), at(x + inward * 0.9, FLOOR_Y + 7.9, z), PLASTER_SHADE, Enum.Material.Plaster)
 		end
 		deco(m, "Baseboard", Vector3.new(0.4, 0.8, 80), at(x + inward * 0.75, FLOOR_Y + 0.4, -48), NAVY)
+		-- framed posters between the pilasters
+		local posters = { "NEW ARRIVALS", "DUST TO DEALERSHIP", "D2D MOTORS", "COLLECT THEM ALL" }
+		local tints = { Color3.fromRGB(235, 90, 70), Color3.fromRGB(60, 140, 230), Color3.fromRGB(250, 190, 50), Color3.fromRGB(80, 190, 120) }
+		for i, z in ipairs({ -72, -56, -40, -24 }) do
+			local face = x > 0 and Enum.NormalId.Left or Enum.NormalId.Right
+			deco(m, "PosterFrame", Vector3.new(0.3, 7.4, 10.4), at(x + inward * 0.8, FLOOR_Y + 8, z), GOLD, Enum.Material.Metal)
+			local poster = deco(m, "Poster", Vector3.new(0.3, 6.6, 9.6), at(x + inward * 0.95, FLOOR_Y + 8, z), tints[i])
+			local g = Instance.new("UIGradient")
+			local t = surfaceText(poster, face, posters[i], Color3.new(1, 1, 1), 24)
+			g.Color = ColorSequence.new(Color3.new(1, 1, 1), Color3.fromRGB(200, 200, 200))
+			g.Rotation = 90
+			g.Parent = t
+			local st = Instance.new("UIStroke")
+			st.Thickness = 3
+			st.Color = Color3.fromRGB(30, 30, 40)
+			st.Parent = t
+			-- a little car silhouette under the words
+			deco(m, "PosterCar", Vector3.new(0.32, 1.2, 5), at(x + inward * 1.0, FLOOR_Y + 6.1, z), Color3.fromRGB(30, 30, 40))
+			deco(m, "PosterCarTop", Vector3.new(0.32, 0.9, 2.6), at(x + inward * 1.0, FLOOR_Y + 7.1, z + 0.2), Color3.fromRGB(30, 30, 40))
+		end
 		-- outside: a cornice band
 		deco(m, "Cornice", Vector3.new(1.8, 1.2, 80.6), at(x, CEIL + 0.6, -48), PLASTER_SHADE, Enum.Material.Plaster)
 	end
@@ -558,17 +619,24 @@ local function buildPlot(index, parent)
 			deco(m, "TrackBulb", Vector3.new(0.5, 0.1, 0.5), spot.CFrame * CFrame.new(0, -0.56, 0), LAMP, Enum.Material.Neon)
 		end
 	end
-	-- reception desk, benches, plants
-	box(m, "Desk", Vector3.new(9, 3.4, 2.6), at(30, FLOOR_Y + 1.7, -84.6), Color3.fromRGB(245, 245, 245))
-	deco(m, "DeskTop", Vector3.new(9.4, 0.3, 3), at(30, FLOOR_Y + 3.55, -84.6), WOOD, Enum.Material.Wood)
-	deco(m, "Monitor", Vector3.new(2.4, 1.6, 0.2), at(30, FLOOR_Y + 4.6, -84.2), Color3.fromRGB(25, 25, 30))
-	deco(m, "Screen", Vector3.new(2.1, 1.3, 0.05), at(30, FLOOR_Y + 4.6, -84.32), Color3.fromRGB(150, 205, 255), Enum.Material.Neon)
-	local logo = deco(m, "DeskLogo", Vector3.new(5, 1.4, 0.1), at(30, FLOOR_Y + 1.9, -85.95), NAVY)
-	surfaceText(logo, Enum.NormalId.Front, "D2D MOTORS", GOLD, 30)
-	for _, p in ipairs({ { -42, -85 }, { 42, -11 }, { -42, -11 }, { 20, -85 } }) do
+	-- reception desk, lounge, plants (Creator Store models when we have them)
+	local desk = Props.Place("ReceptionDesk", m, at(30, FLOOR_Y, -84.8) * CFrame.Angles(0, math.pi, 0), { Width = 9, Solid = true })
+	if not desk then
+		box(m, "Desk", Vector3.new(9, 3.4, 2.6), at(30, FLOOR_Y + 1.7, -84.6), Color3.fromRGB(245, 245, 245))
+		deco(m, "DeskTop", Vector3.new(9.4, 0.3, 3), at(30, FLOOR_Y + 3.55, -84.6), WOOD, Enum.Material.Wood)
+		deco(m, "Monitor", Vector3.new(2.4, 1.6, 0.2), at(30, FLOOR_Y + 4.6, -84.2), Color3.fromRGB(25, 25, 30))
+		deco(m, "Screen", Vector3.new(2.1, 1.3, 0.05), at(30, FLOOR_Y + 4.6, -84.32), Color3.fromRGB(150, 205, 255), Enum.Material.Neon)
+		local logo = deco(m, "DeskLogo", Vector3.new(5, 1.4, 0.1), at(30, FLOOR_Y + 1.9, -85.95), NAVY)
+		surfaceText(logo, Enum.NormalId.Front, "D2D MOTORS", GOLD, 30)
+	end
+	-- a small waiting lounge in the front-left corner
+	Props.Place("Sofa", m, at(-33, FLOOR_Y, -85.4) * CFrame.Angles(0, math.pi, 0), { Width = 7.5, Solid = true })
+	for _, p in ipairs({ { -42, -85 }, { 42, -11 }, { -42, -11 }, { 20, -85 }, { -42, -48 }, { 42, -48 } }) do
 		local pot = v(p[1], FLOOR_Y, p[2])
-		column(m, "Pot", 2, 2.4, CFrame.new(pot + Vector3.new(0, 1, 0)), NAVY, nil, true)
-		cypress(m, pot + Vector3.new(0, 1.4, 0), 4)
+		if not Props.Place("PottedPlant", m, CFrame.new(pot) * CFrame.Angles(0, rng:NextNumber(0, 6.28), 0), { Height = 6 }) then
+			column(m, "Pot", 2, 2.4, CFrame.new(pot + Vector3.new(0, 1, 0)), NAVY, nil, true)
+			cypress(m, pot + Vector3.new(0, 1.4, 0), 4)
+		end
 	end
 
 	-- display podiums: 8 columns x 5 rows, filled from the front row, center outward
@@ -637,32 +705,50 @@ local function buildPlot(index, parent)
 		deco(m, "Tool", Vector3.new(0.2, 1.8 + (i % 3) * 0.4, 0.25), at(-43.95, FLOOR_Y + 8, z), Color3.fromRGB(205, 205, 210), Enum.Material.Metal)
 		deco(m, "ToolGrip", Vector3.new(0.25, 0.8, 0.35), at(-43.9, FLOOR_Y + 7.1 - (i % 3) * 0.2, z), i % 2 == 0 and Color3.fromRGB(220, 60, 50) or Color3.fromRGB(240, 190, 40))
 	end
-	for _, z in ipairs({ 6, 13 }) do
-		for _, y in ipairs({ 0.8, 3.4, 6 }) do
-			deco(m, "Shelf", Vector3.new(2.4, 0.2, 6), at(43, FLOOR_Y + y, z), Color3.fromRGB(110, 115, 125), Enum.Material.Metal)
+	if Props.Has("MetalShelf") then
+		for _, z in ipairs({ 6, 13 }) do
+			Props.Place("MetalShelf", m, at(42.6, FLOOR_Y, z) * CFrame.Angles(0, math.rad(-90), 0), { Height = 7 })
 		end
-		for _, dz in ipairs({ -3, 3 }) do
-			deco(m, "ShelfPost", Vector3.new(0.25, 6.6, 0.25), at(42, FLOOR_Y + 3.3, z + dz), NAVY)
-			deco(m, "ShelfPost", Vector3.new(0.25, 6.6, 0.25), at(44, FLOOR_Y + 3.3, z + dz), NAVY)
+	else
+		for _, z in ipairs({ 6, 13 }) do
+			for _, y in ipairs({ 0.8, 3.4, 6 }) do
+				deco(m, "Shelf", Vector3.new(2.4, 0.2, 6), at(43, FLOOR_Y + y, z), Color3.fromRGB(110, 115, 125), Enum.Material.Metal)
+			end
+			for _, dz in ipairs({ -3, 3 }) do
+				deco(m, "ShelfPost", Vector3.new(0.25, 6.6, 0.25), at(42, FLOOR_Y + 3.3, z + dz), NAVY)
+				deco(m, "ShelfPost", Vector3.new(0.25, 6.6, 0.25), at(44, FLOOR_Y + 3.3, z + dz), NAVY)
+			end
+			cardboardBox(m, at(43, FLOOR_Y + 1.7, z - 1.3), 1.8)
+			cardboardBox(m, at(43, FLOOR_Y + 1.6, z + 1.4), 1.6)
+			cardboardBox(m, at(43, FLOOR_Y + 4.2, z), 1.9)
+			cardboardBox(m, at(43, FLOOR_Y + 6.8, z + 1.2), 1.5)
 		end
-		cardboardBox(m, at(43, FLOOR_Y + 1.7, z - 1.3), 1.8)
-		cardboardBox(m, at(43, FLOOR_Y + 1.6, z + 1.4), 1.6)
-		cardboardBox(m, at(43, FLOOR_Y + 4.2, z), 1.9)
-		cardboardBox(m, at(43, FLOOR_Y + 6.8, z + 1.2), 1.5)
 	end
-	box(m, "Workbench", Vector3.new(10, 0.5, 3), at(-28, FLOOR_Y + 3.2, -5.5), WOOD, Enum.Material.Wood)
-	for _, x in ipairs({ -32.5, -23.5 }) do
-		deco(m, "BenchLeg", Vector3.new(0.5, 3, 2.6), at(x, FLOOR_Y + 1.5, -5.5), NAVY, Enum.Material.Metal)
+	local bench = Props.Place("WorkBench", m, at(-28, FLOOR_Y, -5.4), { Width = 10, Solid = true })
+	local chest = Props.Place("ToolChest", m, at(42.4, FLOOR_Y, -2.5) * CFrame.Angles(0, math.rad(-90), 0), { Height = 4.6, Solid = true })
+	local tires = Props.Place("TireStack", m, at(-42, FLOOR_Y, 5.5), { Height = 4, Solid = true })
+	for _, b in ipairs({ { -41.5, 24 }, { -39.4, 25.6 }, { 41.5, 24.5 } }) do
+		Props.Place("OilBarrel", m, at(b[1], FLOOR_Y, b[2]) * CFrame.Angles(0, rng:NextNumber(0, 6.28), 0), { Height = 3.4, Solid = true })
 	end
-	deco(m, "Vise", Vector3.new(1, 0.8, 1), at(-31, FLOOR_Y + 3.85, -5.5), Color3.fromRGB(60, 90, 160), Enum.Material.Metal)
-	cardboardBox(m, at(-25, FLOOR_Y + 4.1, -5.6), 1.4)
-	box(m, "ToolCabinet", Vector3.new(2.2, 4.4, 5), at(42.8, FLOOR_Y + 2.2, -2.5), Color3.fromRGB(205, 45, 45), nil, { Reflectance = 0.08 })
-	for i = 0, 3 do
-		deco(m, "Drawer", Vector3.new(0.1, 0.12, 4.4), at(41.65, FLOOR_Y + 1 + i, -2.5), Color3.fromRGB(225, 225, 230), Enum.Material.Metal)
+	if not bench then
+		box(m, "Workbench", Vector3.new(10, 0.5, 3), at(-28, FLOOR_Y + 3.2, -5.5), WOOD, Enum.Material.Wood)
+		for _, x in ipairs({ -32.5, -23.5 }) do
+			deco(m, "BenchLeg", Vector3.new(0.5, 3, 2.6), at(x, FLOOR_Y + 1.5, -5.5), NAVY, Enum.Material.Metal)
+		end
+		deco(m, "Vise", Vector3.new(1, 0.8, 1), at(-31, FLOOR_Y + 3.85, -5.5), Color3.fromRGB(60, 90, 160), Enum.Material.Metal)
+		cardboardBox(m, at(-25, FLOOR_Y + 4.1, -5.6), 1.4)
 	end
-	for i = 1, 4 do
-		local t = part({ Name = "Tire", Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.9, 2.6, 2.6), CFrame = at(-42.4, FLOOR_Y + i - 0.5, 5) * CFrame.Angles(0, 0, math.rad(90)), Color = Color3.fromRGB(28, 28, 30), Material = Enum.Material.Rubber, CanCollide = true }, m)
-		t.Size = Vector3.new(0.9, 2.6, 2.6)
+	if not chest then
+		box(m, "ToolCabinet", Vector3.new(2.2, 4.4, 5), at(42.8, FLOOR_Y + 2.2, -2.5), Color3.fromRGB(205, 45, 45), nil, { Reflectance = 0.08 })
+		for i = 0, 3 do
+			deco(m, "Drawer", Vector3.new(0.1, 0.12, 4.4), at(41.65, FLOOR_Y + 1 + i, -2.5), Color3.fromRGB(225, 225, 230), Enum.Material.Metal)
+		end
+	end
+	if not tires then
+		for i = 1, 4 do
+			local t = part({ Name = "Tire", Shape = Enum.PartType.Cylinder, Size = Vector3.new(0.9, 2.6, 2.6), CFrame = at(-42.4, FLOOR_Y + i - 0.5, 5) * CFrame.Angles(0, 0, math.rad(90)), Color = Color3.fromRGB(28, 28, 30), Material = Enum.Material.Rubber, CanCollide = true }, m)
+			t.Size = Vector3.new(0.9, 2.6, 2.6)
+		end
 	end
 
 	-- wash bay: tiled floor, drain, wash gantry with brushes
@@ -737,6 +823,11 @@ local function buildPlot(index, parent)
 	end
 	for _, x in ipairs({ -40, -20, 20, 40 }) do
 		box(m, "Bollard", Vector3.new(0.8, 2.4, 0.8), at(x, 1.2, 30), Color3.fromRGB(250, 200, 40))
+	end
+	-- yard props
+	Props.Place("Forklift", m, at(38, 0.4, 62) * CFrame.Angles(0, math.rad(-120), 0), { Length = 8, Solid = true })
+	for _, c in ipairs({ { -40, 66 }, { -36, 67.5 } }) do
+		Props.Place("OilBarrel", m, at(c[1], 0.4, c[2]), { Height = 3.4, Solid = true })
 	end
 	-- the delivery truck waiting behind the gate
 	box(m, "Driveway", Vector3.new(22, 0.3, 30), at(0, 0.15, 85), ASPHALT, Enum.Material.Asphalt)

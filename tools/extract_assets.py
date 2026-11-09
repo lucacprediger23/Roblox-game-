@@ -40,9 +40,10 @@ def main():
 
     # keep the shared strings (mesh data) that the folder uses
     used = set()
-    for el in found.iter("SharedString"):
-        if el.text:
-            used.add(el.text.strip())
+    for tag in ("SharedString", "NetAssetRef"):
+        for el in found.iter(tag):
+            if el.text:
+                used.add(el.text.strip())
     shared_out = ET.Element("SharedStrings")
     shared = root.find("SharedStrings")
     if shared is not None:
