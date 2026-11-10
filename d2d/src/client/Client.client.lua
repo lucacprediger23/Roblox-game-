@@ -14,6 +14,7 @@ local player = Players.LocalPlayer
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared:WaitForChild("Config"))
 local CarBuilder = require(Shared:WaitForChild("CarBuilder"))
+local Juice = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Juice"))
 local Icons = require(Shared:WaitForChild("Icons"))
 local remotes = ReplicatedStorage:WaitForChild("Remotes")
 local NotifyEvent = remotes:WaitForChild("Notify")
@@ -371,6 +372,12 @@ task.spawn(function()
 		local diff = cash.Value - lastCash
 		if diff > 0 and lastCash > 0 then
 			floatGain(diff)
+			-- big gains get more feedback than the steady per-second income
+			if diff >= math.max(50, lastCash * 0.25) then
+				Juice.Feedback("medium", cashPill)
+			elseif diff >= lastCash * 0.05 then
+				Juice.Feedback("small", cashPill)
+			end
 		end
 		lastCash = cash.Value
 	end
@@ -478,6 +485,8 @@ local function reveal(carId, isNew)
 	scale.Scale = 0.2
 	scale.Parent = f
 	TweenService:Create(scale, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play()
+	-- rarer cars hit harder
+	Juice.Shake(car.Rarity >= 4 and 0.7 or (car.Rarity >= 2 and 0.45 or 0.3))
 	task.delay(3, function()
 		local tw = TweenService:Create(scale, TweenInfo.new(0.25), { Scale = 0 })
 		tw:Play()

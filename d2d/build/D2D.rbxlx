@@ -1,4 +1,4 @@
-<roblox xmlns:xmime="http://www.w3.org/2005/05/xmlmime" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.roblox.com/roblox.xsd" version="4"><Item class="Workspace" referent="RBX00000001"><Properties><string name="Name">Workspace</string><bool name="StreamingEnabled">false</bool></Properties></Item><Item class="Lighting" referent="RBX00000002"><Properties><string name="Name">Lighting</string><token name="Technology">4</token><bool name="GlobalShadows">true</bool><bool name="Outlines">false</bool><token name="LightingStyle">0</token></Properties></Item><Item class="MaterialService" referent="RBX00000003"><Properties><string name="Name">MaterialService</string><bool name="Use2022MaterialsXml">true</bool></Properties></Item><Item class="ReplicatedStorage" referent="RBX0000000B"><Properties><string name="Name">ReplicatedStorage</string></Properties><Item class="Folder" referent="RBX00000009"><Properties><string name="Name">Shared</string></Properties><Item class="ModuleScript" referent="RBX00000004"><Properties><string name="Name">CarBuilder</string><ProtectedString name="Source"><![CDATA[-- CarBuilder: builds placeholder cars, engines and containers out of plain parts.
+<roblox xmlns:xmime="http://www.w3.org/2005/05/xmlmime" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.roblox.com/roblox.xsd" version="4"><Item class="Workspace" referent="RBX00000001"><Properties><string name="Name">Workspace</string><bool name="StreamingEnabled">false</bool></Properties></Item><Item class="Lighting" referent="RBX00000002"><Properties><string name="Name">Lighting</string><token name="Technology">4</token><bool name="GlobalShadows">true</bool><bool name="Outlines">false</bool><token name="LightingStyle">0</token></Properties></Item><Item class="MaterialService" referent="RBX00000003"><Properties><string name="Name">MaterialService</string><bool name="Use2022MaterialsXml">true</bool></Properties></Item><Item class="ReplicatedStorage" referent="RBX0000000C"><Properties><string name="Name">ReplicatedStorage</string></Properties><Item class="Folder" referent="RBX0000000A"><Properties><string name="Name">Shared</string></Properties><Item class="ModuleScript" referent="RBX00000004"><Properties><string name="Name">CarBuilder</string><ProtectedString name="Source"><![CDATA[-- CarBuilder: builds placeholder cars, engines and containers out of plain parts.
 -- These stand in until the real 3D models (from Roblox's AI generator) are ready:
 -- swap BuildCar's body for a mesh later and everything else keeps working.
 
@@ -1133,7 +1133,79 @@ function Icons.Make(kind, props)
 end
 
 return Icons
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX00000007"><Properties><string name="Name">LightingPresets</string><ProtectedString name="Source"><![CDATA[-- LightingPresets: the game's look (sky, sun, haze, colour grading) in one place.
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX00000007"><Properties><string name="Name">Juice</string><ProtectedString name="Source"><![CDATA[-- Juice: small, layered, short-lived feedback (client only).
+-- Principles (from game-feel research): exaggerate briefly then return to rest, ease everything,
+-- and scale the feedback to how important the moment is (small / medium / large tiers).
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
+
+local Juice = {}
+
+-- Camera shake driven by decaying "trauma" (shake = trauma^2), applied to Humanoid.CameraOffset
+-- so the camera moves but the character/physics never do.
+local trauma = 0
+local t = 0
+local DECAY = 1.6
+local MAX_OFFSET = Vector3.new(0.6, 0.45, 0)
+local running = false
+
+local function step(dt)
+	local char = Players.LocalPlayer.Character
+	local hum = char and char:FindFirstChildOfClass("Humanoid")
+	trauma = math.max(0, trauma - DECAY * dt)
+	t = t + dt * 28
+	local s = trauma * trauma
+	if hum then
+		hum.CameraOffset = Vector3.new(MAX_OFFSET.X * s * math.sin(t * 1.7), MAX_OFFSET.Y * s * math.sin(t * 2.3), 0)
+	end
+	return trauma > 0
+end
+
+function Juice.Shake(amount)
+	trauma = math.clamp(trauma + amount, 0, 1)
+	if running then
+		return
+	end
+	running = true
+	local conn
+	conn = RunService.RenderStepped:Connect(function(dt)
+		if not step(dt) then
+			conn:Disconnect()
+			running = false
+		end
+	end)
+end
+
+-- Squash-and-overshoot "pop" on any GuiObject (adds/reuses a UIScale).
+function Juice.Pop(gui, strength)
+	if not gui then
+		return
+	end
+	strength = strength or 0.18
+	local scale = gui:FindFirstChild("JuiceScale") or Instance.new("UIScale")
+	scale.Name = "JuiceScale"
+	scale.Parent = gui
+	scale.Scale = 1 + strength
+	TweenService:Create(scale, TweenInfo.new(0.28, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play()
+end
+
+-- One call per event; the tier keeps the whole game proportional.
+function Juice.Feedback(tier, gui)
+	if tier == "small" then
+		Juice.Pop(gui, 0.12)
+	elseif tier == "medium" then
+		Juice.Pop(gui, 0.2)
+		Juice.Shake(0.3)
+	elseif tier == "large" then
+		Juice.Pop(gui, 0.3)
+		Juice.Shake(0.6)
+	end
+end
+
+return Juice
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX00000008"><Properties><string name="Name">LightingPresets</string><ProtectedString name="Source"><![CDATA[-- LightingPresets: the game's look (sky, sun, haze, colour grading) in one place.
 -- LightingPresets.Apply("CleanDay") swaps everything at once, so looks can be compared live.
 
 local Lighting = game:GetService("Lighting")
@@ -1263,7 +1335,7 @@ function LightingPresets.Apply(name, skyOverride)
 end
 
 return LightingPresets
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX00000008"><Properties><string name="Name">Props</string><ProtectedString name="Source"><![CDATA[-- Props: places 3D models from the Creator Store (saved in ReplicatedStorage.Assets.Props).
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX00000009"><Properties><string name="Name">Props</string><ProtectedString name="Source"><![CDATA[-- Props: places 3D models from the Creator Store (saved in ReplicatedStorage.Assets.Props).
 -- Every prop is cleaned (no scripts), anchored, scaled to a target size and set on the ground.
 -- If a prop is missing, Place returns nil so the caller can build its own fallback.
 
@@ -1424,7 +1496,7 @@ function Props.Pick(names, rng)
 end
 
 return Props
-]]></ProtectedString></Properties></Item></Item><Item class="Folder" referent="RBX0000000A"><Properties><string name="Name">Assets</string></Properties><Item class="Folder" referent="A0_RBX2EDAE2564A1A4E5DB78F05EAFC534037">
+]]></ProtectedString></Properties></Item></Item><Item class="Folder" referent="RBX0000000B"><Properties><string name="Name">Assets</string></Properties><Item class="Folder" referent="A0_RBX2EDAE2564A1A4E5DB78F05EAFC534037">
 			<Properties>
 				<Color3 name="IconTint">
 					<R>0</R>
@@ -105137,7 +105209,7 @@ AAAAAAAJAAAAAAAAADwvcm9ibG94Pg==</BinaryString>
 				</Item>
 			</Item>
 		</Item>
-		</Item></Item><Item class="ServerScriptService" referent="RBX00000010"><Properties><string name="Name">ServerScriptService</string></Properties><Item class="Folder" referent="RBX0000000F"><Properties><string name="Name">Server</string></Properties><Item class="ModuleScript" referent="RBX0000000C"><Properties><string name="Name">DataService</string><ProtectedString name="Source"><![CDATA[-- DataService: loads and saves each player's progress.
+		</Item></Item><Item class="ServerScriptService" referent="RBX00000011"><Properties><string name="Name">ServerScriptService</string></Properties><Item class="Folder" referent="RBX00000010"><Properties><string name="Name">Server</string></Properties><Item class="ModuleScript" referent="RBX0000000D"><Properties><string name="Name">DataService</string><ProtectedString name="Source"><![CDATA[-- DataService: loads and saves each player's progress.
 -- Saving in Studio needs Game Settings > Security > "Enable Studio Access to API Services".
 
 local DataStoreService = game:GetService("DataStoreService")
@@ -105283,7 +105355,7 @@ function DataService.Release(player)
 end
 
 return DataService
-]]></ProtectedString></Properties></Item><Item class="Script" referent="RBX0000000D"><Properties><string name="Name">GameServer</string><ProtectedString name="Source"><![CDATA[-- D2D (Dust to Dealership) - main server script.
+]]></ProtectedString></Properties></Item><Item class="Script" referent="RBX0000000E"><Properties><string name="Name">GameServer</string><ProtectedString name="Source"><![CDATA[-- D2D (Dust to Dealership) - main server script.
 -- Truck delivers containers -> open -> wash to 100% -> roll tires -> display -> NPC customers pay.
 
 local Players = game:GetService("Players")
@@ -106925,7 +106997,7 @@ task.spawn(function()
 end)
 
 print("[D2D] Server ready!")
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX0000000E"><Properties><string name="Name">MapBuilder</string><ProtectedString name="Source"><![CDATA[-- MapBuilder: builds the world and the 6 player plots when the server starts.
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX0000000F"><Properties><string name="Name">MapBuilder</string><ProtectedString name="Source"><![CDATA[-- MapBuilder: builds the world and the 6 player plots when the server starts.
 -- Plots face each other across a boulevard. Each plot: a showroom that grows with its level
 -- (level 1 is a small garage), a large yard beside it with the upgrade stations, the parking lot
 -- for containers, the wash spot (more gear appears as the car wash is upgraded) and the tire shop.
@@ -107749,7 +107821,7 @@ function MapBuilder.Build()
 end
 
 return MapBuilder
-]]></ProtectedString></Properties></Item></Item></Item><Item class="StarterPlayer" referent="RBX00000013"><Properties><string name="Name">StarterPlayer</string></Properties><Item class="StarterPlayerScripts" referent="RBX00000012"><Properties><string name="Name">StarterPlayerScripts</string></Properties><Item class="LocalScript" referent="RBX00000011"><Properties><string name="Name">Client</string><ProtectedString name="Source"><![CDATA[-- D2D client: HUD, delivery timer, wash view (scrubbing), tire view, Index and messages.
+]]></ProtectedString></Properties></Item></Item></Item><Item class="StarterPlayer" referent="RBX00000014"><Properties><string name="Name">StarterPlayer</string></Properties><Item class="StarterPlayerScripts" referent="RBX00000013"><Properties><string name="Name">StarterPlayerScripts</string></Properties><Item class="LocalScript" referent="RBX00000012"><Properties><string name="Name">Client</string><ProtectedString name="Source"><![CDATA[-- D2D client: HUD, delivery timer, wash view (scrubbing), tire view, Index and messages.
 -- UI style: cream panels with brown borders, chunky colored buttons, icon buttons on the left.
 
 local Players = game:GetService("Players")
@@ -107765,6 +107837,7 @@ local player = Players.LocalPlayer
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared:WaitForChild("Config"))
 local CarBuilder = require(Shared:WaitForChild("CarBuilder"))
+local Juice = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Juice"))
 local Icons = require(Shared:WaitForChild("Icons"))
 local remotes = ReplicatedStorage:WaitForChild("Remotes")
 local NotifyEvent = remotes:WaitForChild("Notify")
@@ -108122,6 +108195,12 @@ task.spawn(function()
 		local diff = cash.Value - lastCash
 		if diff > 0 and lastCash > 0 then
 			floatGain(diff)
+			-- big gains get more feedback than the steady per-second income
+			if diff >= math.max(50, lastCash * 0.25) then
+				Juice.Feedback("medium", cashPill)
+			elseif diff >= lastCash * 0.05 then
+				Juice.Feedback("small", cashPill)
+			end
 		end
 		lastCash = cash.Value
 	end
@@ -108229,6 +108308,8 @@ local function reveal(carId, isNew)
 	scale.Scale = 0.2
 	scale.Parent = f
 	TweenService:Create(scale, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play()
+	-- rarer cars hit harder
+	Juice.Shake(car.Rarity >= 4 and 0.7 or (car.Rarity >= 2 and 0.45 or 0.3))
 	task.delay(3, function()
 		local tw = TweenService:Create(scale, TweenInfo.new(0.25), { Scale = 0 })
 		tw:Play()
