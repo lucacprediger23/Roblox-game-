@@ -1,4 +1,4 @@
-<roblox xmlns:xmime="http://www.w3.org/2005/05/xmlmime" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.roblox.com/roblox.xsd" version="4"><Item class="Workspace" referent="RBX00000001"><Properties><string name="Name">Workspace</string><bool name="StreamingEnabled">false</bool></Properties></Item><Item class="Lighting" referent="RBX00000002"><Properties><string name="Name">Lighting</string><token name="Technology">4</token><bool name="GlobalShadows">true</bool><bool name="Outlines">false</bool><token name="LightingStyle">0</token></Properties></Item><Item class="MaterialService" referent="RBX00000003"><Properties><string name="Name">MaterialService</string><bool name="Use2022MaterialsXml">true</bool></Properties></Item><Item class="ReplicatedStorage" referent="RBX0000000A"><Properties><string name="Name">ReplicatedStorage</string></Properties><Item class="Folder" referent="RBX00000008"><Properties><string name="Name">Shared</string></Properties><Item class="ModuleScript" referent="RBX00000004"><Properties><string name="Name">CarBuilder</string><ProtectedString name="Source"><![CDATA[-- CarBuilder: builds placeholder cars, engines and containers out of plain parts.
+<roblox xmlns:xmime="http://www.w3.org/2005/05/xmlmime" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.roblox.com/roblox.xsd" version="4"><Item class="Workspace" referent="RBX00000001"><Properties><string name="Name">Workspace</string><bool name="StreamingEnabled">false</bool></Properties></Item><Item class="Lighting" referent="RBX00000002"><Properties><string name="Name">Lighting</string><token name="Technology">4</token><bool name="GlobalShadows">true</bool><bool name="Outlines">false</bool><token name="LightingStyle">0</token></Properties></Item><Item class="MaterialService" referent="RBX00000003"><Properties><string name="Name">MaterialService</string><bool name="Use2022MaterialsXml">true</bool></Properties></Item><Item class="ReplicatedStorage" referent="RBX0000000B"><Properties><string name="Name">ReplicatedStorage</string></Properties><Item class="Folder" referent="RBX00000009"><Properties><string name="Name">Shared</string></Properties><Item class="ModuleScript" referent="RBX00000004"><Properties><string name="Name">CarBuilder</string><ProtectedString name="Source"><![CDATA[-- CarBuilder: builds placeholder cars, engines and containers out of plain parts.
 -- These stand in until the real 3D models (from Roblox's AI generator) are ready:
 -- swap BuildCar's body for a mesh later and everything else keeps working.
 
@@ -1133,7 +1133,137 @@ function Icons.Make(kind, props)
 end
 
 return Icons
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX00000007"><Properties><string name="Name">Props</string><ProtectedString name="Source"><![CDATA[-- Props: places 3D models from the Creator Store (saved in ReplicatedStorage.Assets.Props).
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX00000007"><Properties><string name="Name">LightingPresets</string><ProtectedString name="Source"><![CDATA[-- LightingPresets: the game's look (sky, sun, haze, colour grading) in one place.
+-- LightingPresets.Apply("CleanDay") swaps everything at once, so looks can be compared live.
+
+local Lighting = game:GetService("Lighting")
+
+local LightingPresets = {}
+
+-- Optional painted skyboxes (6 faces each). Empty = Roblox's default sky.
+-- (Creator Store cartoon skies)
+LightingPresets.Skies = {
+	CartoonA = { Bk = "rbxassetid://158516797", Dn = "rbxassetid://158516788", Ft = "rbxassetid://158516797", Lf = "rbxassetid://158516797", Rt = "rbxassetid://158516797", Up = "rbxassetid://158516792" },
+	CartoonB = { Bk = "rbxassetid://13523725319", Dn = "rbxassetid://13523743919", Ft = "rbxassetid://13523725319", Lf = "rbxassetid://13523725319", Rt = "rbxassetid://13523725319", Up = "rbxassetid://13523746141" },
+	CartoonC = { Bk = "rbxassetid://13107325341", Dn = "rbxassetid://13107329809", Ft = "rbxassetid://13107334845", Lf = "rbxassetid://13107337703", Rt = "rbxassetid://13107340396", Up = "rbxassetid://13107344387" },
+}
+
+LightingPresets.Presets = {
+	-- Bright, soft, clean daylight (Clean a Painting style)
+	CleanDay = {
+		Sky = "Default",
+		ClockTime = 13.4,
+		Latitude = 30,
+		Brightness = 2.6,
+		Ambient = Color3.fromRGB(118, 122, 134),
+		OutdoorAmbient = Color3.fromRGB(168, 172, 184),
+		Exposure = 0.2,
+		ShadowSoftness = 0.4,
+		Diffuse = 1,
+		Specular = 0.7,
+		Atmosphere = { Density = 0.26, Offset = 0.22, Color = Color3.fromRGB(205, 222, 240), Decay = Color3.fromRGB(150, 175, 210), Glare = 0, Haze = 0.7 },
+		Bloom = { Intensity = 0.32, Size = 26, Threshold = 1.7 },
+		Color = { Saturation = 0.12, Contrast = 0.04, Brightness = 0.02, Tint = Color3.fromRGB(255, 253, 248) },
+		SunRays = { Intensity = 0.02, Spread = 0.5 },
+		Clouds = { Cover = 0.45, Density = 0.5 },
+	},
+	-- Punchy simulator look: deeper blue sky, saturated colours, crisper shadows
+	VividSim = {
+		Sky = "CartoonC",
+		ClockTime = 14,
+		Latitude = 25,
+		Brightness = 3,
+		Ambient = Color3.fromRGB(110, 118, 140),
+		OutdoorAmbient = Color3.fromRGB(150, 162, 192),
+		Exposure = 0.1,
+		ShadowSoftness = 0.22,
+		Diffuse = 1,
+		Specular = 0.8,
+		Atmosphere = { Density = 0.18, Offset = 0.3, Color = Color3.fromRGB(190, 215, 245), Decay = Color3.fromRGB(120, 160, 220), Glare = 0, Haze = 0.5 },
+		Bloom = { Intensity = 0.25, Size = 22, Threshold = 2 },
+		Color = { Saturation = 0.25, Contrast = 0.08, Brightness = 0, Tint = Color3.fromRGB(250, 252, 255) },
+		SunRays = { Intensity = 0.03, Spread = 0.4 },
+		Clouds = { Cover = 0.55, Density = 0.65 },
+	},
+	-- Warm late-afternoon light with long soft shadows
+	GoldenHour = {
+		Sky = "Default",
+		ClockTime = 16.7,
+		Latitude = 35,
+		Brightness = 2.4,
+		Ambient = Color3.fromRGB(120, 110, 108),
+		OutdoorAmbient = Color3.fromRGB(170, 152, 140),
+		Exposure = 0.25,
+		ShadowSoftness = 0.35,
+		Diffuse = 1,
+		Specular = 0.8,
+		Atmosphere = { Density = 0.3, Offset = 0.2, Color = Color3.fromRGB(235, 215, 195), Decay = Color3.fromRGB(200, 150, 120), Glare = 0.3, Haze = 1.1 },
+		Bloom = { Intensity = 0.4, Size = 28, Threshold = 1.5 },
+		Color = { Saturation = 0.15, Contrast = 0.1, Brightness = 0.01, Tint = Color3.fromRGB(255, 244, 228) },
+		SunRays = { Intensity = 0.08, Spread = 0.6 },
+		Clouds = { Cover = 0.5, Density = 0.55 },
+	},
+}
+
+LightingPresets.Default = "CleanDay"
+
+local function fresh(className)
+	for _, c in ipairs(Lighting:GetChildren()) do
+		if c.ClassName == className then
+			c:Destroy()
+		end
+	end
+	local obj = Instance.new(className)
+	obj.Parent = Lighting
+	return obj
+end
+
+function LightingPresets.Apply(name, skyOverride)
+	local p = LightingPresets.Presets[name] or LightingPresets.Presets[LightingPresets.Default]
+	Lighting.GlobalShadows = true
+	Lighting.ClockTime = p.ClockTime
+	Lighting.GeographicLatitude = p.Latitude
+	Lighting.Brightness = p.Brightness
+	Lighting.Ambient = p.Ambient
+	Lighting.OutdoorAmbient = p.OutdoorAmbient
+	Lighting.ExposureCompensation = p.Exposure
+	Lighting.ShadowSoftness = p.ShadowSoftness
+	Lighting.EnvironmentDiffuseScale = p.Diffuse
+	Lighting.EnvironmentSpecularScale = p.Specular
+
+	local sky = fresh("Sky")
+	sky.SunAngularSize = 14
+	sky.StarCount = 0
+	local faces = LightingPresets.Skies[skyOverride or p.Sky]
+	if faces then
+		sky.SkyboxBk, sky.SkyboxDn, sky.SkyboxFt = faces.Bk, faces.Dn, faces.Ft
+		sky.SkyboxLf, sky.SkyboxRt, sky.SkyboxUp = faces.Lf, faces.Rt, faces.Up
+		sky.CelestialBodiesShown = faces.Sun ~= false
+	end
+
+	local a = fresh("Atmosphere")
+	for k, v in pairs(p.Atmosphere) do
+		a[k] = v
+	end
+	local bloom = fresh("BloomEffect")
+	bloom.Intensity, bloom.Size, bloom.Threshold = p.Bloom.Intensity, p.Bloom.Size, p.Bloom.Threshold
+	local cc = fresh("ColorCorrectionEffect")
+	cc.Saturation, cc.Contrast, cc.Brightness, cc.TintColor = p.Color.Saturation, p.Color.Contrast, p.Color.Brightness, p.Color.Tint
+	local rays = fresh("SunRaysEffect")
+	rays.Intensity, rays.Spread = p.SunRays.Intensity, p.SunRays.Spread
+	local dof = fresh("DepthOfFieldEffect")
+	dof.FarIntensity, dof.FocusDistance, dof.InFocusRadius, dof.NearIntensity = 0.12, 60, 140, 0
+
+	local clouds = workspace.Terrain:FindFirstChildOfClass("Clouds") or Instance.new("Clouds")
+	clouds.Cover = p.Clouds.Cover
+	clouds.Density = p.Clouds.Density
+	clouds.Color = Color3.new(1, 1, 1)
+	clouds.Parent = workspace.Terrain
+	Lighting:SetAttribute("Preset", name)
+end
+
+return LightingPresets
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX00000008"><Properties><string name="Name">Props</string><ProtectedString name="Source"><![CDATA[-- Props: places 3D models from the Creator Store (saved in ReplicatedStorage.Assets.Props).
 -- Every prop is cleaned (no scripts), anchored, scaled to a target size and set on the ground.
 -- If a prop is missing, Place returns nil so the caller can build its own fallback.
 
@@ -1294,7 +1424,7 @@ function Props.Pick(names, rng)
 end
 
 return Props
-]]></ProtectedString></Properties></Item></Item><Item class="Folder" referent="RBX00000009"><Properties><string name="Name">Assets</string></Properties><Item class="Folder" referent="A0_RBX2EDAE2564A1A4E5DB78F05EAFC534037">
+]]></ProtectedString></Properties></Item></Item><Item class="Folder" referent="RBX0000000A"><Properties><string name="Name">Assets</string></Properties><Item class="Folder" referent="A0_RBX2EDAE2564A1A4E5DB78F05EAFC534037">
 			<Properties>
 				<Color3 name="IconTint">
 					<R>0</R>
@@ -105007,7 +105137,7 @@ AAAAAAAJAAAAAAAAADwvcm9ibG94Pg==</BinaryString>
 				</Item>
 			</Item>
 		</Item>
-		</Item></Item><Item class="ServerScriptService" referent="RBX0000000F"><Properties><string name="Name">ServerScriptService</string></Properties><Item class="Folder" referent="RBX0000000E"><Properties><string name="Name">Server</string></Properties><Item class="ModuleScript" referent="RBX0000000B"><Properties><string name="Name">DataService</string><ProtectedString name="Source"><![CDATA[-- DataService: loads and saves each player's progress.
+		</Item></Item><Item class="ServerScriptService" referent="RBX00000010"><Properties><string name="Name">ServerScriptService</string></Properties><Item class="Folder" referent="RBX0000000F"><Properties><string name="Name">Server</string></Properties><Item class="ModuleScript" referent="RBX0000000C"><Properties><string name="Name">DataService</string><ProtectedString name="Source"><![CDATA[-- DataService: loads and saves each player's progress.
 -- Saving in Studio needs Game Settings > Security > "Enable Studio Access to API Services".
 
 local DataStoreService = game:GetService("DataStoreService")
@@ -105153,7 +105283,7 @@ function DataService.Release(player)
 end
 
 return DataService
-]]></ProtectedString></Properties></Item><Item class="Script" referent="RBX0000000C"><Properties><string name="Name">GameServer</string><ProtectedString name="Source"><![CDATA[-- D2D (Dust to Dealership) - main server script.
+]]></ProtectedString></Properties></Item><Item class="Script" referent="RBX0000000D"><Properties><string name="Name">GameServer</string><ProtectedString name="Source"><![CDATA[-- D2D (Dust to Dealership) - main server script.
 -- Truck delivers containers -> open -> wash to 100% -> roll tires -> display -> NPC customers pay.
 
 local Players = game:GetService("Players")
@@ -106789,7 +106919,7 @@ task.spawn(function()
 end)
 
 print("[D2D] Server ready!")
-]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX0000000D"><Properties><string name="Name">MapBuilder</string><ProtectedString name="Source"><![CDATA[-- MapBuilder: builds the world and the 6 player plots when the server starts.
+]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX0000000E"><Properties><string name="Name">MapBuilder</string><ProtectedString name="Source"><![CDATA[-- MapBuilder: builds the world and the 6 player plots when the server starts.
 -- Plots face each other across a boulevard. Each plot: a showroom that grows with its level
 -- (level 1 is a small garage), a large yard beside it with the upgrade stations, the parking lot
 -- for containers, the wash spot (more gear appears as the car wash is upgraded) and the tire shop.
@@ -106800,6 +106930,7 @@ local CollectionService = game:GetService("CollectionService")
 local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
 local Props = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Props"))
 local Icons = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Icons"))
+local LightingPresets = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("LightingPresets"))
 
 local MapBuilder = {}
 
@@ -107072,57 +107203,7 @@ end
 -- Light and sky
 ---------------------------------------------------------------------
 local function buildLighting()
-	-- bright, soft, clean daylight (Clean a Painting style): high ambient, soft shadows, gentle bloom
-	Lighting.GlobalShadows = true
-	Lighting.ClockTime = 13.4
-	Lighting.GeographicLatitude = 30
-	Lighting.Brightness = 2.6
-	Lighting.Ambient = Color3.fromRGB(118, 122, 134)
-	Lighting.OutdoorAmbient = Color3.fromRGB(168, 172, 184)
-	Lighting.EnvironmentDiffuseScale = 1
-	Lighting.EnvironmentSpecularScale = 0.7
-	Lighting.ExposureCompensation = 0.2
-	Lighting.ShadowSoftness = 0.4
-	for _, c in ipairs(Lighting:GetChildren()) do
-		if c:IsA("PostEffect") or c:IsA("Atmosphere") or c:IsA("Sky") then
-			c:Destroy()
-		end
-	end
-	local sky = Instance.new("Sky")
-	sky.SunAngularSize = 14
-	sky.MoonAngularSize = 8
-	sky.StarCount = 0
-	sky.Parent = Lighting
-	local a = Instance.new("Atmosphere")
-	a.Density = 0.26
-	a.Offset = 0.22
-	a.Color = Color3.fromRGB(205, 222, 240)
-	a.Decay = Color3.fromRGB(150, 175, 210)
-	a.Glare = 0
-	a.Haze = 0.7
-	a.Parent = Lighting
-	local bloom = Instance.new("BloomEffect")
-	bloom.Intensity = 0.32
-	bloom.Size = 26
-	bloom.Threshold = 1.7
-	bloom.Parent = Lighting
-	local cc = Instance.new("ColorCorrectionEffect")
-	cc.Saturation = 0.12
-	cc.Contrast = 0.04
-	cc.Brightness = 0.02
-	cc.TintColor = Color3.fromRGB(255, 253, 248)
-	cc.Parent = Lighting
-	local rays = Instance.new("SunRaysEffect")
-	rays.Intensity = 0.02
-	rays.Spread = 0.5
-	rays.Parent = Lighting
-	-- softens the far distance so it never looks jagged
-	local dof = Instance.new("DepthOfFieldEffect")
-	dof.FarIntensity = 0.12
-	dof.FocusDistance = 60
-	dof.InFocusRadius = 140
-	dof.NearIntensity = 0
-	dof.Parent = Lighting
+	LightingPresets.Apply(LightingPresets.Default)
 end
 
 ---------------------------------------------------------------------
@@ -107169,13 +107250,6 @@ local function buildTerrain(map)
 		step(Vector3.new(sx * 400, 10, 0), Vector3.new(30, 20, 470))
 		step(Vector3.new(sx * 432, 24, 0), Vector3.new(36, 48, 520))
 		step(Vector3.new(sx * 470, 38, 0), Vector3.new(50, 76, 580))
-	end
-	if not terrain:FindFirstChildOfClass("Clouds") then
-		local clouds = Instance.new("Clouds")
-		clouds.Cover = 0.45
-		clouds.Density = 0.5
-		clouds.Color = Color3.new(1, 1, 1)
-		clouds.Parent = terrain
 	end
 end
 
@@ -107791,7 +107865,7 @@ function MapBuilder.Build()
 end
 
 return MapBuilder
-]]></ProtectedString></Properties></Item></Item></Item><Item class="StarterPlayer" referent="RBX00000012"><Properties><string name="Name">StarterPlayer</string></Properties><Item class="StarterPlayerScripts" referent="RBX00000011"><Properties><string name="Name">StarterPlayerScripts</string></Properties><Item class="LocalScript" referent="RBX00000010"><Properties><string name="Name">Client</string><ProtectedString name="Source"><![CDATA[-- D2D client: HUD, delivery timer, wash view (scrubbing), tire view, Index and messages.
+]]></ProtectedString></Properties></Item></Item></Item><Item class="StarterPlayer" referent="RBX00000013"><Properties><string name="Name">StarterPlayer</string></Properties><Item class="StarterPlayerScripts" referent="RBX00000012"><Properties><string name="Name">StarterPlayerScripts</string></Properties><Item class="LocalScript" referent="RBX00000011"><Properties><string name="Name">Client</string><ProtectedString name="Source"><![CDATA[-- D2D client: HUD, delivery timer, wash view (scrubbing), tire view, Index and messages.
 -- UI style: cream panels with brown borders, chunky colored buttons, icon buttons on the left.
 
 local Players = game:GetService("Players")

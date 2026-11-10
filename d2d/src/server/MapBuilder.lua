@@ -9,6 +9,7 @@ local CollectionService = game:GetService("CollectionService")
 local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
 local Props = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Props"))
 local Icons = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Icons"))
+local LightingPresets = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("LightingPresets"))
 
 local MapBuilder = {}
 
@@ -281,57 +282,7 @@ end
 -- Light and sky
 ---------------------------------------------------------------------
 local function buildLighting()
-	-- bright, soft, clean daylight (Clean a Painting style): high ambient, soft shadows, gentle bloom
-	Lighting.GlobalShadows = true
-	Lighting.ClockTime = 13.4
-	Lighting.GeographicLatitude = 30
-	Lighting.Brightness = 2.6
-	Lighting.Ambient = Color3.fromRGB(118, 122, 134)
-	Lighting.OutdoorAmbient = Color3.fromRGB(168, 172, 184)
-	Lighting.EnvironmentDiffuseScale = 1
-	Lighting.EnvironmentSpecularScale = 0.7
-	Lighting.ExposureCompensation = 0.2
-	Lighting.ShadowSoftness = 0.4
-	for _, c in ipairs(Lighting:GetChildren()) do
-		if c:IsA("PostEffect") or c:IsA("Atmosphere") or c:IsA("Sky") then
-			c:Destroy()
-		end
-	end
-	local sky = Instance.new("Sky")
-	sky.SunAngularSize = 14
-	sky.MoonAngularSize = 8
-	sky.StarCount = 0
-	sky.Parent = Lighting
-	local a = Instance.new("Atmosphere")
-	a.Density = 0.26
-	a.Offset = 0.22
-	a.Color = Color3.fromRGB(205, 222, 240)
-	a.Decay = Color3.fromRGB(150, 175, 210)
-	a.Glare = 0
-	a.Haze = 0.7
-	a.Parent = Lighting
-	local bloom = Instance.new("BloomEffect")
-	bloom.Intensity = 0.32
-	bloom.Size = 26
-	bloom.Threshold = 1.7
-	bloom.Parent = Lighting
-	local cc = Instance.new("ColorCorrectionEffect")
-	cc.Saturation = 0.12
-	cc.Contrast = 0.04
-	cc.Brightness = 0.02
-	cc.TintColor = Color3.fromRGB(255, 253, 248)
-	cc.Parent = Lighting
-	local rays = Instance.new("SunRaysEffect")
-	rays.Intensity = 0.02
-	rays.Spread = 0.5
-	rays.Parent = Lighting
-	-- softens the far distance so it never looks jagged
-	local dof = Instance.new("DepthOfFieldEffect")
-	dof.FarIntensity = 0.12
-	dof.FocusDistance = 60
-	dof.InFocusRadius = 140
-	dof.NearIntensity = 0
-	dof.Parent = Lighting
+	LightingPresets.Apply(LightingPresets.Default)
 end
 
 ---------------------------------------------------------------------
@@ -378,13 +329,6 @@ local function buildTerrain(map)
 		step(Vector3.new(sx * 400, 10, 0), Vector3.new(30, 20, 470))
 		step(Vector3.new(sx * 432, 24, 0), Vector3.new(36, 48, 520))
 		step(Vector3.new(sx * 470, 38, 0), Vector3.new(50, 76, 580))
-	end
-	if not terrain:FindFirstChildOfClass("Clouds") then
-		local clouds = Instance.new("Clouds")
-		clouds.Cover = 0.45
-		clouds.Density = 0.5
-		clouds.Color = Color3.new(1, 1, 1)
-		clouds.Parent = terrain
 	end
 end
 
