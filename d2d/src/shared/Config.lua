@@ -126,6 +126,7 @@ Config.SellSeconds = 100 -- a car sells for 100 seconds of its income
 Config.ViewSeconds = 12 -- one view pays 12 seconds' worth of the car's income value
 Config.CustomerEvery = 5 -- a new customer can walk in every 5 seconds
 Config.InventorySize = 10 -- cars you can carry in the toolbar
+Config.StorageSize = 60 -- cars you can keep in the Storage Unit
 Config.StarterCar = "c1_1"
 Config.CompletionBonus = 0.05 -- +5% income per completed container
 Config.TokensPerCompletion = 5

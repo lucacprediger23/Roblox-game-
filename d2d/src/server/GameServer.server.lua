@@ -41,6 +41,10 @@ local WashFinish = remote("RemoteEvent", "WashFinish")
 local OpenTuneEvent = remote("RemoteEvent", "OpenTune")
 local TuneAction = remote("RemoteFunction", "TuneAction")
 local EquipCar = remote("RemoteEvent", "EquipCar")
+local OpenSellEvent = remote("RemoteEvent", "OpenSell")
+local OpenStorageEvent = remote("RemoteEvent", "OpenStorage")
+local SellAction = remote("RemoteFunction", "SellAction")
+local StorageAction = remote("RemoteFunction", "StorageAction")
 
 local GOLD = Color3.fromRGB(255, 220, 80)
 local RED = Color3.fromRGB(255, 110, 110)
@@ -140,6 +144,11 @@ local function syncAttributes(player)
 		table.insert(inv, { Uid = c.Uid, Id = c.Id, Engine = c.Engine })
 	end
 	player:SetAttribute("Inventory", HttpService:JSONEncode(inv))
+	local store = {}
+	for i, c in ipairs(profile.Storage) do
+		table.insert(store, { Slot = i, Id = c.Id, Engine = c.Engine })
+	end
+	player:SetAttribute("Storage", HttpService:JSONEncode(store))
 	player:SetAttribute("Tutorial", not profile.TutorialDone)
 	player:SetAttribute("Discovered", table.concat(d, ","))
 	player:SetAttribute("Claimed", table.concat(c, ","))
@@ -271,12 +280,6 @@ local function showSpot(plot, spotIndex, entry)
 		takeBack(player, plot, spotIndex, entry)
 	end)
 	take.KeyboardKeyCode = Enum.KeyCode.E
-	local value = Config.GetCarIncome(entry.Id, entry.Engine) * Config.SellSeconds
-	local sell = addPrompt(body, "Sell $" .. Config.FormatNumber(value), carTitle(entry.Id), 1.2, owner, function(player)
-		sellSpot(player, plot, spotIndex, entry)
-	end)
-	sell.KeyboardKeyCode = Enum.KeyCode.F
-	sell.UIOffset = Vector2.new(0, 70)
 	model.Parent = carsFolder
 	entry.Model = model
 	if spot.Marker then
@@ -1193,7 +1196,7 @@ local function giveToy(player, car)
 		end
 	end
 	model.Parent = tool
-	tool.Grip = CFrame.new(0, 0, -0.4)
+	tool.Grip = CFrame.new(0, 0, -0.4) * CFrame.Angles(0, math.rad(90), 0) -- nose forward, resting on the palm
 	tool.Parent = char
 	player:SetAttribute("Holding", car.Uid)
 end
@@ -1256,6 +1259,105 @@ takeBack = function(player, plot, spotIndex, entry)
 		plot.Spots[spotIndex].Marker:SetAttribute("Occupied", false)
 	end
 	inventoryAdd(player, { Id = entry.Id, Engine = entry.Engine })
+end
+
+---------------------------------------------------------------------
+-- Sell Station and Storage Unit (in the lot): sell or store cars from the toolbar
+---------------------------------------------------------------------
+local function sellValue(car)
+	return Config.GetCarIncome(car.Id, car.Engine) * Config.SellSeconds
+end
+
+SellAction.OnServerInvoke = function(player, action, uid)
+	local profile = DataService.Get(player)
+	local plot = playerPlot[player]
+	if not profile or not plot then
+		return { Ok = false }
+	end
+	local root = getRoot(player)
+	if not root or (root.Position - plot.SellCFrame.Position).Magnitude > 30 then
+		return { Ok = false, Message = "Walk to the Sell Station first." }
+	end
+	local total, count = 0, 0
+	if action == "Sell" and typeof(uid) == "number" then
+		local car, i = inventoryFind(profile, uid)
+		if not car then
+			return { Ok = false }
+		end
+		if player:GetAttribute("Holding") == uid then
+			removeToy(player)
+		end
+		table.remove(profile.Inventory, i)
+		total, count = sellValue(car), 1
+	elseif action == "SellAll" then
+		removeToy(player)
+		for _, car in ipairs(profile.Inventory) do
+			total = total + sellValue(car)
+			count = count + 1
+		end
+		profile.Inventory = {}
+	else
+		return { Ok = false }
+	end
+	if count > 0 then
+		addCash(player, total)
+		syncAttributes(player)
+		notify(player, "Sold " .. count .. (count == 1 and " car" or " cars") .. " for $" .. Config.FormatNumber(total), GOLD)
+	end
+	return { Ok = true, Total = total }
+end
+
+StorageAction.OnServerInvoke = function(player, action, key)
+	local profile = DataService.Get(player)
+	local plot = playerPlot[player]
+	if not profile or not plot then
+		return { Ok = false }
+	end
+	local root = getRoot(player)
+	if not root or (root.Position - plot.StorageCFrame.Position).Magnitude > 30 then
+		return { Ok = false, Message = "Walk to your Storage Unit first." }
+	end
+	if action == "Store" and typeof(key) == "number" then
+		if #profile.Storage >= Config.StorageSize then
+			return { Ok = false, Message = "Your storage is full." }
+		end
+		local car, i = inventoryFind(profile, key)
+		if not car then
+			return { Ok = false }
+		end
+		if player:GetAttribute("Holding") == key then
+			removeToy(player)
+		end
+		table.remove(profile.Inventory, i)
+		table.insert(profile.Storage, { Id = car.Id, Engine = car.Engine })
+	elseif action == "Take" and typeof(key) == "number" then
+		local car = profile.Storage[math.floor(key)]
+		if not car then
+			return { Ok = false }
+		end
+		if #profile.Inventory >= Config.InventorySize then
+			return { Ok = false, Message = "Your toolbar is full." }
+		end
+		table.remove(profile.Storage, math.floor(key))
+		inventoryAdd(player, { Id = car.Id, Engine = car.Engine })
+	else
+		return { Ok = false }
+	end
+	syncAttributes(player)
+	return { Ok = true }
+end
+
+for _, plot in ipairs(map.Plots) do
+	addPrompt(plot.SellPart, "Sell Cars", "Sell Station", 0, nil, function(player)
+		if playerPlot[player] == plot then
+			OpenSellEvent:FireClient(player)
+		end
+	end)
+	addPrompt(plot.StoragePart, "Open Storage", "Storage Unit", 0, nil, function(player)
+		if playerPlot[player] == plot then
+			OpenStorageEvent:FireClient(player)
+		end
+	end)
 end
 
 ---------------------------------------------------------------------
@@ -1978,6 +2080,11 @@ if game:GetService("RunService"):IsStudio() then
 					applyShowroom(plot, player, profile)
 				elseif cmd == "cash" then
 					setCash(player, value)
+				elseif cmd == "give" then
+					-- put a few finished cars straight into the toolbar
+					for k = 1, (value or 3) do
+						inventoryAdd(player, { Id = "c" .. math.min(k, 10) .. "_" .. (k % 12 + 1), Engine = 2 })
+					end
 				elseif cmd == "fill" then
 					-- top showroom with one of every generated model (2 per era)
 					profile.ShowroomLevel = Config.MaxShowroomLevel

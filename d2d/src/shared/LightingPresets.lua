@@ -54,19 +54,19 @@ LightingPresets.Presets = {
 	-- soft but defined shadows, no blown-out whites and no crushed blacks
 	Studio = {
 		Sky = "Default",
-		ClockTime = 14.6,
-		Latitude = 38,
-		Brightness = 2.2,
-		Ambient = Color3.fromRGB(78, 80, 88), -- fill in shade and indoors (lamps do the rest)
-		OutdoorAmbient = Color3.fromRGB(112, 116, 126),
-		Exposure = -0.15,
-		ShadowSoftness = 0.3,
-		Diffuse = 1, -- sky light bounces into shadows, so they read blue-grey instead of black
-		Specular = 0.65,
-		Atmosphere = { Density = 0.3, Offset = 0.25, Color = Color3.fromRGB(199, 210, 224), Decay = Color3.fromRGB(110, 128, 152), Glare = 0.1, Haze = 1.2 },
-		Bloom = { Intensity = 0.18, Size = 24, Threshold = 2.2 },
-		Color = { Saturation = 0.03, Contrast = 0.06, Brightness = 0, Tint = Color3.fromRGB(255, 252, 248) },
-		SunRays = { Intensity = 0.015, Spread = 0.6 },
+		ClockTime = 16.3, -- afternoon sun: warm key light, long soft shadows that give depth
+		Latitude = 41,
+		Brightness = 3.4,
+		Ambient = Color3.fromRGB(78, 78, 86), -- even fill indoors (no black corners)
+		OutdoorAmbient = Color3.fromRGB(118, 116, 124),
+		Exposure = 0.05,
+		ShadowSoftness = 0.12,
+		Diffuse = 1,
+		Specular = 1,
+		Atmosphere = { Density = 0.3, Offset = 0.12, Color = Color3.fromRGB(214, 196, 176), Decay = Color3.fromRGB(120, 98, 82), Glare = 0.25, Haze = 0.9 },
+		Bloom = { Intensity = 0.35, Size = 28, Threshold = 1.6 },
+		Color = { Saturation = 0.1, Contrast = 0.14, Brightness = 0.01, Tint = Color3.fromRGB(255, 246, 236) },
+		SunRays = { Intensity = 0.06, Spread = 0.5 },
 		Clouds = { Cover = 0.5, Density = 0.55 },
 		NoDof = true,
 	},

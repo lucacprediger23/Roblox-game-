@@ -34,6 +34,7 @@ local function default()
 		LastOnline = 0,
 		IncomeRate = 0,
 		Inventory = {}, -- { {Id=, Engine=} } finished cars carried in the toolbar
+		Storage = {}, -- { {Id=, Engine=} } cars kept in the Storage Unit
 		GarageClaimed = false, -- opened their garage door for the first time
 		TutorialDone = false,
 	}
@@ -93,6 +94,13 @@ local function sanitize(data)
 	for _, c in ipairs(overflow) do
 		if #p.Inventory < Config.InventorySize then
 			table.insert(p.Inventory, c)
+		end
+	end
+	if type(data.Storage) == "table" then
+		for _, c in ipairs(data.Storage) do
+			if type(c) == "table" and Config.CarsById[c.Id] and #p.Storage < Config.StorageSize then
+				table.insert(p.Storage, { Id = c.Id, Engine = num(c.Engine, 1, #Config.Tunes, 1) })
+			end
 		end
 	end
 	local veteran = next(p.Display) ~= nil or (type(data.Discovered) == "table" and next(data.Discovered) ~= nil)

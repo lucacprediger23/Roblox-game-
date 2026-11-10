@@ -28,6 +28,10 @@ local WashFinish = remotes:WaitForChild("WashFinish")
 local OpenTuneEvent = remotes:WaitForChild("OpenTune")
 local TuneAction = remotes:WaitForChild("TuneAction")
 local EquipCar = remotes:WaitForChild("EquipCar")
+local OpenSellEvent = remotes:WaitForChild("OpenSell")
+local OpenStorageEvent = remotes:WaitForChild("OpenStorage")
+local SellAction = remotes:WaitForChild("SellAction")
+local StorageAction = remotes:WaitForChild("StorageAction")
 local HttpService = game:GetService("HttpService")
 local StarterGui = game:GetService("StarterGui")
 -- our own toolbar replaces Roblox's backpack bar
@@ -1508,12 +1512,203 @@ RunService.RenderStepped:Connect(function(dt)
 end)
 
 ---------------------------------------------------------------------
+-- Sell Station and Storage Unit panels
+---------------------------------------------------------------------
+local function decode(attr)
+	local ok, list = pcall(HttpService.JSONDecode, HttpService, player:GetAttribute(attr) or "[]")
+	return ok and list or {}
+end
+local function carLine(car)
+	local def = Config.CarsById[car.Id]
+	local tuneDef = Config.Tunes[car.Engine or 1]
+	return def and def.Name or car.Id, def and Config.Rarities[def.Rarity].Color or WHITE, tuneDef and tuneDef.Name or ""
+end
+local function listFrame(parent, props)
+	local sf = Instance.new("ScrollingFrame")
+	sf.BackgroundColor3 = CREAM_DARK
+	sf.BackgroundTransparency = 0.2
+	sf.BorderSizePixel = 0
+	sf.ScrollBarThickness = 6
+	sf.ScrollBarImageColor3 = BROWN
+	sf.CanvasSize = UDim2.new(0, 0, 0, 0)
+	sf.AutomaticCanvasSize = Enum.AutomaticSize.Y
+	for k, v in pairs(props) do
+		sf[k] = v
+	end
+	corner(sf, 12)
+	local l = Instance.new("UIListLayout")
+	l.Padding = UDim.new(0, 6)
+	l.SortOrder = Enum.SortOrder.LayoutOrder
+	l.Parent = sf
+	local pad = Instance.new("UIPadding")
+	pad.PaddingTop, pad.PaddingBottom = UDim.new(0, 8), UDim.new(0, 8)
+	pad.PaddingLeft, pad.PaddingRight = UDim.new(0, 8), UDim.new(0, 8)
+	pad.Parent = sf
+	sf.Parent = parent
+	return sf
+end
+local function row(list, order, car, rightText, buttonText, buttonColor, onClick)
+	local r = Instance.new("Frame")
+	r.Size = UDim2.new(1, 0, 0, 48)
+	r.BackgroundColor3 = CREAM
+	r.LayoutOrder = order
+	corner(r, 10)
+	r.Parent = list
+	local name, color, tuneName = carLine(car)
+	local n = inkText(r, { Position = UDim2.new(0, 12, 0, 4), Size = UDim2.new(0.55, 0, 0, 22), Text = name, TextXAlignment = Enum.TextXAlignment.Left })
+	n.TextColor3 = color:Lerp(Color3.new(0, 0, 0), 0.35)
+	inkText(r, { Position = UDim2.new(0, 12, 0, 26), Size = UDim2.new(0.55, 0, 0, 16), Text = tuneName, TextXAlignment = Enum.TextXAlignment.Left })
+	if rightText then
+		inkText(r, { AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -128, 0.5, 0), Size = UDim2.new(0, 120, 0, 22), Text = rightText, TextXAlignment = Enum.TextXAlignment.Right })
+	end
+	local b = button(r, { AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -6, 0.5, 0), Size = UDim2.new(0, 112, 0, 40), Text = buttonText }, buttonColor)
+	b.MouseButton1Click:Connect(onClick)
+	return r
+end
+local function emptyNote(list, textValue)
+	local l = inkText(list, { Size = UDim2.new(1, 0, 0, 40), Text = textValue })
+	l.LayoutOrder = 0
+end
+
+-- Sell Station
+local sellFrame = panel(gui, { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0.5, 0), Size = UDim2.new(0, 560, 0, 520), Visible = false })
+Icons.Make("Cash", { Position = UDim2.new(0, 18, 0, -4), Size = UDim2.new(0, 76, 0, 76) }).Parent = sellFrame
+text(sellFrame, { Position = UDim2.new(0, 100, 0, 18), Size = UDim2.new(0, 300, 0, 44), Text = "SELL CARS", TextXAlignment = Enum.TextXAlignment.Left, StrokeThickness = 3.5 })
+local sellClose = button(sellFrame, { AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 16, 0, -16), Size = UDim2.new(0, 60, 0, 60), Text = "X" }, BTN.Red)
+local sellList = listFrame(sellFrame, { Position = UDim2.new(0, 28, 0, 84), Size = UDim2.new(1, -56, 1, -184) })
+local sellAll = button(sellFrame, { AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -24), Size = UDim2.new(0, 330, 0, 64), Text = "SELL ALL" }, BTN.Orange)
+
+local function refreshSell()
+	for _, c in ipairs(sellList:GetChildren()) do
+		if c:IsA("GuiObject") then
+			c:Destroy()
+		end
+	end
+	local inv = decode("Inventory")
+	local total = 0
+	for i, car in ipairs(inv) do
+		local value = Config.GetCarIncome(car.Id, car.Engine) * Config.SellSeconds
+		total = total + value
+		row(sellList, i, car, "$" .. Config.FormatNumber(value), "SELL", BTN.Green, function()
+			local r = SellAction:InvokeServer("Sell", car.Uid)
+			if r and r.Message then
+				showNotification(r.Message, Color3.fromRGB(255, 130, 120))
+			end
+		end)
+	end
+	if #inv == 0 then
+		emptyNote(sellList, "Your toolbar is empty.")
+	end
+	sellAll.Visible = #inv > 0
+	sellAll.Text = "SELL ALL  $" .. Config.FormatNumber(total)
+end
+sellAll.MouseButton1Click:Connect(function()
+	local r = SellAction:InvokeServer("SellAll")
+	if r and r.Message then
+		showNotification(r.Message, Color3.fromRGB(255, 130, 120))
+	end
+end)
+sellClose.MouseButton1Click:Connect(function()
+	sellFrame.Visible = false
+end)
+OpenSellEvent.OnClientEvent:Connect(function()
+	refreshSell()
+	sellFrame.Visible = true
+	Juice.Pop(sellFrame)
+end)
+
+-- Storage Unit
+local storageFrame = panel(gui, { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0.5, 0), Size = UDim2.new(0, 860, 0, 540), Visible = false })
+Icons.Make("Crate", { Position = UDim2.new(0, 18, 0, -4), Size = UDim2.new(0, 76, 0, 76) }).Parent = storageFrame
+text(storageFrame, { Position = UDim2.new(0, 100, 0, 18), Size = UDim2.new(0, 300, 0, 44), Text = "STORAGE", TextXAlignment = Enum.TextXAlignment.Left, StrokeThickness = 3.5 })
+local storageClose = button(storageFrame, { AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 16, 0, -16), Size = UDim2.new(0, 60, 0, 60), Text = "X" }, BTN.Red)
+local invTitle = inkText(storageFrame, { Position = UDim2.new(0, 30, 0, 78), Size = UDim2.new(0.5, -40, 0, 24), Text = "TOOLBAR", TextXAlignment = Enum.TextXAlignment.Left })
+local storeTitle = inkText(storageFrame, { Position = UDim2.new(0.5, 10, 0, 78), Size = UDim2.new(0.5, -40, 0, 24), Text = "IN STORAGE", TextXAlignment = Enum.TextXAlignment.Left })
+local invList = listFrame(storageFrame, { Position = UDim2.new(0, 28, 0, 108), Size = UDim2.new(0.5, -38, 1, -136) })
+local storeList = listFrame(storageFrame, { Position = UDim2.new(0.5, 10, 0, 108), Size = UDim2.new(0.5, -38, 1, -136) })
+
+local function refreshStorage()
+	for _, list in ipairs({ invList, storeList }) do
+		for _, c in ipairs(list:GetChildren()) do
+			if c:IsA("GuiObject") then
+				c:Destroy()
+			end
+		end
+	end
+	local inv, store = decode("Inventory"), decode("Storage")
+	invTitle.Text = "TOOLBAR  " .. #inv .. "/" .. Config.InventorySize
+	storeTitle.Text = "IN STORAGE  " .. #store .. "/" .. Config.StorageSize
+	for i, car in ipairs(inv) do
+		row(invList, i, car, nil, "STORE", BTN.Blue, function()
+			local r = StorageAction:InvokeServer("Store", car.Uid)
+			if r and r.Message then
+				showNotification(r.Message, Color3.fromRGB(255, 130, 120))
+			end
+		end)
+	end
+	for i, car in ipairs(store) do
+		row(storeList, i, car, nil, "TAKE", BTN.Green, function()
+			local r = StorageAction:InvokeServer("Take", car.Slot)
+			if r and r.Message then
+				showNotification(r.Message, Color3.fromRGB(255, 130, 120))
+			end
+		end)
+	end
+	if #inv == 0 then
+		emptyNote(invList, "Toolbar is empty.")
+	end
+	if #store == 0 then
+		emptyNote(storeList, "Nothing stored yet.")
+	end
+end
+storageClose.MouseButton1Click:Connect(function()
+	storageFrame.Visible = false
+end)
+OpenStorageEvent.OnClientEvent:Connect(function()
+	refreshStorage()
+	storageFrame.Visible = true
+	Juice.Pop(storageFrame)
+end)
+player:GetAttributeChangedSignal("Inventory"):Connect(function()
+	if sellFrame.Visible then
+		refreshSell()
+	end
+	if storageFrame.Visible then
+		refreshStorage()
+	end
+end)
+player:GetAttributeChangedSignal("Storage"):Connect(function()
+	if storageFrame.Visible then
+		refreshStorage()
+	end
+end)
+-- walking away closes them
+task.spawn(function()
+	while true do
+		task.wait(0.5)
+		local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+		if root and (sellFrame.Visible or storageFrame.Visible) then
+			local idx = player:GetAttribute("PlotIndex")
+			local plot = idx and workspace:FindFirstChild("Map") and workspace.Map:FindFirstChild("Plot" .. idx)
+			local sellPart = plot and plot:FindFirstChild("SellCounter")
+			local storagePart = plot and plot:FindFirstChild("StorageDoor")
+			if sellFrame.Visible and sellPart and (sellPart.Position - root.Position).Magnitude > 24 then
+				sellFrame.Visible = false
+			end
+			if storageFrame.Visible and storagePart and (storagePart.Position - root.Position).Magnitude > 24 then
+				storageFrame.Visible = false
+			end
+		end
+	end
+end)
+
+---------------------------------------------------------------------
 -- Calm world: only the single closest label is shown (and only when you're near it), so the
 -- screen never fills with floating text. Money pop-ups over customers always show.
 ---------------------------------------------------------------------
 local worldLabels = {}
 local function trackLabel(g)
-	if g:IsA("BillboardGui") and g.Name ~= "PayPop" and g.Enabled then
+	if g:IsA("BillboardGui") and g.Name ~= "PayPop" and g.Name ~= "IconBoard" and g.Enabled then
 		worldLabels[g] = true
 	end
 end

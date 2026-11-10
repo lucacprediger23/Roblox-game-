@@ -179,10 +179,26 @@ local function buildFromAsset(car, source, opts)
 			d:Destroy()
 		end
 	end
+	local function pathOf(d)
+		local path = d.Name:lower()
+		local a = d.Parent
+		while a and a ~= clone do
+			path = a.Name:lower() .. "/" .. path
+			a = a.Parent
+		end
+		return path
+	end
 	for _, d in ipairs(clone:GetDescendants()) do
 		if d:IsA("BasePart") and (d.Transparency >= 0.95 or d:IsA("Seat") or d:IsA("VehicleSeat")) and not d:FindFirstChildWhichIsA("Light", true) then
-			-- hitboxes, seats and invisible helpers from store models
-			d:Destroy()
+			local path = pathOf(d)
+			local isWheelMesh = (d:IsA("MeshPart") or d:FindFirstChildWhichIsA("DataModelMesh")) and (path:find("wheel") or path:find("tire") or path:find("tyre") or path:find("%f[%a]rim"))
+			if isWheelMesh and not d:IsA("Seat") and not d:IsA("VehicleSeat") then
+				-- racing-kit cars keep their tire and rim meshes hidden until a script shows them
+				d.Transparency = 0
+			else
+				-- hitboxes, seats and invisible helpers from store models
+				d:Destroy()
+			end
 		end
 	end
 	for _, d in ipairs(clone:GetDescendants()) do

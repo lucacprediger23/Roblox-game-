@@ -544,7 +544,7 @@ local function buildPlot(index, parent)
 		end
 		-- every showroom level has its own style: street garage -> workshop -> dealership -> luxury -> future
 		local THEMES = {
-			{ Name = "street", WallMat = Enum.Material.Brick, FloorMat = Enum.Material.Concrete, RoofMat = Enum.Material.CorrodedMetal, Wall = Color3.fromRGB(150, 92, 74), Floor = Color3.fromRGB(92, 94, 100), Trim = Color3.fromRGB(46, 48, 56), Ceiling = Color3.fromRGB(70, 72, 80), Light = Color3.fromRGB(255, 214, 150), Front = Color3.fromRGB(150, 92, 74) },
+			{ Name = "street", WallMat = Enum.Material.Brick, FloorMat = Enum.Material.Concrete, RoofMat = Enum.Material.Metal, Wall = Color3.fromRGB(150, 92, 74), Floor = Color3.fromRGB(92, 94, 100), Trim = Color3.fromRGB(46, 48, 56), Ceiling = Color3.fromRGB(150, 150, 154), Light = Color3.fromRGB(255, 236, 210), Front = Color3.fromRGB(150, 92, 74) },
 			{ Name = "workshop", WallMat = Enum.Material.Concrete, FloorMat = Enum.Material.Concrete, RoofMat = Enum.Material.Metal, Wall = Color3.fromRGB(196, 198, 202), Floor = Color3.fromRGB(110, 120, 134), Trim = Color3.fromRGB(40, 90, 170), Ceiling = Color3.fromRGB(200, 202, 208), Light = LAMP, Front = Color3.fromRGB(196, 198, 202) },
 			{ Name = "dealer", FloorMat = Enum.Material.Marble, RoofMat = Enum.Material.Metal, Wall = PLASTER, Floor = TILE, Trim = NAVY, Ceiling = Color3.fromRGB(226, 226, 230), Light = LAMP, Front = PLASTER },
 			{ Name = "luxury", WallMat = Enum.Material.WoodPlanks, FloorMat = Enum.Material.Marble, RoofMat = Enum.Material.Metal, Wall = Color3.fromRGB(120, 80, 56), Floor = Color3.fromRGB(44, 42, 48), Trim = Color3.fromRGB(222, 180, 90), Ceiling = Color3.fromRGB(236, 226, 210), Light = Color3.fromRGB(255, 226, 170), Front = Color3.fromRGB(70, 52, 44) },
@@ -631,9 +631,9 @@ local function buildPlot(index, parent)
 				local l = deco(sm, "CeilingLight", Vector3.new(6, 0.12, 2), s(x, FLOOR_Y + H - 0.45, z), theme.Light, Enum.Material.Neon)
 				local sl = Instance.new("SurfaceLight")
 				sl.Face = Enum.NormalId.Bottom
-				sl.Angle = 120
-				sl.Range = H + 6
-				sl.Brightness = (theme.Name == "street" or theme.Name == "workshop") and 1.1 or 1.5
+				sl.Angle = 150
+				sl.Range = math.max(18, H + 8)
+				sl.Brightness = (theme.Name == "street" or theme.Name == "workshop") and 0.9 or 1.1
 				sl.Color = theme.Light
 				sl.Shadows = true
 				sl.Parent = l
@@ -693,37 +693,93 @@ local function buildPlot(index, parent)
 		end
 
 		-- real Creator Store furniture in the free corners behind the last cars (never in the aisle)
-		local function furnish(name, x, z, faceYaw, opts)
+		-- footprint of a model in the showroom's own frame (x across, z from front to back)
+		local frame = s(0, 0, 0)
+		local function footprint(model)
+			local minX, maxX, minZ, maxZ = math.huge, -math.huge, math.huge, -math.huge
+			for _, p in ipairs(model:GetDescendants()) do
+				if p:IsA("BasePart") and p.Transparency < 1 then
+					local h = p.Size / 2
+					for _, cx in ipairs({ -1, 1 }) do
+						for _, cz in ipairs({ -1, 1 }) do
+							for _, cy in ipairs({ -1, 1 }) do
+								local w = frame:PointToObjectSpace(p.CFrame:PointToWorldSpace(Vector3.new(cx * h.X, cy * h.Y, cz * h.Z)))
+								minX, maxX = math.min(minX, w.X), math.max(maxX, w.X)
+								minZ, maxZ = math.min(minZ, w.Z), math.max(maxZ, w.Z)
+							end
+						end
+					end
+				end
+			end
+			return minX, maxX, minZ, maxZ
+		end
+		local inX = W / 2 - WT / 2 - 0.12 -- inner face of the side walls
+		local inZ = D - WT / 2 - 0.12 -- inner face of the back wall
+		-- place a store prop and make sure it sits fully inside the room: against its wall when it
+		-- has one (long side along that wall), never poking through a wall
+		local function furnish(name, x, z, faceYaw, opts, wall)
 			local turn = PROP_FRONT[name] or 0
-			return Props.Place(name, sm, s(x, FLOOR_Y, z) * CFrame.Angles(0, faceYaw + turn, 0), opts)
+			local m0 = Props.Place(name, sm, s(x, FLOOR_Y, z) * CFrame.Angles(0, faceYaw + turn, 0), opts)
+			if not m0 then
+				return nil
+			end
+			local x0, x1, z0, z1 = footprint(m0)
+			local alongZ = wall == "left" or wall == "right"
+			if wall and ((alongZ and (x1 - x0) > (z1 - z0)) or (not alongZ and (z1 - z0) > (x1 - x0))) then
+				m0:PivotTo(m0:GetPivot() * CFrame.Angles(0, math.pi / 2, 0))
+				x0, x1, z0, z1 = footprint(m0)
+			end
+			local dx, dz = 0, 0
+			if wall == "left" then
+				dx = -inX - x0
+			elseif wall == "right" then
+				dx = inX - x1
+			elseif wall == "back" then
+				dz = inZ - z1
+			end
+			-- then clamp inside all walls
+			if x0 + dx < -inX then
+				dx = -inX - x0
+			elseif x1 + dx > inX then
+				dx = inX - x1
+			end
+			if z1 + dz > inZ then
+				dz = inZ - z1
+			elseif z0 + dz < 0.4 then
+				dz = 0.4 - z0
+			end
+			if dx ~= 0 or dz ~= 0 then
+				m0:PivotTo(m0:GetPivot() + frame:VectorToWorldSpace(Vector3.new(dx, 0, dz)))
+			end
+			return m0
 		end
 		local backZ = D - 0.8 -- just inside the back wall
 		local cornerX = W / 2 - 1 -- just inside the side walls
 		local FACE_FRONT, FACE_RIGHT, FACE_LEFT = 0, -math.pi / 2, math.pi / 2
 		if single then
 			-- one-car garage: workbench and tool cabinet on the left wall, tyres and compressor on the right
-			furnish("Workbench", -(W / 2 - 1.8), D * 0.45, FACE_RIGHT, { Width = 7 })
-			furnish("ToolCabinet", -(W / 2 - 1.5), D - 4.5, FACE_RIGHT, { Height = 4.2 })
-			furnish("TireRack", W / 2 - 1.6, D * 0.42, FACE_LEFT, { Width = 6 })
-			furnish("Compressor", W / 2 - 1.8, D - 4.5, FACE_LEFT, { Height = 3.2 })
-			furnish("OilDrum", W / 2 - 1.6, 3.5, 0.4, { Height = 3 })
+			furnish("Workbench", -(W / 2 - 1.8), D * 0.45, FACE_RIGHT, { Width = 6.5 }, "left")
+			furnish("ToolCabinet", -(W / 2 - 1.5), D - 4.5, FACE_RIGHT, { Height = 4 }, "left")
+			furnish("TireRack", W / 2 - 1.6, D * 0.42, FACE_LEFT, { Width = 6 }, "right")
+			furnish("Compressor", W / 2 - 1.8, D - 4.5, FACE_LEFT, { Height = 3.2 }, "right")
+			furnish("OilDrum", W / 2 - 1.6, 3.5, 0.4, { Height = 3 }, "right")
 		elseif theme.Name == "street" or theme.Name == "workshop" then
 			-- left corner: workbench on the back wall, tool cabinet on the side wall
-			furnish("Workbench", -(backDoor / 2 + 5.5), backZ - 1.6, FACE_FRONT, { Width = 7.5 })
-			furnish("ToolCabinet", -(cornerX - 1.6), backZ - 6.5, FACE_RIGHT, { Height = 4.4 })
+			furnish("Workbench", -(backDoor / 2 + 5.5), backZ - 1.6, FACE_FRONT, { Width = 7.5 }, "back")
+			furnish("ToolCabinet", -(cornerX - 1.6), backZ - 6.5, FACE_RIGHT, { Height = 4.4 }, "left")
 			-- right corner: tyre rack, compressor and oil drums
-			furnish("TireRack", backDoor / 2 + 5.5, backZ - 1.4, FACE_FRONT, { Width = 7 })
-			furnish("Compressor", cornerX - 1.8, backZ - 6, FACE_LEFT, { Height = 3.4 })
-			furnish("OilDrum", cornerX - 1.4, backZ - 9.2, 0.4, { Height = 3 })
+			furnish("TireRack", backDoor / 2 + 5.5, backZ - 1.4, FACE_FRONT, { Width = 7 }, "back")
+			furnish("Compressor", cornerX - 1.8, backZ - 6, FACE_LEFT, { Height = 3.4 }, "right")
+			furnish("OilDrum", cornerX - 1.4, backZ - 9.2, 0.4, { Height = 3 }, "right")
 			if theme.Name == "workshop" then
-				furnish("GarageShelf", -(cornerX - 1.2), backZ - 11, FACE_RIGHT, { Height = 7 })
+				furnish("GarageShelf", -(cornerX - 1.2), backZ - 11, FACE_RIGHT, { Height = 7 }, "left")
 				furnish("OilDrum", cornerX - 3.6, backZ - 9.6, 1.3, { Height = 3 })
 			end
 		else
 			-- dealership: a sales desk with plants, and plants by the entrance
 			furnish("ShowroomDesk", -(backDoor / 2 + 6), backZ - 3.2, FACE_FRONT, { Width = 8 })
-			furnish("Plant", -(cornerX - 1.6), backZ - 1.6, 0, { Height = 5.5 })
-			furnish("Plant", backDoor / 2 + 2, backZ - 1.6, 1, { Height = 5.5 })
+			furnish("Plant", -(cornerX - 1.6), backZ - 1.6, 0, { Height = 5.5 }, "back")
+			furnish("Plant", backDoor / 2 + 2, backZ - 1.6, 1, { Height = 5.5 }, "back")
 			for _, side in ipairs({ -1, 1 }) do
 				furnish("Plant", side * (doorW / 2 + 2.4), 3.2, side, { Height = 5 })
 			end
@@ -930,7 +986,7 @@ local function buildPlot(index, parent)
 		box(m, "TireWall", Vector3.new(0.5, tH, tD), t(side * tW / 2, FLOOR_Y + tH / 2, 0), BRICK, Enum.Material.Brick)
 	end
 	box(m, "TireBack", Vector3.new(tW, tH, 0.5), t(0, FLOOR_Y + tH / 2, tD / 2), BRICK, Enum.Material.Brick)
-	box(m, "TireRoof", Vector3.new(tW + 0.6, 0.35, tD + 0.6), t(0, FLOOR_Y + tH + 0.18, 0), Color3.fromRGB(70, 74, 84), Enum.Material.CorrodedMetal)
+	box(m, "TireRoof", Vector3.new(tW + 0.6, 0.35, tD + 0.6), t(0, FLOOR_Y + tH + 0.18, 0), Color3.fromRGB(70, 74, 84), Enum.Material.Metal)
 	-- the open front reads as a garage: a rolled-up shutter box and steel door frame
 	deco(m, "ShutterBox", Vector3.new(tW - 1, 0.9, 0.9), t(0, FLOOR_Y + tH - 0.45, -tD / 2 + 0.6), Color3.fromRGB(150, 156, 166), Enum.Material.Metal)
 	for _, side in ipairs({ -1, 1 }) do
@@ -954,15 +1010,80 @@ local function buildPlot(index, parent)
 	local liftLabel = label(lift, "SERVICE", Color3.fromRGB(255, 215, 100), 10, 240)
 	liftLabel.Parent.Enabled = false
 
+	--=========================== SELL STATION + STORAGE UNIT (right behind the garage) ===========================
+	local function iconBoard(parentPart, imageKey, height)
+		local id = Icons.Images[imageKey]
+		if not id then
+			return
+		end
+		local bb = Instance.new("BillboardGui")
+		bb.Name = "IconBoard"
+		bb.Size = UDim2.new(3.6, 0, 3.6, 0)
+		bb.StudsOffset = Vector3.new(0, height, 0)
+		bb.LightInfluence = 0
+		bb.MaxDistance = 140
+		local img = Instance.new("ImageLabel")
+		img.BackgroundTransparency = 1
+		img.Size = UDim2.new(1, 0, 1, 0)
+		img.Image = "rbxassetid://" .. id
+		img.Parent = bb
+		bb.Parent = parentPart
+	end
+	do -- Sell Station: an open kiosk with a counter, facing the middle of the lot
+		local base = at(19, 0.4, 131) * CFrame.Angles(0, math.pi / 2, 0)
+		local function k(x, y, z)
+			return base * CFrame.new(x, y, z)
+		end
+		local GREENK = Color3.fromRGB(46, 150, 84)
+		box(m, "SellSlab", Vector3.new(7, 0.25, 5.4), k(0, 0.12, 0), Color3.fromRGB(150, 152, 156), Enum.Material.Concrete)
+		local counter = box(m, "SellCounter", Vector3.new(6, 3.1, 1.2), k(0, 1.8, -1.9), GREENK, Enum.Material.SmoothPlastic)
+		deco(m, "SellCounterTop", Vector3.new(6.3, 0.18, 1.6), k(0, 3.42, -1.9), Color3.fromRGB(230, 230, 228), Enum.Material.Marble)
+		for _, x in ipairs({ -3.2, 3.2 }) do
+			for _, z in ipairs({ -2.4, 2.4 }) do
+				deco(m, "SellPost", Vector3.new(0.22, 6.6, 0.22), k(x, 3.4, z), Color3.fromRGB(60, 64, 72), Enum.Material.Metal)
+			end
+		end
+		deco(m, "SellRoof", Vector3.new(7.4, 0.22, 5.6), k(0, 6.8, 0), GREENK, Enum.Material.Metal)
+		local sign = deco(m, "SellSign", Vector3.new(5.4, 1.2, 0.12), k(0, 7.6, -2.6), Color3.fromRGB(28, 32, 40))
+		surfaceText(sign, Enum.NormalId.Front, "SELL CARS", Color3.fromRGB(120, 255, 150), 26)
+		iconBoard(counter, "Cash", 6.8)
+		plot.SellPart = counter
+		plot.SellCFrame = k(0, 2, -3)
+	end
+	do -- Storage Unit: a self-storage unit with an orange roll-up door
+		local base = at(-19, 0.4, 132) * CFrame.Angles(0, -math.pi / 2, 0)
+		local function k(x, y, z)
+			return base * CFrame.new(x, y, z)
+		end
+		local SHELL = Color3.fromRGB(196, 200, 208)
+		local uw, ud, uh = 8, 6.5, 6.5
+		box(m, "StorageFloor", Vector3.new(uw, 0.25, ud), k(0, 0.12, 0), Color3.fromRGB(150, 152, 156), Enum.Material.Concrete)
+		for _, x in ipairs({ -uw / 2, uw / 2 }) do
+			box(m, "StorageWall", Vector3.new(0.3, uh, ud), k(x, uh / 2, 0), SHELL, Enum.Material.Metal)
+		end
+		box(m, "StorageBack", Vector3.new(uw, uh, 0.3), k(0, uh / 2, ud / 2), SHELL, Enum.Material.Metal)
+		box(m, "StorageRoof", Vector3.new(uw + 0.6, 0.3, ud + 0.6), k(0, uh + 0.15, 0), Color3.fromRGB(120, 124, 132), Enum.Material.Metal)
+		local door = box(m, "StorageDoor", Vector3.new(uw - 0.6, uh - 1.2, 0.2), k(0, (uh - 1.2) / 2 + 0.25, -ud / 2), Color3.fromRGB(230, 120, 40), Enum.Material.Metal)
+		for y = 0.8, uh - 1.6, 0.7 do
+			deco(m, "StorageRib", Vector3.new(uw - 0.7, 0.08, 0.06), k(0, y, -ud / 2 - 0.12), Color3.fromRGB(196, 96, 30), Enum.Material.Metal)
+		end
+		local sign = deco(m, "StorageSign", Vector3.new(uw - 1, 0.9, 0.12), k(0, uh - 0.45, -ud / 2 - 0.1), Color3.fromRGB(28, 32, 40))
+		surfaceText(sign, Enum.NormalId.Front, "STORAGE", Color3.new(1, 1, 1), 26)
+		iconBoard(door, "Crate", 5.6)
+		plot.StoragePart = door
+		plot.StorageCFrame = k(0, 2, -ud / 2 - 2)
+	end
+
 	--=========================== UPGRADE STATIONS (a row just behind the showroom) ===========================
 	local function icon(kind, at0)
 		local mdl = Instance.new("Model")
 		mdl.Name = "StationIcon"
 		-- the painted icon artwork floating over the pad
-		local imageId = Icons.Images[({ Showroom = "Showroom", Truck = "Truck", Wash = "Sponge", Engine = "Tire" })[kind] or ""]
+		local imageId = Icons.Images[({ Showroom = "Showroom", Truck = "Truck", Wash = "Sponge", Engine = "Upgrade" })[kind] or ""]
 		if imageId and imageId ~= "" then
 			local anchor = deco(mdl, "IconAnchor", Vector3.new(0.2, 0.2, 0.2), at0, Color3.new(1, 1, 1), nil, { Transparency = 1 })
 			local bb = Instance.new("BillboardGui")
+			bb.Name = "IconBoard" -- always visible (the label declutter skips it)
 			bb.Size = UDim2.new(4.6, 0, 4.6, 0)
 			bb.LightInfluence = 0
 			bb.MaxDistance = 140
