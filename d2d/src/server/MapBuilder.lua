@@ -314,21 +314,50 @@ local function buildTerrain(map)
 	local terrain = workspace.Terrain
 	terrain:Clear()
 	local GRASS = Color3.fromRGB(104, 178, 74)
-	local CLIFF = Color3.fromRGB(104, 124, 168)
-	box(map, "Ground", Vector3.new(1400, 2, 1000), CFrame.new(0, -1, 0), GRASS)
-	local function step(center, size)
-		deco(map, "Cliff", size, CFrame.new(center), CLIFF)
-		deco(map, "CliffTop", Vector3.new(size.X, 1, size.Z), CFrame.new(center + Vector3.new(0, size.Y / 2 + 0.5, 0)), GRASS)
+	box(map, "Ground", Vector3.new(1800, 2, 1400), CFrame.new(0, -1, 0), GRASS)
+	-- rolling green hills with tree lines around the town, so the sky stays open to the horizon
+	local HILLS = { Color3.fromRGB(98, 172, 70), Color3.fromRGB(110, 182, 78), Color3.fromRGB(88, 160, 66), Color3.fromRGB(120, 188, 86) }
+	local TREES = { Color3.fromRGB(56, 128, 58), Color3.fromRGB(66, 140, 62), Color3.fromRGB(48, 116, 54), Color3.fromRGB(78, 150, 66) }
+	local function blob(name, size, cf, color)
+		local p = deco(map, name, size, cf, color)
+		local mesh = Instance.new("SpecialMesh")
+		mesh.MeshType = Enum.MeshType.Sphere
+		mesh.Parent = p
+		return p
 	end
+	local function hill(x, z, rx, rz, h)
+		blob("Hill", Vector3.new(rx * 2, h * 2, rz * 2), CFrame.new(x, 0, z) * CFrame.Angles(0, rng:NextNumber(-0.3, 0.3), 0), HILLS[rng:NextInteger(1, #HILLS)])
+		-- a scatter of round trees on the hillside
+		local count = math.floor(rx * rz / 380)
+		for _ = 1, count do
+			local u, v = rng:NextNumber(-0.85, 0.85), rng:NextNumber(-0.85, 0.85)
+			local k = 1 - u * u - v * v
+			if k > 0.05 then
+				local y = h * math.sqrt(k)
+				local sz = rng:NextNumber(7, 12)
+				local pos = Vector3.new(x + u * rx, y, z + v * rz)
+				deco(map, "HillTrunk", Vector3.new(1.2, sz * 0.6, 1.2), CFrame.new(pos + Vector3.new(0, sz * 0.25, 0)), Color3.fromRGB(110, 76, 52))
+				blob("HillTree", Vector3.new(sz, sz * 1.15, sz), CFrame.new(pos + Vector3.new(0, sz * 0.75, 0)), TREES[rng:NextInteger(1, #TREES)])
+			end
+		end
+	end
+	-- behind the back service roads (north and south)
 	for _, sz in ipairs({ -1, 1 }) do
-		step(Vector3.new(0, 10, sz * 232), Vector3.new(1000, 20, 30))
-		step(Vector3.new(0, 24, sz * 262), Vector3.new(1050, 48, 34))
-		step(Vector3.new(0, 38, sz * 300), Vector3.new(1100, 76, 50))
+		for x = -680, 680, 70 do
+			hill(x + rng:NextNumber(-20, 20), sz * rng:NextNumber(250, 280), rng:NextNumber(45, 70), rng:NextNumber(28, 40), rng:NextNumber(10, 18))
+			hill(x + 35 + rng:NextNumber(-20, 20), sz * rng:NextNumber(330, 380), rng:NextNumber(60, 90), rng:NextNumber(40, 60), rng:NextNumber(22, 36))
+			hill(x + rng:NextNumber(-30, 30), sz * rng:NextNumber(430, 480), rng:NextNumber(80, 120), rng:NextNumber(50, 70), rng:NextNumber(35, 55))
+		end
 	end
+	-- at both ends of the boulevard (east and west)
 	for _, sx in ipairs({ -1, 1 }) do
-		step(Vector3.new(sx * 400, 10, 0), Vector3.new(30, 20, 470))
-		step(Vector3.new(sx * 432, 24, 0), Vector3.new(36, 48, 520))
-		step(Vector3.new(sx * 470, 38, 0), Vector3.new(50, 76, 580))
+		for z = -220, 220, 60 do
+			if math.abs(z) > 30 then
+				hill(sx * rng:NextNumber(430, 460), z + rng:NextNumber(-15, 15), rng:NextNumber(30, 45), rng:NextNumber(40, 60), rng:NextNumber(10, 18))
+			end
+			hill(sx * rng:NextNumber(530, 580), z + 30 + rng:NextNumber(-15, 15), rng:NextNumber(50, 80), rng:NextNumber(50, 70), rng:NextNumber(24, 40))
+			hill(sx * rng:NextNumber(640, 690), z + rng:NextNumber(-20, 20), rng:NextNumber(70, 100), rng:NextNumber(60, 80), rng:NextNumber(35, 55))
+		end
 	end
 end
 

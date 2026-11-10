@@ -34,7 +34,7 @@ LightingPresets.Presets = {
 	},
 	-- Punchy simulator look: deeper blue sky, saturated colours, crisper shadows
 	VividSim = {
-		Sky = "CartoonC",
+		Sky = "CartoonA",
 		ClockTime = 14,
 		Latitude = 25,
 		Brightness = 3,
@@ -70,7 +70,7 @@ LightingPresets.Presets = {
 	},
 }
 
-LightingPresets.Default = "CleanDay"
+LightingPresets.Default = "VividSim"
 
 local function fresh(className)
 	for _, c in ipairs(Lighting:GetChildren()) do
