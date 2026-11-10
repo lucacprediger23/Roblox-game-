@@ -135,7 +135,7 @@ local function findAsset(car)
 		return nil
 	end
 	-- a model made for this exact car wins, then one for its body shape
-	local exact = cars:FindFirstChild(car.Id)
+	local exact = cars:FindFirstChild(car.Id) or (car.Model and cars:FindFirstChild(car.Model))
 	if exact then
 		return exact
 	end

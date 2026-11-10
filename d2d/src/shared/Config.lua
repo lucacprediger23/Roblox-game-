@@ -107,56 +107,58 @@ Config.OfflineMaxSeconds = 8 * 3600
 -- Shapes are drawn by CarBuilder: mini, hatch, sedan, wagon, van, truck, suv,
 -- bus, classic, muscle, coupe, racer, super, hyper, limo, open
 ---------------------------------------------------------------------
+-- Ten containers = a timeline of the car, from the first horseless carriages to the future.
+-- Each car: { name, body shape (size), generated model key }
 Config.Containers = {
-	{ Name = "Scrapyard Finds", Color = Color3.fromRGB(232, 184, 116), Dirt = Color3.fromRGB(120, 95, 70), Cars = {
-		{ "Puddle Pip", "mini" }, { "Rattler Rustbucket", "sedan" }, { "Haulman Postie", "van" }, { "Puddle Pip Cabrio", "mini" },
-		{ "Rattler Wagon '82", "wagon" }, { "Haulman Tow-Tug", "truck" }, { "Rattler Hotshot", "hatch" }, { "Puddle Bubble", "mini" },
-		{ "Haulman Ice Cream Van", "van" }, { "Rattler Taxi Classic", "sedan" }, { "Puddle Pip Gold Rally", "mini" }, { "Rattler Junkyard King", "muscle" },
+	{ Name = "Brass Era Barn Finds", Era = "1900s-1920s", Color = Color3.fromRGB(232, 184, 116), Dirt = Color3.fromRGB(120, 95, 70), Cars = {
+		{ "Puttering Pioneer", "open", "brass" }, { "Tin Can Tourer", "classic", "vintage20s" }, { "Boneshaker Runabout", "open", "brass" }, { "Parlor Coach '24", "classic", "vintage20s" },
+		{ "Brasslamp Phaeton", "open", "brass" }, { "Doctor's Coupe", "classic", "vintage20s" }, { "Crank-Start Roadster", "open", "brass" }, { "Gilded Age Limousine", "limo", "vintage20s" },
+		{ "Speedster 1912", "open", "brass" }, { "Silver Whisper Tourer", "classic", "vintage20s" }, { "Royal Carriage Motor", "limo", "vintage20s" }, { "Golden Brass Runabout", "open", "brass" },
 	} },
-	{ Name = "City Streets", Color = Color3.fromRGB(226, 124, 52), Dirt = Color3.fromRGB(90, 90, 95), Cars = {
-		{ "Metrolux Commuter", "sedan" }, { "Sorano Kei", "mini" }, { "Metrolux Hatch GT", "hatch" }, { "Sorano Haru", "coupe" },
-		{ "Metrolux Cab", "sedan" }, { "Sorano Pocket Rocket", "hatch" }, { "Sorano Drift-R", "coupe" }, { "Metrolux Police Cruiser", "sedan" },
-		{ "Sorano Kei Turbo Widebody", "mini" }, { "Metrolux Limo Stretch", "limo" }, { "Sorano Neon Night", "coupe" }, { "Metrolux Executive Armored", "limo" },
+	{ Name = "Roaring Thirties", Era = "1930s", Color = Color3.fromRGB(226, 124, 52), Dirt = Color3.fromRGB(90, 80, 70), Cars = {
+		{ "Depot Delivery Sedan", "classic", "sedan30s" }, { "Breadline Coupe", "coupe", "streamline30s" }, { "Mob Boss Sedan", "classic", "sedan30s" }, { "Slipstream Arrow", "coupe", "streamline30s" },
+		{ "Speakeasy Special", "classic", "sedan30s" }, { "Deco Teardrop", "coupe", "streamline30s" }, { "Getaway Twelve", "classic", "sedan30s" }, { "Breeze Streamliner", "coupe", "streamline30s" },
+		{ "Pinstripe Phantom", "limo", "sedan30s" }, { "Silver Bullet Coupe", "coupe", "streamline30s" }, { "Grand Ballroom V16", "limo", "sedan30s" }, { "Gold Deco Dream", "coupe", "streamline30s" },
 	} },
-	{ Name = "Family and Adventure", Color = Color3.fromRGB(136, 82, 54), Dirt = Color3.fromRGB(110, 80, 50), Cars = {
-		{ "Bramble Trail", "suv" }, { "Haulman Family Van", "van" }, { "Bramble Pickup", "truck" }, { "Haulman Camper Mini", "van" },
-		{ "Bramble Badger 4x4", "suv" }, { "Haulman Surf Bus", "bus" }, { "Bramble Rock Crawler", "suv" }, { "Haulman Mega Camper", "bus" },
-		{ "Bramble Desert Raider", "truck" }, { "Bramble Six-Wheeler", "truck" }, { "Bramble Wildlands Black", "suv" }, { "Haulman Rolling Mansion", "bus" },
+	{ Name = "Fifties Diner Drive-In", Era = "1950s", Color = Color3.fromRGB(136, 82, 54), Dirt = Color3.fromRGB(110, 90, 70), Cars = {
+		{ "Milkshake Pickup", "truck", "pickup50s" }, { "Sock Hop Sedan", "classic", "tailfin50s" }, { "Farm Fresh Hauler", "truck", "pickup50s" }, { "Jukebox Cruiser", "classic", "tailfin50s" },
+		{ "Drive-In Deluxe", "classic", "tailfin50s" }, { "Rockabilly Pickup", "truck", "pickup50s" }, { "Rocket Fin '57", "classic", "tailfin50s" }, { "Chrome Canyon Hauler", "truck", "pickup50s" },
+		{ "Pink Cadence Convertible", "classic", "tailfin50s" }, { "Atomic Age Cruiser", "classic", "tailfin50s" }, { "Stardust Supreme", "classic", "tailfin50s" }, { "Golden Jet Fin", "classic", "tailfin50s" },
 	} },
-	{ Name = "Golden Age Classics", Color = Color3.fromRGB(188, 194, 206), Dirt = Color3.fromRGB(150, 140, 125), Cars = {
-		{ "Bellwether Sedan '55", "classic" }, { "Bellwether Coupe '58", "classic" }, { "Bellwether Convertible '57", "open" }, { "Bellwether Diner Wagon", "wagon" },
-		{ "Bellwether Tailfin '59", "classic" }, { "Bellwether Roadster", "open" }, { "Bellwether Moonglow", "classic" }, { "Bellwether Woodie Surf", "wagon" },
-		{ "Bellwether Jet Age Concept", "super" }, { "Bellwether Pink Cadence", "open" }, { "Bellwether Royal Parade", "limo" }, { "Bellwether Golden Gleam", "classic" },
+	{ Name = "Swinging Sixties", Era = "1960s", Color = Color3.fromRGB(188, 194, 206), Dirt = Color3.fromRGB(120, 110, 95), Cars = {
+		{ "Flower Power Bus", "van", "microbus60s" }, { "Riviera Roadster", "open", "convertible60s" }, { "Surf Safari Van", "van", "microbus60s" }, { "Monaco Spider", "open", "convertible60s" },
+		{ "Peace Wagon", "van", "microbus60s" }, { "Le Mans Roadster", "open", "convertible60s" }, { "Woodstock Camper", "van", "microbus60s" }, { "Grand Tourer '66", "open", "convertible60s" },
+		{ "Spy Car Silver", "open", "convertible60s" }, { "Psychedelic Splitscreen", "van", "microbus60s" }, { "Jet Set Convertible", "open", "convertible60s" }, { "Golden Summer Bus", "van", "microbus60s" },
 	} },
-	{ Name = "Muscle Mayhem", Color = Color3.fromRGB(60, 120, 225), Dirt = Color3.fromRGB(60, 55, 50), Cars = {
-		{ "Thunderjaw Brawler", "muscle" }, { "Rattler Sprint 70", "muscle" }, { "Thunderjaw Fastback 69", "muscle" }, { "Rattler Bandit", "muscle" },
-		{ "Thunderjaw Hammerhead", "muscle" }, { "Rattler Pursuit", "sedan" }, { "Thunderjaw Supercharger", "muscle" }, { "Rattler Midnight Run", "muscle" },
-		{ "Thunderjaw Drag King", "racer" }, { "Thunderjaw Twin-Blower", "muscle" }, { "Thunderjaw Inferno", "muscle" }, { "Thunderjaw Big Daddy Gold", "muscle" },
+	{ Name = "Seventies Muscle", Era = "1970s", Color = Color3.fromRGB(60, 120, 225), Dirt = Color3.fromRGB(80, 70, 60), Cars = {
+		{ "Bandit Brawler", "muscle", "muscle70s" }, { "Doorstop Wedge", "coupe", "wedge70s" }, { "Stripe Hammer", "muscle", "muscle70s" }, { "Disco Wedge", "coupe", "wedge70s" },
+		{ "Big Block Bruiser", "muscle", "muscle70s" }, { "Origami GT", "coupe", "wedge70s" }, { "Thunder Scoop 454", "muscle", "muscle70s" }, { "Prism Pointer", "coupe", "wedge70s" },
+		{ "Blaze Inferno", "muscle", "muscle70s" }, { "Laser Wedge Turbo", "coupe", "wedge70s" }, { "Twin Blower Beast", "muscle", "muscle70s" }, { "Golden Eagle Muscle", "muscle", "muscle70s" },
 	} },
-	{ Name = "Tuner Nights", Color = Color3.fromRGB(64, 182, 96), Dirt = Color3.fromRGB(45, 45, 50), Cars = {
-		{ "Hikari Tsubame", "hatch" }, { "Sorano Shiro", "sedan" }, { "Hikari Kaze GT", "coupe" }, { "Sorano Spinner", "coupe" },
-		{ "Hikari Touge", "coupe" }, { "Sorano Wing", "sedan" }, { "Hikari Kaze GT-Z", "coupe" }, { "Sorano Midnight Bay", "coupe" },
-		{ "Hikari Raijin", "coupe" }, { "Sorano Spinner Twin-Rotor", "racer" }, { "Hikari Daimyo", "super" }, { "Sorano Neo-Tokyo", "super" },
+	{ Name = "Neon Eighties", Era = "1980s", Color = Color3.fromRGB(64, 182, 96), Dirt = Color3.fromRGB(70, 70, 80), Cars = {
+		{ "Boombox Hatch", "hatch", "hatch80s" }, { "Pop-Up Prowler", "coupe", "popup80s" }, { "Arcade Hatch GT", "hatch", "hatch80s" }, { "Synthwave Coupe", "coupe", "popup80s" },
+		{ "Mixtape Hot Hatch", "hatch", "hatch80s" }, { "Night Runner", "coupe", "popup80s" }, { "Cassette Turbo", "hatch", "hatch80s" }, { "Miami Nights Coupe", "coupe", "popup80s" },
+		{ "Group B Hatch", "hatch", "hatch80s" }, { "Outrun Redhead", "coupe", "popup80s" }, { "Neon Grid Racer", "coupe", "popup80s" }, { "Gold Laserdisc GT", "coupe", "popup80s" },
 	} },
-	{ Name = "Euro Sport", Color = Color3.fromRGB(150, 82, 225), Dirt = Color3.fromRGB(200, 200, 205), Cars = {
-		{ "Strassen Kompakt", "hatch" }, { "Lucenti Piccola", "mini" }, { "Strassen Coupe 3", "coupe" }, { "Lucenti Aria", "open" },
-		{ "Strassen Bahnsturm", "coupe" }, { "Lucenti GT Classico", "classic" }, { "Strassen Flachbau", "racer" }, { "Lucenti Gran Turismo V8", "coupe" },
-		{ "Strassen Ringmeister", "racer" }, { "Lucenti Rosso Fuoco", "super" }, { "Strassen Schwarzwald Black", "super" }, { "Lucenti Principessa", "coupe" },
+	{ Name = "Nineties Tuners", Era = "1990s", Color = Color3.fromRGB(150, 82, 225), Dirt = Color3.fromRGB(60, 60, 70), Cars = {
+		{ "Mountain Pass Hatch", "hatch", "rally90s" }, { "Wing King Coupe", "coupe", "tuner90s" }, { "Gravel Stage Hatch", "hatch", "rally90s" }, { "Touge Drifter", "coupe", "tuner90s" },
+		{ "Rally Blue Rocket", "hatch", "rally90s" }, { "Street Spec R", "coupe", "tuner90s" }, { "Snowstage Hatch", "hatch", "rally90s" }, { "Midnight Highway", "coupe", "tuner90s" },
+		{ "Widebody Monster", "coupe", "tuner90s" }, { "Championship Rally", "hatch", "rally90s" }, { "Twin Turbo Legend", "coupe", "tuner90s" }, { "Gold Wing Spec", "coupe", "tuner90s" },
 	} },
-	{ Name = "Race Legends", Color = Color3.fromRGB(218, 56, 56), Dirt = Color3.fromRGB(100, 75, 50), Cars = {
-		{ "Vellora Club Racer", "racer" }, { "Strassen Touring Cup", "sedan" }, { "Vellora Rally Stage", "hatch" }, { "Strassen Endurance '72", "racer" },
-		{ "Vellora Le Grand", "racer" }, { "Strassen Group-B Monster", "hatch" }, { "Vellora Open-Wheel 90", "racer" }, { "Strassen Hillclimb Beast", "racer" },
-		{ "Vellora Prototype X", "hyper" }, { "Strassen Endurance Hybrid", "racer" }, { "Vellora Championship Winner", "racer" }, { "Vellora Golden Trophy", "racer" },
+	{ Name = "Modern Streets", Era = "2010s-2020s", Color = Color3.fromRGB(218, 56, 56), Dirt = Color3.fromRGB(150, 140, 125), Cars = {
+		{ "Volt Commuter", "sedan", "ev2020" }, { "Family Crossover", "suv", "suv2020" }, { "Silent Sedan", "sedan", "ev2020" }, { "Trailhead SUV", "suv", "suv2020" },
+		{ "Overdrive Performance", "sedan", "ev2020" }, { "Summit Explorer", "suv", "suv2020" }, { "Autopilot Luxe", "sedan", "ev2020" }, { "Highland Ranger", "suv", "suv2020" },
+		{ "Hyperdrive Sedan", "sedan", "ev2020" }, { "Black Edition SUV", "suv", "suv2020" }, { "Executive Electric", "sedan", "ev2020" }, { "Golden Crossover", "suv", "suv2020" },
 	} },
-	{ Name = "Supercars", Color = Color3.fromRGB(242, 192, 50), Dirt = Color3.fromRGB(210, 180, 120), Cars = {
-		{ "Vellora Furia", "super" }, { "Lucenti Veloce", "coupe" }, { "Vellora Furia Spider", "super" }, { "Lucenti Tempesta", "super" },
-		{ "Vellora Falco", "super" }, { "Lucenti Ombra", "super" }, { "Vellora Saetta", "super" }, { "Lucenti Vortice", "super" },
-		{ "Vellora Falco Ultimo", "super" }, { "Lucenti Fulmine", "super" }, { "Vellora Carbonio", "super" }, { "Vellora Imperatore", "super" },
+	{ Name = "Supercars", Era = "Today's fastest", Color = Color3.fromRGB(242, 192, 50), Dirt = Color3.fromRGB(210, 180, 120), Cars = {
+		{ "Furia Spider", "super", "supercar" }, { "Tempesta GT", "super", "supercar" }, { "Saetta V10", "super", "supercar" }, { "Aero Wing", "hyper", "hypercar" },
+		{ "Falco Ultimo", "super", "supercar" }, { "Vortice Hybrid", "hyper", "hypercar" }, { "Carbonio R", "super", "supercar" }, { "Velocita 1500", "hyper", "hypercar" },
+		{ "Imperatore V12", "super", "supercar" }, { "Track Monster", "hyper", "hypercar" }, { "Record Breaker", "hyper", "hypercar" }, { "Golden Hypercar", "hyper", "hypercar" },
 	} },
-	{ Name = "Hypercars and Future", Color = Color3.fromRGB(44, 46, 60), Dirt = Color3.fromRGB(150, 120, 200), Cars = {
-		{ "Quasar Watt", "hatch" }, { "Quasar Pulse", "sedan" }, { "Quasar Ionic GT", "coupe" }, { "Gilded Aero", "coupe" },
-		{ "Quasar Photon", "hyper" }, { "Gilded Oasis", "hyper" }, { "Quasar Singularity", "hyper" }, { "Gilded Regent", "limo" },
-		{ "Quasar Hover Prototype", "hyper" }, { "Gilded Midas", "hyper" }, { "Quasar Diamond Edge", "hyper" }, { "Gilded Fortune One", "hyper" },
+	{ Name = "The Future", Era = "2050+", Color = Color3.fromRGB(44, 46, 60), Dirt = Color3.fromRGB(150, 120, 200), Cars = {
+		{ "Cyber Hauler", "truck", "cybertruck" }, { "Hover Pod", "super", "hover" }, { "Angular Mk.II", "truck", "cybertruck" }, { "Maglev Glider", "super", "hover" },
+		{ "Mars Rover XL", "truck", "cybertruck" }, { "Antigrav Cruiser", "super", "hover" }, { "Stainless Brute", "truck", "cybertruck" }, { "Quantum Drift", "super", "hover" },
+		{ "Orbital Interceptor", "super", "hover" }, { "Warp Hauler", "truck", "cybertruck" }, { "Singularity", "super", "hover" }, { "Golden Future One", "super", "hover" },
 	} },
 }
 
@@ -179,6 +181,7 @@ for c, container in ipairs(Config.Containers) do
 			Id = "c" .. c .. "_" .. slot,
 			Name = entry[1],
 			Shape = entry[2],
+			Model = entry[3],
 			Container = c,
 			Slot = slot,
 			Rarity = rarity,

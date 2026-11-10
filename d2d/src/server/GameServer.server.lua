@@ -1640,3 +1640,27 @@ task.spawn(function()
 end)
 
 print("[D2D] Server ready!")
+
+---------------------------------------------------------------------
+-- Studio-only QA hook (never exists in a live server):
+--   game.ServerStorage.D2DDebug:Invoke("showroom", 3)  /  ("cash", 1e9)
+---------------------------------------------------------------------
+if game:GetService("RunService"):IsStudio() then
+	local debugFn = Instance.new("BindableFunction")
+	debugFn.Name = "D2DDebug"
+	debugFn.OnInvoke = function(cmd, value)
+		for player, plot in pairs(playerPlot) do
+			local profile = DataService.Get(player)
+			if profile then
+				if cmd == "showroom" then
+					profile.ShowroomLevel = math.clamp(value, 1, Config.MaxShowroomLevel)
+					applyShowroom(plot, player, profile)
+				elseif cmd == "cash" then
+					setCash(player, value)
+				end
+			end
+		end
+		return true
+	end
+	debugFn.Parent = game:GetService("ServerStorage")
+end

@@ -488,16 +488,34 @@ local function buildPlot(index, parent)
 		local function s(x, y, z)
 			return at(x, y, Z0 + z)
 		end
-		local wallColor = garage and Color3.fromRGB(200, 196, 188) or PLASTER
-		local trim = garage and Color3.fromRGB(70, 78, 96) or NAVY
+		-- every showroom level has its own style: street garage -> workshop -> dealership -> luxury -> future
+		local THEMES = {
+			{ Name = "street", Wall = Color3.fromRGB(150, 92, 74), Floor = Color3.fromRGB(92, 94, 100), Trim = Color3.fromRGB(46, 48, 56), Ceiling = Color3.fromRGB(70, 72, 80), Light = Color3.fromRGB(255, 214, 150), Front = Color3.fromRGB(150, 92, 74) },
+			{ Name = "workshop", Wall = Color3.fromRGB(196, 198, 202), Floor = Color3.fromRGB(110, 120, 134), Trim = Color3.fromRGB(40, 90, 170), Ceiling = Color3.fromRGB(200, 202, 208), Light = LAMP, Front = Color3.fromRGB(196, 198, 202) },
+			{ Name = "dealer", Wall = PLASTER, Floor = TILE, Trim = NAVY, Ceiling = Color3.fromRGB(226, 226, 230), Light = LAMP, Front = PLASTER },
+			{ Name = "luxury", Wall = Color3.fromRGB(120, 80, 56), Floor = Color3.fromRGB(44, 42, 48), Trim = Color3.fromRGB(222, 180, 90), Ceiling = Color3.fromRGB(236, 226, 210), Light = Color3.fromRGB(255, 226, 170), Front = Color3.fromRGB(70, 52, 44) },
+			{ Name = "future", Wall = Color3.fromRGB(232, 236, 244), Floor = Color3.fromRGB(196, 202, 214), Trim = Color3.fromRGB(40, 220, 255), Ceiling = Color3.fromRGB(240, 244, 250), Light = Color3.fromRGB(190, 245, 255), Front = Color3.fromRGB(232, 236, 244) },
+		}
+		local theme = THEMES[level]
+		-- the lot behind follows the same style
+		local LOT = { Color3.fromRGB(64, 64, 68), Color3.fromRGB(80, 84, 92), ASPHALT, Color3.fromRGB(44, 44, 50), Color3.fromRGB(176, 184, 198) }
+		if plot.LotPart then
+			plot.LotPart.Color = LOT[level]
+			for _, f in ipairs(plot.FenceParts) do
+				f.Color = theme.Name == "street" and Color3.fromRGB(70, 78, 96) or theme.Trim
+				f.Material = theme.Name == "future" and Enum.Material.Neon or Enum.Material.SmoothPlastic
+			end
+		end
+		local wallColor = theme.Wall
+		local trim = theme.Trim
 
 		-- floor, walls, roof
-		box(sm, "Floor", Vector3.new(W, FLOOR_Y, D), s(0, FLOOR_Y / 2, D / 2), garage and Color3.fromRGB(150, 152, 156) or TILE)
+		box(sm, "Floor", Vector3.new(W, FLOOR_Y, D), s(0, FLOOR_Y / 2, D / 2), theme.Floor, nil, { Reflectance = theme.Name == "luxury" and 0.12 or 0 })
 		for _, side in ipairs({ -1, 1 }) do
 			box(sm, "Wall", Vector3.new(1.2, H, D), s(side * W / 2, FLOOR_Y + H / 2, D / 2), wallColor)
 		end
 		box(sm, "Roof", Vector3.new(W + 1.6, 1, D + 1.6), s(0, FLOOR_Y + H + 0.5, D / 2), Color3.fromRGB(84, 88, 98))
-		deco(sm, "Ceiling", Vector3.new(W - 1.2, 0.4, D - 1.2), s(0, FLOOR_Y + H - 0.2, D / 2), Color3.fromRGB(214, 214, 218))
+		deco(sm, "Ceiling", Vector3.new(W - 1.2, 0.4, D - 1.2), s(0, FLOOR_Y + H - 0.2, D / 2), theme.Ceiling)
 
 		-- back wall with a wide open doorway into the lot
 		local backDoor = 18
@@ -517,14 +535,14 @@ local function buildPlot(index, parent)
 			if garage then
 				box(sm, "Front", Vector3.new(sideW, H, 1.2), s(side * (doorW / 2 + sideW / 2), FLOOR_Y + H / 2, 0), wallColor)
 			else
-				box(sm, "FrontPier", Vector3.new(1.6, H, 1.6), s(side * (W / 2 - 0.2), FLOOR_Y + H / 2, 0), PLASTER)
-				box(sm, "DoorPier", Vector3.new(1.6, H, 1.6), s(side * (doorW / 2 + 0.8), FLOOR_Y + H / 2, 0), PLASTER)
+				box(sm, "FrontPier", Vector3.new(1.6, H, 1.6), s(side * (W / 2 - 0.2), FLOOR_Y + H / 2, 0), theme.Front)
+				box(sm, "DoorPier", Vector3.new(1.6, H, 1.6), s(side * (doorW / 2 + 0.8), FLOOR_Y + H / 2, 0), theme.Front)
 				window(sm, s(side * (doorW / 2 + sideW / 2), FLOOR_Y + 0.5 + (H - 4) / 2, 0), sideW - 3, H - 4, 2, 1, 0.6)
 			end
 		end
-		box(sm, "Header", Vector3.new(doorW, H - doorH, 1.2), s(0, FLOOR_Y + doorH + (H - doorH) / 2, 0), garage and wallColor or PLASTER)
+		box(sm, "Header", Vector3.new(doorW, H - doorH, 1.2), s(0, FLOOR_Y + doorH + (H - doorH) / 2, 0), theme.Front)
 		if not garage then
-			box(sm, "SignBand", Vector3.new(W + 1, 3, 1.4), s(0, FLOOR_Y + H - 1.5, 0), PLASTER)
+			box(sm, "SignBand", Vector3.new(W + 1, 3, 1.4), s(0, FLOOR_Y + H - 1.5, 0), theme.Front)
 		end
 		local signBoard = box(sm, "SignBoard", Vector3.new(math.min(W - 8, 34), 2.6, 0.4), s(0, FLOOR_Y + (garage and doorH + 1.5 or H - 1.5), -0.9), trim)
 		table.insert(signLabels, surfaceText(signBoard, Enum.NormalId.Front, signText, GOLD, 26))
@@ -533,9 +551,58 @@ local function buildPlot(index, parent)
 		local k = 0
 		for z = 10, D - 8, 16 do
 			k = k + 1
-			local l = deco(sm, "CeilingLight", Vector3.new(6, 0.12, 2), s(0, FLOOR_Y + H - 0.45, z), LAMP, Enum.Material.Neon)
-			if k % 2 == 1 then
-				light(l, 28, 0.35)
+			local l = deco(sm, "CeilingLight", Vector3.new(6, 0.12, 2), s(0, FLOOR_Y + H - 0.45, z), theme.Light, Enum.Material.Neon)
+			-- interiors need their own light (the sun can't reach in): every lamp lights the room
+			light(l, 32, (theme.Name == "street" or theme.Name == "workshop") and 0.55 or 0.9, theme.Light)
+		end
+
+		-- style details for each level
+		local function decal(id, size, cf, face)
+			local panelPart = deco(sm, "Art", size, cf, Color3.new(1, 1, 1), nil, { Transparency = 1 })
+			local d = Instance.new("Decal")
+			d.Texture = "rbxassetid://" .. id
+			d.Face = face
+			d.Parent = panelPart
+			return panelPart
+		end
+		local GRAFFITI = { "94240820734263", "131777455527155", "70627886445938" }
+		if theme.Name == "street" then
+			-- spray-painted walls inside and out, bare warm bulbs
+			for i, side in ipairs({ -1, 1 }) do
+				for k2, z in ipairs({ D * 0.3, D * 0.7 }) do
+					local id = GRAFFITI[(i + k2) % #GRAFFITI + 1]
+					decal(id, Vector3.new(0.1, 6, 10.5), s(side * (W / 2 - 0.7), FLOOR_Y + 5.5, z), side < 0 and Enum.NormalId.Right or Enum.NormalId.Left)
+				end
+			end
+			local sw = (W - doorW) / 2
+			decal(GRAFFITI[1], Vector3.new(sw - 2, 5.5, 0.1), s(-(doorW / 2 + sw / 2), FLOOR_Y + 5, -0.7), Enum.NormalId.Front)
+			decal(GRAFFITI[3], Vector3.new(math.min(sw - 2, 6), 6, 0.1), s(doorW / 2 + sw / 2, FLOOR_Y + 5, -0.7), Enum.NormalId.Front)
+			decal(GRAFFITI[2], Vector3.new(14, 7.5, 0.1), s(-W / 2 - 0.7, FLOOR_Y + 5, D * 0.5) * CFrame.Angles(0, math.rad(90), 0), Enum.NormalId.Front)
+		elseif theme.Name == "workshop" then
+			-- yellow safety lines and a blue stripe along the walls
+			for _, side in ipairs({ -1, 1 }) do
+				deco(sm, "SafetyLine", Vector3.new(0.5, 0.04, D - 4), s(side * (W / 2 - 4), FLOOR_Y + 0.02, D / 2), Color3.fromRGB(250, 200, 40))
+				deco(sm, "WallStripe", Vector3.new(0.2, 1.2, D - 2), s(side * (W / 2 - 0.65), FLOOR_Y + 4, D / 2), trim)
+			end
+		elseif theme.Name == "luxury" then
+			-- gold trim lines, warm light
+			for _, side in ipairs({ -1, 1 }) do
+				deco(sm, "GoldTrim", Vector3.new(0.2, 0.3, D - 2), s(side * (W / 2 - 0.65), FLOOR_Y + H - 2, D / 2), trim, Enum.Material.Neon)
+				deco(sm, "GoldBase", Vector3.new(0.3, 0.5, D - 2), s(side * (W / 2 - 0.7), FLOOR_Y + 0.25, D / 2), trim)
+			end
+			deco(sm, "Carpet", Vector3.new(8, 0.05, D - 6), s(0, FLOOR_Y + 0.03, D / 2), Color3.fromRGB(120, 24, 36))
+		elseif theme.Name == "future" then
+			-- glowing cyan lines on the floor edges and ceiling, floor grid
+			for _, side in ipairs({ -1, 1 }) do
+				deco(sm, "NeonEdge", Vector3.new(0.3, 0.06, D - 2), s(side * (W / 2 - 1.2), FLOOR_Y + 0.03, D / 2), trim, Enum.Material.Neon)
+				deco(sm, "NeonCeil", Vector3.new(0.3, 0.2, D - 2), s(side * (W / 2 - 1.2), FLOOR_Y + H - 0.5, D / 2), trim, Enum.Material.Neon)
+			end
+			deco(sm, "RoofGlow", Vector3.new(W + 1.8, 0.4, 0.4), s(0, FLOOR_Y + H + 1, -0.9), trim, Enum.Material.Neon)
+			for _, side in ipairs({ -1, 1 }) do
+				deco(sm, "CornerGlow", Vector3.new(0.4, H, 0.4), s(side * (W / 2 + 0.9), FLOOR_Y + H / 2, -0.9), trim, Enum.Material.Neon)
+			end
+			for z = 12, D - 6, 12 do
+				deco(sm, "GridLine", Vector3.new(W - 4, 0.04, 0.12), s(0, FLOOR_Y + 0.02, z), Color3.fromRGB(150, 230, 255), Enum.Material.Neon)
 			end
 		end
 
@@ -561,7 +628,8 @@ local function buildPlot(index, parent)
 
 	--=========================== CONTAINER LOT (behind the showroom) ===========================
 	local lotD = LOT_Z1 - LOT_Z0
-	box(m, "Lot", Vector3.new(LOT_HALF * 2, 0.4, lotD), at(0, 0.2, (LOT_Z0 + LOT_Z1) / 2), ASPHALT)
+	plot.LotPart = box(m, "Lot", Vector3.new(LOT_HALF * 2, 0.4, lotD), at(0, 0.2, (LOT_Z0 + LOT_Z1) / 2), ASPHALT)
+	plot.FenceParts = {}
 	-- low fence on the sides; the back stays open where the truck backs in
 	local function fenceRun(from, to)
 		local dir = to - from
@@ -569,11 +637,11 @@ local function buildPlot(index, parent)
 		local mid = (from + to) / 2
 		local cf = CFrame.lookAt(mid, mid + dir.Unit)
 		for _, y in ipairs({ 1.6, 3.2 }) do
-			box(m, "FenceRail", Vector3.new(0.3, 0.5, len), cf * CFrame.new(0, y - mid.Y, 0), Color3.fromRGB(70, 78, 96))
+			table.insert(plot.FenceParts, box(m, "FenceRail", Vector3.new(0.3, 0.5, len), cf * CFrame.new(0, y - mid.Y, 0), Color3.fromRGB(70, 78, 96)))
 		end
 		local posts = math.max(1, math.floor(len / 12))
 		for i = 0, posts do
-			deco(m, "FencePost", Vector3.new(0.5, 4, 0.5), cf * CFrame.new(0, 2 - mid.Y, -len / 2 + i * len / posts), Color3.fromRGB(70, 78, 96))
+			table.insert(plot.FenceParts, deco(m, "FencePost", Vector3.new(0.5, 4, 0.5), cf * CFrame.new(0, 2 - mid.Y, -len / 2 + i * len / posts), Color3.fromRGB(70, 78, 96)))
 		end
 	end
 	for _, sx in ipairs({ -1, 1 }) do

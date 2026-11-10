@@ -143,44 +143,103 @@ local function juicy(b)
 	end)
 end
 
--- 3D push button like Clean a Painting: a darker "lip" underneath, a glossy face on top that
--- presses down when clicked, white outlined text. Setting button.Text / TextColor3 later still works.
+-- Painted UI kit (generated art, 9-sliced so it stretches to any size without blurring corners)
+local UI_ART = {
+	Green = { Id = "rbxassetid://112756175701104", W = 749, H = 298 },
+	Blue = { Id = "rbxassetid://131173130754843", W = 755, H = 305 },
+	Red = { Id = "rbxassetid://139684477436323", W = 759, H = 291 },
+	Gold = { Id = "rbxassetid://119845650258438", W = 759, H = 328 },
+	Panel = { Id = "rbxassetid://119283926119895", W = 748, H = 738 },
+	Bar = { Id = "rbxassetid://130594728260397", W = 750, H = 149 },
+	Close = "rbxassetid://105507747717488",
+}
+local function artFor(color)
+	if color == BTN.Green then
+		return UI_ART.Green
+	elseif color == BTN.Blue then
+		return UI_ART.Blue
+	elseif color == BTN.Red then
+		return UI_ART.Red
+	elseif color == BTN.Yellow or color == BTN.Orange then
+		return UI_ART.Gold
+	end
+	return nil
+end
+-- a pill image sliced so its round caps keep their shape at any button size
+local function slicedPill(parent, art)
+	local img = Instance.new("ImageLabel")
+	img.Name = "Art"
+	img.BackgroundTransparency = 1
+	img.Size = UDim2.new(1, 0, 1, 0)
+	img.Image = art.Id
+	img.ScaleType = Enum.ScaleType.Slice
+	local cap = math.floor(art.H / 2)
+	img.SliceCenter = Rect.new(cap, math.floor(art.H * 0.3), art.W - cap, math.floor(art.H * 0.7))
+	local function fit()
+		local h = img.AbsoluteSize.Y
+		if h > 0 then
+			-- caps are half the image height; scale them to half the button height
+			img.SliceScale = math.max(0.05, h / art.H)
+		end
+	end
+	img:GetPropertyChangedSignal("AbsoluteSize"):Connect(fit)
+	task.defer(fit)
+	img.Parent = parent
+	return img
+end
+
+-- Glossy push button: painted pill art, white outlined text, presses down when clicked.
+-- Setting button.Text / TextColor3 later still works.
 local function button(parent, props, color)
 	color = color or BTN.Green
+	local art = artFor(color)
+	local isClose = props.Text == "X"
 	local b = Instance.new("TextButton")
 	b.AutoButtonColor = false
-	b.BackgroundColor3 = color:Lerp(Color3.new(0, 0, 0), 0.38)
+	b.BackgroundTransparency = 1
 	b.TextTransparency = 1
 	b.Text = ""
-	corner(b, 14)
-	stroke(b, BLACK, 3)
-	local face = Instance.new("Frame")
-	face.Name = "Face"
-	face.BorderSizePixel = 0
-	face.Size = UDim2.new(1, 0, 1, -6)
-	face.BackgroundColor3 = WHITE
-	corner(face, 13)
-	local g = Instance.new("UIGradient")
-	g.Rotation = 90
-	g.Color = ColorSequence.new(color:Lerp(WHITE, 0.22), color)
-	g.Parent = face
-	local gloss = Instance.new("Frame")
-	gloss.Name = "Gloss"
-	gloss.BackgroundColor3 = WHITE
-	gloss.BackgroundTransparency = 0.8
-	gloss.BorderSizePixel = 0
-	gloss.Position = UDim2.new(0, 6, 0, 4)
-	gloss.Size = UDim2.new(1, -12, 0.38, 0)
-	corner(gloss, 9)
-	gloss.Parent = face
+	local face
+	if isClose then
+		face = Instance.new("ImageLabel")
+		face.Name = "Face"
+		face.BackgroundTransparency = 1
+		face.Image = UI_ART.Close
+		face.ScaleType = Enum.ScaleType.Fit
+		face.Size = UDim2.new(1, 0, 1, 0)
+	elseif art then
+		face = Instance.new("Frame")
+		face.Name = "Face"
+		face.BackgroundTransparency = 1
+		face.Size = UDim2.new(1, 0, 1, 0)
+		slicedPill(face, art)
+	else
+		-- plain colours (cream etc.) keep the drawn style
+		b.BackgroundTransparency = 0
+		b.BackgroundColor3 = color:Lerp(Color3.new(0, 0, 0), 0.38)
+		corner(b, 14)
+		stroke(b, BLACK, 3)
+		face = Instance.new("Frame")
+		face.Name = "Face"
+		face.BorderSizePixel = 0
+		face.Size = UDim2.new(1, 0, 1, -6)
+		face.BackgroundColor3 = WHITE
+		corner(face, 13)
+		local g = Instance.new("UIGradient")
+		g.Rotation = 90
+		g.Color = ColorSequence.new(color:Lerp(WHITE, 0.22), color)
+		g.Parent = face
+	end
 	local label = Instance.new("TextLabel")
 	label.Name = "Label"
 	label.BackgroundTransparency = 1
-	label.Position = UDim2.new(0, 10, 0.16, 0)
-	label.Size = UDim2.new(1, -20, 0.68, 0)
+	label.Position = UDim2.new(0, 14, 0.2, 0)
+	label.Size = UDim2.new(1, -28, 0.56, 0)
 	label.Font = Enum.Font.FredokaOne
 	label.TextScaled = true
 	label.TextColor3 = WHITE
+	label.ZIndex = 3
+	label.Visible = not isClose
 	textStroke(label, 2.5)
 	label.Parent = face
 	face.Parent = b
@@ -199,11 +258,13 @@ local function button(parent, props, color)
 	b:GetPropertyChangedSignal("TextColor3"):Connect(function()
 		label.TextColor3 = b.TextColor3
 	end)
+	local pressScale = Instance.new("UIScale")
+	pressScale.Parent = face
 	b.MouseButton1Down:Connect(function()
-		face.Position = UDim2.new(0, 0, 0, 4)
+		TweenService:Create(pressScale, TweenInfo.new(0.06), { Scale = 0.92 }):Play()
 	end)
 	local function release()
-		face.Position = UDim2.new(0, 0, 0, 0)
+		TweenService:Create(pressScale, TweenInfo.new(0.18, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play()
 	end
 	b.MouseButton1Up:Connect(release)
 	b.MouseLeave:Connect(release)
@@ -230,29 +291,17 @@ local function keyBadge(b, key)
 	return k
 end
 
--- cream "paper" panel: warm gradient, thick brown border and a thin inner highlight line
+-- cream "paper" panel: the painted panel art, 9-sliced so the thick rounded frame keeps its shape
 local function panel(parent, props)
-	local f = Instance.new("Frame")
-	f.BackgroundColor3 = WHITE
-	f.BorderSizePixel = 0
+	local f = Instance.new("ImageLabel")
+	f.BackgroundTransparency = 1
+	f.Image = UI_ART.Panel.Id
+	f.ScaleType = Enum.ScaleType.Slice
+	f.SliceCenter = Rect.new(110, 110, UI_ART.Panel.W - 110, UI_ART.Panel.H - 110)
+	f.SliceScale = 0.32
 	for k, v in pairs(props) do
 		f[k] = v
 	end
-	corner(f, 20)
-	stroke(f, BROWN, 5)
-	local g = Instance.new("UIGradient")
-	g.Rotation = 90
-	g.Color = ColorSequence.new(Color3.fromRGB(255, 249, 236), Color3.fromRGB(250, 233, 200))
-	g.Parent = f
-	local inner = Instance.new("Frame")
-	inner.Name = "InnerLine"
-	inner.BackgroundTransparency = 1
-	inner.Position = UDim2.new(0, 8, 0, 8)
-	inner.Size = UDim2.new(1, -16, 1, -16)
-	corner(inner, 14)
-	local is = stroke(inner, Color3.fromRGB(226, 192, 140), 2)
-	is.Transparency = 0.2
-	inner.Parent = f
 	f.Parent = parent
 	return f
 end
@@ -285,16 +334,14 @@ hud.Size = UDim2.new(1, 0, 1, 0)
 hud.Parent = gui
 
 local function pill(y, width, icon, color, strokeColor)
-	local f = Instance.new("Frame")
+	local f = Instance.new("ImageLabel")
+	f.BackgroundTransparency = 1
 	f.Position = UDim2.new(0, 46, 0, y)
-	f.Size = UDim2.new(0, width, 0, 50)
-	f.BackgroundColor3 = WHITE
-	corner(f, 14)
-	stroke(f, BROWN, 3)
-	local g = Instance.new("UIGradient")
-	g.Rotation = 90
-	g.Color = ColorSequence.new(Color3.fromRGB(255, 249, 234), Color3.fromRGB(246, 224, 182))
-	g.Parent = f
+	f.Size = UDim2.new(0, width, 0, 52)
+	f.Image = UI_ART.Panel.Id
+	f.ScaleType = Enum.ScaleType.Slice
+	f.SliceCenter = Rect.new(110, 110, UI_ART.Panel.W - 110, UI_ART.Panel.H - 110)
+	f.SliceScale = 0.2
 	f.Parent = hud
 	Icons.Make(icon, { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0, 2, 0.5, 0), Size = UDim2.new(0, 78, 0, 78), ZIndex = 3 }).Parent = f
 	local l = Instance.new("TextLabel")
@@ -313,6 +360,16 @@ local cashPill, cashLabel = pill(64, 250, "Cash", GREEN_TEXT, Color3.fromRGB(230
 local _, tokenLabel = pill(124, 160, "Coin", TEXT_DARK)
 local incomeLabel = text(hud, { Position = UDim2.new(0, 306, 0, 78), Size = UDim2.new(0, 200, 0, 26), Text = "", TextColor3 = Color3.fromRGB(130, 255, 140), TextXAlignment = Enum.TextXAlignment.Left })
 
+do
+	-- dark glossy capsule behind the delivery timer
+	local timerBack = Instance.new("Frame")
+	timerBack.AnchorPoint = Vector2.new(0.5, 0)
+	timerBack.Position = UDim2.new(0.5, 0, 0, 8)
+	timerBack.Size = UDim2.new(0, 250, 0, 68)
+	timerBack.BackgroundTransparency = 1
+	timerBack.Parent = hud
+	slicedPill(timerBack, UI_ART.Bar)
+end
 text(hud, { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 14), Size = UDim2.new(0, 260, 0, 18), Text = "CONTAINER DELIVERY", StrokeThickness = 1.5 })
 local timerLabel = text(hud, { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 34), Size = UDim2.new(0, 200, 0, 36), Text = "--:--", StrokeThickness = 2.5 })
 
@@ -1046,7 +1103,7 @@ local function refreshIndex()
 				n = n + 1
 			end
 		end
-		b.Text = "Container " .. c .. "\n" .. n .. " / 12"
+		b.Text = Config.Containers[c].Era .. "\n" .. n .. " / 12"
 		b.BackgroundColor3 = (c == selectedContainer) and BTN.Green or Color3.fromRGB(255, 225, 170)
 		b.TextColor3 = (c == selectedContainer) and WHITE or TEXT_DARK
 	end
@@ -1076,7 +1133,7 @@ for c = 1, #Config.Containers do
 	b.BackgroundColor3 = Color3.fromRGB(255, 225, 170)
 	b.AutoButtonColor = false
 	b.LayoutOrder = c
-	b.Text = "Container " .. c
+	b.Text = Config.Containers[c].Era
 	corner(b, 12)
 	stroke(b, BROWN, 3)
 	shine(b, 0.12)
@@ -1303,12 +1360,10 @@ end)
 local goalPill = Instance.new("Frame")
 goalPill.AnchorPoint = Vector2.new(0.5, 0)
 goalPill.Position = UDim2.new(0.5, 0, 0, 82)
-goalPill.Size = UDim2.new(0, 460, 0, 46)
-goalPill.BackgroundColor3 = Color3.fromRGB(24, 26, 34)
-goalPill.BackgroundTransparency = 0.2
-corner(goalPill, 23)
-stroke(goalPill, GOLD, 2).Transparency = 0.3
+goalPill.Size = UDim2.new(0, 480, 0, 50)
+goalPill.BackgroundTransparency = 1
 goalPill.Parent = hud
+slicedPill(goalPill, UI_ART.Bar).ZIndex = 0
 local goalTag = Instance.new("TextLabel")
 goalTag.BackgroundTransparency = 1
 goalTag.Position = UDim2.new(0, 18, 0, 0)

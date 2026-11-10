@@ -135,7 +135,7 @@ local function findAsset(car)
 		return nil
 	end
 	-- a model made for this exact car wins, then one for its body shape
-	local exact = cars:FindFirstChild(car.Id)
+	local exact = cars:FindFirstChild(car.Id) or (car.Model and cars:FindFirstChild(car.Model))
 	if exact then
 		return exact
 	end
@@ -718,56 +718,58 @@ Config.OfflineMaxSeconds = 8 * 3600
 -- Shapes are drawn by CarBuilder: mini, hatch, sedan, wagon, van, truck, suv,
 -- bus, classic, muscle, coupe, racer, super, hyper, limo, open
 ---------------------------------------------------------------------
+-- Ten containers = a timeline of the car, from the first horseless carriages to the future.
+-- Each car: { name, body shape (size), generated model key }
 Config.Containers = {
-	{ Name = "Scrapyard Finds", Color = Color3.fromRGB(232, 184, 116), Dirt = Color3.fromRGB(120, 95, 70), Cars = {
-		{ "Puddle Pip", "mini" }, { "Rattler Rustbucket", "sedan" }, { "Haulman Postie", "van" }, { "Puddle Pip Cabrio", "mini" },
-		{ "Rattler Wagon '82", "wagon" }, { "Haulman Tow-Tug", "truck" }, { "Rattler Hotshot", "hatch" }, { "Puddle Bubble", "mini" },
-		{ "Haulman Ice Cream Van", "van" }, { "Rattler Taxi Classic", "sedan" }, { "Puddle Pip Gold Rally", "mini" }, { "Rattler Junkyard King", "muscle" },
+	{ Name = "Brass Era Barn Finds", Era = "1900s-1920s", Color = Color3.fromRGB(232, 184, 116), Dirt = Color3.fromRGB(120, 95, 70), Cars = {
+		{ "Puttering Pioneer", "open", "brass" }, { "Tin Can Tourer", "classic", "vintage20s" }, { "Boneshaker Runabout", "open", "brass" }, { "Parlor Coach '24", "classic", "vintage20s" },
+		{ "Brasslamp Phaeton", "open", "brass" }, { "Doctor's Coupe", "classic", "vintage20s" }, { "Crank-Start Roadster", "open", "brass" }, { "Gilded Age Limousine", "limo", "vintage20s" },
+		{ "Speedster 1912", "open", "brass" }, { "Silver Whisper Tourer", "classic", "vintage20s" }, { "Royal Carriage Motor", "limo", "vintage20s" }, { "Golden Brass Runabout", "open", "brass" },
 	} },
-	{ Name = "City Streets", Color = Color3.fromRGB(226, 124, 52), Dirt = Color3.fromRGB(90, 90, 95), Cars = {
-		{ "Metrolux Commuter", "sedan" }, { "Sorano Kei", "mini" }, { "Metrolux Hatch GT", "hatch" }, { "Sorano Haru", "coupe" },
-		{ "Metrolux Cab", "sedan" }, { "Sorano Pocket Rocket", "hatch" }, { "Sorano Drift-R", "coupe" }, { "Metrolux Police Cruiser", "sedan" },
-		{ "Sorano Kei Turbo Widebody", "mini" }, { "Metrolux Limo Stretch", "limo" }, { "Sorano Neon Night", "coupe" }, { "Metrolux Executive Armored", "limo" },
+	{ Name = "Roaring Thirties", Era = "1930s", Color = Color3.fromRGB(226, 124, 52), Dirt = Color3.fromRGB(90, 80, 70), Cars = {
+		{ "Depot Delivery Sedan", "classic", "sedan30s" }, { "Breadline Coupe", "coupe", "streamline30s" }, { "Mob Boss Sedan", "classic", "sedan30s" }, { "Slipstream Arrow", "coupe", "streamline30s" },
+		{ "Speakeasy Special", "classic", "sedan30s" }, { "Deco Teardrop", "coupe", "streamline30s" }, { "Getaway Twelve", "classic", "sedan30s" }, { "Breeze Streamliner", "coupe", "streamline30s" },
+		{ "Pinstripe Phantom", "limo", "sedan30s" }, { "Silver Bullet Coupe", "coupe", "streamline30s" }, { "Grand Ballroom V16", "limo", "sedan30s" }, { "Gold Deco Dream", "coupe", "streamline30s" },
 	} },
-	{ Name = "Family and Adventure", Color = Color3.fromRGB(136, 82, 54), Dirt = Color3.fromRGB(110, 80, 50), Cars = {
-		{ "Bramble Trail", "suv" }, { "Haulman Family Van", "van" }, { "Bramble Pickup", "truck" }, { "Haulman Camper Mini", "van" },
-		{ "Bramble Badger 4x4", "suv" }, { "Haulman Surf Bus", "bus" }, { "Bramble Rock Crawler", "suv" }, { "Haulman Mega Camper", "bus" },
-		{ "Bramble Desert Raider", "truck" }, { "Bramble Six-Wheeler", "truck" }, { "Bramble Wildlands Black", "suv" }, { "Haulman Rolling Mansion", "bus" },
+	{ Name = "Fifties Diner Drive-In", Era = "1950s", Color = Color3.fromRGB(136, 82, 54), Dirt = Color3.fromRGB(110, 90, 70), Cars = {
+		{ "Milkshake Pickup", "truck", "pickup50s" }, { "Sock Hop Sedan", "classic", "tailfin50s" }, { "Farm Fresh Hauler", "truck", "pickup50s" }, { "Jukebox Cruiser", "classic", "tailfin50s" },
+		{ "Drive-In Deluxe", "classic", "tailfin50s" }, { "Rockabilly Pickup", "truck", "pickup50s" }, { "Rocket Fin '57", "classic", "tailfin50s" }, { "Chrome Canyon Hauler", "truck", "pickup50s" },
+		{ "Pink Cadence Convertible", "classic", "tailfin50s" }, { "Atomic Age Cruiser", "classic", "tailfin50s" }, { "Stardust Supreme", "classic", "tailfin50s" }, { "Golden Jet Fin", "classic", "tailfin50s" },
 	} },
-	{ Name = "Golden Age Classics", Color = Color3.fromRGB(188, 194, 206), Dirt = Color3.fromRGB(150, 140, 125), Cars = {
-		{ "Bellwether Sedan '55", "classic" }, { "Bellwether Coupe '58", "classic" }, { "Bellwether Convertible '57", "open" }, { "Bellwether Diner Wagon", "wagon" },
-		{ "Bellwether Tailfin '59", "classic" }, { "Bellwether Roadster", "open" }, { "Bellwether Moonglow", "classic" }, { "Bellwether Woodie Surf", "wagon" },
-		{ "Bellwether Jet Age Concept", "super" }, { "Bellwether Pink Cadence", "open" }, { "Bellwether Royal Parade", "limo" }, { "Bellwether Golden Gleam", "classic" },
+	{ Name = "Swinging Sixties", Era = "1960s", Color = Color3.fromRGB(188, 194, 206), Dirt = Color3.fromRGB(120, 110, 95), Cars = {
+		{ "Flower Power Bus", "van", "microbus60s" }, { "Riviera Roadster", "open", "convertible60s" }, { "Surf Safari Van", "van", "microbus60s" }, { "Monaco Spider", "open", "convertible60s" },
+		{ "Peace Wagon", "van", "microbus60s" }, { "Le Mans Roadster", "open", "convertible60s" }, { "Woodstock Camper", "van", "microbus60s" }, { "Grand Tourer '66", "open", "convertible60s" },
+		{ "Spy Car Silver", "open", "convertible60s" }, { "Psychedelic Splitscreen", "van", "microbus60s" }, { "Jet Set Convertible", "open", "convertible60s" }, { "Golden Summer Bus", "van", "microbus60s" },
 	} },
-	{ Name = "Muscle Mayhem", Color = Color3.fromRGB(60, 120, 225), Dirt = Color3.fromRGB(60, 55, 50), Cars = {
-		{ "Thunderjaw Brawler", "muscle" }, { "Rattler Sprint 70", "muscle" }, { "Thunderjaw Fastback 69", "muscle" }, { "Rattler Bandit", "muscle" },
-		{ "Thunderjaw Hammerhead", "muscle" }, { "Rattler Pursuit", "sedan" }, { "Thunderjaw Supercharger", "muscle" }, { "Rattler Midnight Run", "muscle" },
-		{ "Thunderjaw Drag King", "racer" }, { "Thunderjaw Twin-Blower", "muscle" }, { "Thunderjaw Inferno", "muscle" }, { "Thunderjaw Big Daddy Gold", "muscle" },
+	{ Name = "Seventies Muscle", Era = "1970s", Color = Color3.fromRGB(60, 120, 225), Dirt = Color3.fromRGB(80, 70, 60), Cars = {
+		{ "Bandit Brawler", "muscle", "muscle70s" }, { "Doorstop Wedge", "coupe", "wedge70s" }, { "Stripe Hammer", "muscle", "muscle70s" }, { "Disco Wedge", "coupe", "wedge70s" },
+		{ "Big Block Bruiser", "muscle", "muscle70s" }, { "Origami GT", "coupe", "wedge70s" }, { "Thunder Scoop 454", "muscle", "muscle70s" }, { "Prism Pointer", "coupe", "wedge70s" },
+		{ "Blaze Inferno", "muscle", "muscle70s" }, { "Laser Wedge Turbo", "coupe", "wedge70s" }, { "Twin Blower Beast", "muscle", "muscle70s" }, { "Golden Eagle Muscle", "muscle", "muscle70s" },
 	} },
-	{ Name = "Tuner Nights", Color = Color3.fromRGB(64, 182, 96), Dirt = Color3.fromRGB(45, 45, 50), Cars = {
-		{ "Hikari Tsubame", "hatch" }, { "Sorano Shiro", "sedan" }, { "Hikari Kaze GT", "coupe" }, { "Sorano Spinner", "coupe" },
-		{ "Hikari Touge", "coupe" }, { "Sorano Wing", "sedan" }, { "Hikari Kaze GT-Z", "coupe" }, { "Sorano Midnight Bay", "coupe" },
-		{ "Hikari Raijin", "coupe" }, { "Sorano Spinner Twin-Rotor", "racer" }, { "Hikari Daimyo", "super" }, { "Sorano Neo-Tokyo", "super" },
+	{ Name = "Neon Eighties", Era = "1980s", Color = Color3.fromRGB(64, 182, 96), Dirt = Color3.fromRGB(70, 70, 80), Cars = {
+		{ "Boombox Hatch", "hatch", "hatch80s" }, { "Pop-Up Prowler", "coupe", "popup80s" }, { "Arcade Hatch GT", "hatch", "hatch80s" }, { "Synthwave Coupe", "coupe", "popup80s" },
+		{ "Mixtape Hot Hatch", "hatch", "hatch80s" }, { "Night Runner", "coupe", "popup80s" }, { "Cassette Turbo", "hatch", "hatch80s" }, { "Miami Nights Coupe", "coupe", "popup80s" },
+		{ "Group B Hatch", "hatch", "hatch80s" }, { "Outrun Redhead", "coupe", "popup80s" }, { "Neon Grid Racer", "coupe", "popup80s" }, { "Gold Laserdisc GT", "coupe", "popup80s" },
 	} },
-	{ Name = "Euro Sport", Color = Color3.fromRGB(150, 82, 225), Dirt = Color3.fromRGB(200, 200, 205), Cars = {
-		{ "Strassen Kompakt", "hatch" }, { "Lucenti Piccola", "mini" }, { "Strassen Coupe 3", "coupe" }, { "Lucenti Aria", "open" },
-		{ "Strassen Bahnsturm", "coupe" }, { "Lucenti GT Classico", "classic" }, { "Strassen Flachbau", "racer" }, { "Lucenti Gran Turismo V8", "coupe" },
-		{ "Strassen Ringmeister", "racer" }, { "Lucenti Rosso Fuoco", "super" }, { "Strassen Schwarzwald Black", "super" }, { "Lucenti Principessa", "coupe" },
+	{ Name = "Nineties Tuners", Era = "1990s", Color = Color3.fromRGB(150, 82, 225), Dirt = Color3.fromRGB(60, 60, 70), Cars = {
+		{ "Mountain Pass Hatch", "hatch", "rally90s" }, { "Wing King Coupe", "coupe", "tuner90s" }, { "Gravel Stage Hatch", "hatch", "rally90s" }, { "Touge Drifter", "coupe", "tuner90s" },
+		{ "Rally Blue Rocket", "hatch", "rally90s" }, { "Street Spec R", "coupe", "tuner90s" }, { "Snowstage Hatch", "hatch", "rally90s" }, { "Midnight Highway", "coupe", "tuner90s" },
+		{ "Widebody Monster", "coupe", "tuner90s" }, { "Championship Rally", "hatch", "rally90s" }, { "Twin Turbo Legend", "coupe", "tuner90s" }, { "Gold Wing Spec", "coupe", "tuner90s" },
 	} },
-	{ Name = "Race Legends", Color = Color3.fromRGB(218, 56, 56), Dirt = Color3.fromRGB(100, 75, 50), Cars = {
-		{ "Vellora Club Racer", "racer" }, { "Strassen Touring Cup", "sedan" }, { "Vellora Rally Stage", "hatch" }, { "Strassen Endurance '72", "racer" },
-		{ "Vellora Le Grand", "racer" }, { "Strassen Group-B Monster", "hatch" }, { "Vellora Open-Wheel 90", "racer" }, { "Strassen Hillclimb Beast", "racer" },
-		{ "Vellora Prototype X", "hyper" }, { "Strassen Endurance Hybrid", "racer" }, { "Vellora Championship Winner", "racer" }, { "Vellora Golden Trophy", "racer" },
+	{ Name = "Modern Streets", Era = "2010s-2020s", Color = Color3.fromRGB(218, 56, 56), Dirt = Color3.fromRGB(150, 140, 125), Cars = {
+		{ "Volt Commuter", "sedan", "ev2020" }, { "Family Crossover", "suv", "suv2020" }, { "Silent Sedan", "sedan", "ev2020" }, { "Trailhead SUV", "suv", "suv2020" },
+		{ "Overdrive Performance", "sedan", "ev2020" }, { "Summit Explorer", "suv", "suv2020" }, { "Autopilot Luxe", "sedan", "ev2020" }, { "Highland Ranger", "suv", "suv2020" },
+		{ "Hyperdrive Sedan", "sedan", "ev2020" }, { "Black Edition SUV", "suv", "suv2020" }, { "Executive Electric", "sedan", "ev2020" }, { "Golden Crossover", "suv", "suv2020" },
 	} },
-	{ Name = "Supercars", Color = Color3.fromRGB(242, 192, 50), Dirt = Color3.fromRGB(210, 180, 120), Cars = {
-		{ "Vellora Furia", "super" }, { "Lucenti Veloce", "coupe" }, { "Vellora Furia Spider", "super" }, { "Lucenti Tempesta", "super" },
-		{ "Vellora Falco", "super" }, { "Lucenti Ombra", "super" }, { "Vellora Saetta", "super" }, { "Lucenti Vortice", "super" },
-		{ "Vellora Falco Ultimo", "super" }, { "Lucenti Fulmine", "super" }, { "Vellora Carbonio", "super" }, { "Vellora Imperatore", "super" },
+	{ Name = "Supercars", Era = "Today's fastest", Color = Color3.fromRGB(242, 192, 50), Dirt = Color3.fromRGB(210, 180, 120), Cars = {
+		{ "Furia Spider", "super", "supercar" }, { "Tempesta GT", "super", "supercar" }, { "Saetta V10", "super", "supercar" }, { "Aero Wing", "hyper", "hypercar" },
+		{ "Falco Ultimo", "super", "supercar" }, { "Vortice Hybrid", "hyper", "hypercar" }, { "Carbonio R", "super", "supercar" }, { "Velocita 1500", "hyper", "hypercar" },
+		{ "Imperatore V12", "super", "supercar" }, { "Track Monster", "hyper", "hypercar" }, { "Record Breaker", "hyper", "hypercar" }, { "Golden Hypercar", "hyper", "hypercar" },
 	} },
-	{ Name = "Hypercars and Future", Color = Color3.fromRGB(44, 46, 60), Dirt = Color3.fromRGB(150, 120, 200), Cars = {
-		{ "Quasar Watt", "hatch" }, { "Quasar Pulse", "sedan" }, { "Quasar Ionic GT", "coupe" }, { "Gilded Aero", "coupe" },
-		{ "Quasar Photon", "hyper" }, { "Gilded Oasis", "hyper" }, { "Quasar Singularity", "hyper" }, { "Gilded Regent", "limo" },
-		{ "Quasar Hover Prototype", "hyper" }, { "Gilded Midas", "hyper" }, { "Quasar Diamond Edge", "hyper" }, { "Gilded Fortune One", "hyper" },
+	{ Name = "The Future", Era = "2050+", Color = Color3.fromRGB(44, 46, 60), Dirt = Color3.fromRGB(150, 120, 200), Cars = {
+		{ "Cyber Hauler", "truck", "cybertruck" }, { "Hover Pod", "super", "hover" }, { "Angular Mk.II", "truck", "cybertruck" }, { "Maglev Glider", "super", "hover" },
+		{ "Mars Rover XL", "truck", "cybertruck" }, { "Antigrav Cruiser", "super", "hover" }, { "Stainless Brute", "truck", "cybertruck" }, { "Quantum Drift", "super", "hover" },
+		{ "Orbital Interceptor", "super", "hover" }, { "Warp Hauler", "truck", "cybertruck" }, { "Singularity", "super", "hover" }, { "Golden Future One", "super", "hover" },
 	} },
 }
 
@@ -790,6 +792,7 @@ for c, container in ipairs(Config.Containers) do
 			Id = "c" .. c .. "_" .. slot,
 			Name = entry[1],
 			Shape = entry[2],
+			Model = entry[3],
 			Container = c,
 			Slot = slot,
 			Rarity = rarity,
@@ -106997,6 +107000,30 @@ task.spawn(function()
 end)
 
 print("[D2D] Server ready!")
+
+---------------------------------------------------------------------
+-- Studio-only QA hook (never exists in a live server):
+--   game.ServerStorage.D2DDebug:Invoke("showroom", 3)  /  ("cash", 1e9)
+---------------------------------------------------------------------
+if game:GetService("RunService"):IsStudio() then
+	local debugFn = Instance.new("BindableFunction")
+	debugFn.Name = "D2DDebug"
+	debugFn.OnInvoke = function(cmd, value)
+		for player, plot in pairs(playerPlot) do
+			local profile = DataService.Get(player)
+			if profile then
+				if cmd == "showroom" then
+					profile.ShowroomLevel = math.clamp(value, 1, Config.MaxShowroomLevel)
+					applyShowroom(plot, player, profile)
+				elseif cmd == "cash" then
+					setCash(player, value)
+				end
+			end
+		end
+		return true
+	end
+	debugFn.Parent = game:GetService("ServerStorage")
+end
 ]]></ProtectedString></Properties></Item><Item class="ModuleScript" referent="RBX0000000F"><Properties><string name="Name">MapBuilder</string><ProtectedString name="Source"><![CDATA[-- MapBuilder: builds the world and the 6 player plots when the server starts.
 -- Plots face each other across a boulevard. Each plot: a showroom that grows with its level
 -- (level 1 is a small garage), a large yard beside it with the upgrade stations, the parking lot
@@ -107487,16 +107514,34 @@ local function buildPlot(index, parent)
 		local function s(x, y, z)
 			return at(x, y, Z0 + z)
 		end
-		local wallColor = garage and Color3.fromRGB(200, 196, 188) or PLASTER
-		local trim = garage and Color3.fromRGB(70, 78, 96) or NAVY
+		-- every showroom level has its own style: street garage -> workshop -> dealership -> luxury -> future
+		local THEMES = {
+			{ Name = "street", Wall = Color3.fromRGB(150, 92, 74), Floor = Color3.fromRGB(92, 94, 100), Trim = Color3.fromRGB(46, 48, 56), Ceiling = Color3.fromRGB(70, 72, 80), Light = Color3.fromRGB(255, 214, 150), Front = Color3.fromRGB(150, 92, 74) },
+			{ Name = "workshop", Wall = Color3.fromRGB(196, 198, 202), Floor = Color3.fromRGB(110, 120, 134), Trim = Color3.fromRGB(40, 90, 170), Ceiling = Color3.fromRGB(200, 202, 208), Light = LAMP, Front = Color3.fromRGB(196, 198, 202) },
+			{ Name = "dealer", Wall = PLASTER, Floor = TILE, Trim = NAVY, Ceiling = Color3.fromRGB(226, 226, 230), Light = LAMP, Front = PLASTER },
+			{ Name = "luxury", Wall = Color3.fromRGB(46, 44, 50), Floor = Color3.fromRGB(30, 30, 36), Trim = Color3.fromRGB(212, 170, 80), Ceiling = Color3.fromRGB(40, 38, 44), Light = Color3.fromRGB(255, 226, 170), Front = Color3.fromRGB(46, 44, 50) },
+			{ Name = "future", Wall = Color3.fromRGB(232, 236, 244), Floor = Color3.fromRGB(196, 202, 214), Trim = Color3.fromRGB(40, 220, 255), Ceiling = Color3.fromRGB(240, 244, 250), Light = Color3.fromRGB(190, 245, 255), Front = Color3.fromRGB(232, 236, 244) },
+		}
+		local theme = THEMES[level]
+		-- the lot behind follows the same style
+		local LOT = { Color3.fromRGB(64, 64, 68), Color3.fromRGB(80, 84, 92), ASPHALT, Color3.fromRGB(44, 44, 50), Color3.fromRGB(176, 184, 198) }
+		if plot.LotPart then
+			plot.LotPart.Color = LOT[level]
+			for _, f in ipairs(plot.FenceParts) do
+				f.Color = theme.Name == "street" and Color3.fromRGB(70, 78, 96) or theme.Trim
+				f.Material = theme.Name == "future" and Enum.Material.Neon or Enum.Material.SmoothPlastic
+			end
+		end
+		local wallColor = theme.Wall
+		local trim = theme.Trim
 
 		-- floor, walls, roof
-		box(sm, "Floor", Vector3.new(W, FLOOR_Y, D), s(0, FLOOR_Y / 2, D / 2), garage and Color3.fromRGB(150, 152, 156) or TILE)
+		box(sm, "Floor", Vector3.new(W, FLOOR_Y, D), s(0, FLOOR_Y / 2, D / 2), theme.Floor, nil, { Reflectance = theme.Name == "luxury" and 0.12 or 0 })
 		for _, side in ipairs({ -1, 1 }) do
 			box(sm, "Wall", Vector3.new(1.2, H, D), s(side * W / 2, FLOOR_Y + H / 2, D / 2), wallColor)
 		end
 		box(sm, "Roof", Vector3.new(W + 1.6, 1, D + 1.6), s(0, FLOOR_Y + H + 0.5, D / 2), Color3.fromRGB(84, 88, 98))
-		deco(sm, "Ceiling", Vector3.new(W - 1.2, 0.4, D - 1.2), s(0, FLOOR_Y + H - 0.2, D / 2), Color3.fromRGB(214, 214, 218))
+		deco(sm, "Ceiling", Vector3.new(W - 1.2, 0.4, D - 1.2), s(0, FLOOR_Y + H - 0.2, D / 2), theme.Ceiling)
 
 		-- back wall with a wide open doorway into the lot
 		local backDoor = 18
@@ -107516,14 +107561,14 @@ local function buildPlot(index, parent)
 			if garage then
 				box(sm, "Front", Vector3.new(sideW, H, 1.2), s(side * (doorW / 2 + sideW / 2), FLOOR_Y + H / 2, 0), wallColor)
 			else
-				box(sm, "FrontPier", Vector3.new(1.6, H, 1.6), s(side * (W / 2 - 0.2), FLOOR_Y + H / 2, 0), PLASTER)
-				box(sm, "DoorPier", Vector3.new(1.6, H, 1.6), s(side * (doorW / 2 + 0.8), FLOOR_Y + H / 2, 0), PLASTER)
+				box(sm, "FrontPier", Vector3.new(1.6, H, 1.6), s(side * (W / 2 - 0.2), FLOOR_Y + H / 2, 0), theme.Front)
+				box(sm, "DoorPier", Vector3.new(1.6, H, 1.6), s(side * (doorW / 2 + 0.8), FLOOR_Y + H / 2, 0), theme.Front)
 				window(sm, s(side * (doorW / 2 + sideW / 2), FLOOR_Y + 0.5 + (H - 4) / 2, 0), sideW - 3, H - 4, 2, 1, 0.6)
 			end
 		end
-		box(sm, "Header", Vector3.new(doorW, H - doorH, 1.2), s(0, FLOOR_Y + doorH + (H - doorH) / 2, 0), garage and wallColor or PLASTER)
+		box(sm, "Header", Vector3.new(doorW, H - doorH, 1.2), s(0, FLOOR_Y + doorH + (H - doorH) / 2, 0), theme.Front)
 		if not garage then
-			box(sm, "SignBand", Vector3.new(W + 1, 3, 1.4), s(0, FLOOR_Y + H - 1.5, 0), PLASTER)
+			box(sm, "SignBand", Vector3.new(W + 1, 3, 1.4), s(0, FLOOR_Y + H - 1.5, 0), theme.Front)
 		end
 		local signBoard = box(sm, "SignBoard", Vector3.new(math.min(W - 8, 34), 2.6, 0.4), s(0, FLOOR_Y + (garage and doorH + 1.5 or H - 1.5), -0.9), trim)
 		table.insert(signLabels, surfaceText(signBoard, Enum.NormalId.Front, signText, GOLD, 26))
@@ -107532,9 +107577,55 @@ local function buildPlot(index, parent)
 		local k = 0
 		for z = 10, D - 8, 16 do
 			k = k + 1
-			local l = deco(sm, "CeilingLight", Vector3.new(6, 0.12, 2), s(0, FLOOR_Y + H - 0.45, z), LAMP, Enum.Material.Neon)
+			local l = deco(sm, "CeilingLight", Vector3.new(6, 0.12, 2), s(0, FLOOR_Y + H - 0.45, z), theme.Light, Enum.Material.Neon)
 			if k % 2 == 1 then
-				light(l, 28, 0.35)
+				light(l, 28, 0.35, theme.Light)
+			end
+		end
+
+		-- style details for each level
+		local function decal(id, size, cf, face)
+			local panelPart = deco(sm, "Art", size, cf, Color3.new(1, 1, 1), nil, { Transparency = 1 })
+			local d = Instance.new("Decal")
+			d.Texture = "rbxassetid://" .. id
+			d.Face = face
+			d.Parent = panelPart
+			return panelPart
+		end
+		local GRAFFITI = { "94240820734263", "131777455527155", "70627886445938" }
+		if theme.Name == "street" then
+			-- spray-painted walls inside and out, bare warm bulbs
+			for i, side in ipairs({ -1, 1 }) do
+				for k2, z in ipairs({ D * 0.3, D * 0.7 }) do
+					local id = GRAFFITI[(i + k2) % #GRAFFITI + 1]
+					decal(id, Vector3.new(0.1, 6, 10.5), s(side * (W / 2 - 0.7), FLOOR_Y + 5.5, z), side < 0 and Enum.NormalId.Right or Enum.NormalId.Left)
+				end
+			end
+			local sw = (W - doorW) / 2
+			decal(GRAFFITI[1], Vector3.new(sw - 2, 5.5, 0.1), s(-(doorW / 2 + sw / 2), FLOOR_Y + 5, -0.7), Enum.NormalId.Front)
+			decal(GRAFFITI[3], Vector3.new(math.min(sw - 2, 6), 6, 0.1), s(doorW / 2 + sw / 2, FLOOR_Y + 5, -0.7), Enum.NormalId.Front)
+			decal(GRAFFITI[2], Vector3.new(14, 7.5, 0.1), s(-W / 2 - 0.7, FLOOR_Y + 5, D * 0.5) * CFrame.Angles(0, math.rad(90), 0), Enum.NormalId.Front)
+		elseif theme.Name == "workshop" then
+			-- yellow safety lines and a blue stripe along the walls
+			for _, side in ipairs({ -1, 1 }) do
+				deco(sm, "SafetyLine", Vector3.new(0.5, 0.04, D - 4), s(side * (W / 2 - 4), FLOOR_Y + 0.02, D / 2), Color3.fromRGB(250, 200, 40))
+				deco(sm, "WallStripe", Vector3.new(0.2, 1.2, D - 2), s(side * (W / 2 - 0.65), FLOOR_Y + 4, D / 2), trim)
+			end
+		elseif theme.Name == "luxury" then
+			-- gold trim lines, warm light
+			for _, side in ipairs({ -1, 1 }) do
+				deco(sm, "GoldTrim", Vector3.new(0.2, 0.3, D - 2), s(side * (W / 2 - 0.65), FLOOR_Y + H - 2, D / 2), trim, Enum.Material.Neon)
+				deco(sm, "GoldBase", Vector3.new(0.3, 0.5, D - 2), s(side * (W / 2 - 0.7), FLOOR_Y + 0.25, D / 2), trim)
+			end
+			deco(sm, "Carpet", Vector3.new(8, 0.05, D - 6), s(0, FLOOR_Y + 0.03, D / 2), Color3.fromRGB(120, 24, 36))
+		elseif theme.Name == "future" then
+			-- glowing cyan lines on the floor edges and ceiling, floor grid
+			for _, side in ipairs({ -1, 1 }) do
+				deco(sm, "NeonEdge", Vector3.new(0.3, 0.06, D - 2), s(side * (W / 2 - 1.2), FLOOR_Y + 0.03, D / 2), trim, Enum.Material.Neon)
+				deco(sm, "NeonCeil", Vector3.new(0.3, 0.2, D - 2), s(side * (W / 2 - 1.2), FLOOR_Y + H - 0.5, D / 2), trim, Enum.Material.Neon)
+			end
+			for z = 12, D - 6, 12 do
+				deco(sm, "GridLine", Vector3.new(W - 4, 0.04, 0.12), s(0, FLOOR_Y + 0.02, z), Color3.fromRGB(150, 230, 255), Enum.Material.Neon)
 			end
 		end
 
@@ -107560,7 +107651,8 @@ local function buildPlot(index, parent)
 
 	--=========================== CONTAINER LOT (behind the showroom) ===========================
 	local lotD = LOT_Z1 - LOT_Z0
-	box(m, "Lot", Vector3.new(LOT_HALF * 2, 0.4, lotD), at(0, 0.2, (LOT_Z0 + LOT_Z1) / 2), ASPHALT)
+	plot.LotPart = box(m, "Lot", Vector3.new(LOT_HALF * 2, 0.4, lotD), at(0, 0.2, (LOT_Z0 + LOT_Z1) / 2), ASPHALT)
+	plot.FenceParts = {}
 	-- low fence on the sides; the back stays open where the truck backs in
 	local function fenceRun(from, to)
 		local dir = to - from
@@ -107568,11 +107660,11 @@ local function buildPlot(index, parent)
 		local mid = (from + to) / 2
 		local cf = CFrame.lookAt(mid, mid + dir.Unit)
 		for _, y in ipairs({ 1.6, 3.2 }) do
-			box(m, "FenceRail", Vector3.new(0.3, 0.5, len), cf * CFrame.new(0, y - mid.Y, 0), Color3.fromRGB(70, 78, 96))
+			table.insert(plot.FenceParts, box(m, "FenceRail", Vector3.new(0.3, 0.5, len), cf * CFrame.new(0, y - mid.Y, 0), Color3.fromRGB(70, 78, 96)))
 		end
 		local posts = math.max(1, math.floor(len / 12))
 		for i = 0, posts do
-			deco(m, "FencePost", Vector3.new(0.5, 4, 0.5), cf * CFrame.new(0, 2 - mid.Y, -len / 2 + i * len / posts), Color3.fromRGB(70, 78, 96))
+			table.insert(plot.FenceParts, deco(m, "FencePost", Vector3.new(0.5, 4, 0.5), cf * CFrame.new(0, 2 - mid.Y, -len / 2 + i * len / posts), Color3.fromRGB(70, 78, 96)))
 		end
 	end
 	for _, sx in ipairs({ -1, 1 }) do
@@ -107966,44 +108058,103 @@ local function juicy(b)
 	end)
 end
 
--- 3D push button like Clean a Painting: a darker "lip" underneath, a glossy face on top that
--- presses down when clicked, white outlined text. Setting button.Text / TextColor3 later still works.
+-- Painted UI kit (generated art, 9-sliced so it stretches to any size without blurring corners)
+local UI_ART = {
+	Green = { Id = "rbxassetid://112756175701104", W = 749, H = 298 },
+	Blue = { Id = "rbxassetid://131173130754843", W = 755, H = 305 },
+	Red = { Id = "rbxassetid://139684477436323", W = 759, H = 291 },
+	Gold = { Id = "rbxassetid://119845650258438", W = 759, H = 328 },
+	Panel = { Id = "rbxassetid://119283926119895", W = 748, H = 738 },
+	Bar = { Id = "rbxassetid://130594728260397", W = 750, H = 149 },
+	Close = "rbxassetid://105507747717488",
+}
+local function artFor(color)
+	if color == BTN.Green then
+		return UI_ART.Green
+	elseif color == BTN.Blue then
+		return UI_ART.Blue
+	elseif color == BTN.Red then
+		return UI_ART.Red
+	elseif color == BTN.Yellow or color == BTN.Orange then
+		return UI_ART.Gold
+	end
+	return nil
+end
+-- a pill image sliced so its round caps keep their shape at any button size
+local function slicedPill(parent, art)
+	local img = Instance.new("ImageLabel")
+	img.Name = "Art"
+	img.BackgroundTransparency = 1
+	img.Size = UDim2.new(1, 0, 1, 0)
+	img.Image = art.Id
+	img.ScaleType = Enum.ScaleType.Slice
+	local cap = math.floor(art.H / 2)
+	img.SliceCenter = Rect.new(cap, math.floor(art.H * 0.3), art.W - cap, math.floor(art.H * 0.7))
+	local function fit()
+		local h = img.AbsoluteSize.Y
+		if h > 0 then
+			-- caps are half the image height; scale them to half the button height
+			img.SliceScale = math.max(0.05, h / art.H)
+		end
+	end
+	img:GetPropertyChangedSignal("AbsoluteSize"):Connect(fit)
+	task.defer(fit)
+	img.Parent = parent
+	return img
+end
+
+-- Glossy push button: painted pill art, white outlined text, presses down when clicked.
+-- Setting button.Text / TextColor3 later still works.
 local function button(parent, props, color)
 	color = color or BTN.Green
+	local art = artFor(color)
+	local isClose = props.Text == "X"
 	local b = Instance.new("TextButton")
 	b.AutoButtonColor = false
-	b.BackgroundColor3 = color:Lerp(Color3.new(0, 0, 0), 0.38)
+	b.BackgroundTransparency = 1
 	b.TextTransparency = 1
 	b.Text = ""
-	corner(b, 14)
-	stroke(b, BLACK, 3)
-	local face = Instance.new("Frame")
-	face.Name = "Face"
-	face.BorderSizePixel = 0
-	face.Size = UDim2.new(1, 0, 1, -6)
-	face.BackgroundColor3 = WHITE
-	corner(face, 13)
-	local g = Instance.new("UIGradient")
-	g.Rotation = 90
-	g.Color = ColorSequence.new(color:Lerp(WHITE, 0.22), color)
-	g.Parent = face
-	local gloss = Instance.new("Frame")
-	gloss.Name = "Gloss"
-	gloss.BackgroundColor3 = WHITE
-	gloss.BackgroundTransparency = 0.8
-	gloss.BorderSizePixel = 0
-	gloss.Position = UDim2.new(0, 6, 0, 4)
-	gloss.Size = UDim2.new(1, -12, 0.38, 0)
-	corner(gloss, 9)
-	gloss.Parent = face
+	local face
+	if isClose then
+		face = Instance.new("ImageLabel")
+		face.Name = "Face"
+		face.BackgroundTransparency = 1
+		face.Image = UI_ART.Close
+		face.ScaleType = Enum.ScaleType.Fit
+		face.Size = UDim2.new(1, 0, 1, 0)
+	elseif art then
+		face = Instance.new("Frame")
+		face.Name = "Face"
+		face.BackgroundTransparency = 1
+		face.Size = UDim2.new(1, 0, 1, 0)
+		slicedPill(face, art)
+	else
+		-- plain colours (cream etc.) keep the drawn style
+		b.BackgroundTransparency = 0
+		b.BackgroundColor3 = color:Lerp(Color3.new(0, 0, 0), 0.38)
+		corner(b, 14)
+		stroke(b, BLACK, 3)
+		face = Instance.new("Frame")
+		face.Name = "Face"
+		face.BorderSizePixel = 0
+		face.Size = UDim2.new(1, 0, 1, -6)
+		face.BackgroundColor3 = WHITE
+		corner(face, 13)
+		local g = Instance.new("UIGradient")
+		g.Rotation = 90
+		g.Color = ColorSequence.new(color:Lerp(WHITE, 0.22), color)
+		g.Parent = face
+	end
 	local label = Instance.new("TextLabel")
 	label.Name = "Label"
 	label.BackgroundTransparency = 1
-	label.Position = UDim2.new(0, 10, 0.16, 0)
-	label.Size = UDim2.new(1, -20, 0.68, 0)
+	label.Position = UDim2.new(0, 14, 0.2, 0)
+	label.Size = UDim2.new(1, -28, 0.56, 0)
 	label.Font = Enum.Font.FredokaOne
 	label.TextScaled = true
 	label.TextColor3 = WHITE
+	label.ZIndex = 3
+	label.Visible = not isClose
 	textStroke(label, 2.5)
 	label.Parent = face
 	face.Parent = b
@@ -108022,11 +108173,13 @@ local function button(parent, props, color)
 	b:GetPropertyChangedSignal("TextColor3"):Connect(function()
 		label.TextColor3 = b.TextColor3
 	end)
+	local pressScale = Instance.new("UIScale")
+	pressScale.Parent = face
 	b.MouseButton1Down:Connect(function()
-		face.Position = UDim2.new(0, 0, 0, 4)
+		TweenService:Create(pressScale, TweenInfo.new(0.06), { Scale = 0.92 }):Play()
 	end)
 	local function release()
-		face.Position = UDim2.new(0, 0, 0, 0)
+		TweenService:Create(pressScale, TweenInfo.new(0.18, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play()
 	end
 	b.MouseButton1Up:Connect(release)
 	b.MouseLeave:Connect(release)
@@ -108053,29 +108206,17 @@ local function keyBadge(b, key)
 	return k
 end
 
--- cream "paper" panel: warm gradient, thick brown border and a thin inner highlight line
+-- cream "paper" panel: the painted panel art, 9-sliced so the thick rounded frame keeps its shape
 local function panel(parent, props)
-	local f = Instance.new("Frame")
-	f.BackgroundColor3 = WHITE
-	f.BorderSizePixel = 0
+	local f = Instance.new("ImageLabel")
+	f.BackgroundTransparency = 1
+	f.Image = UI_ART.Panel.Id
+	f.ScaleType = Enum.ScaleType.Slice
+	f.SliceCenter = Rect.new(110, 110, UI_ART.Panel.W - 110, UI_ART.Panel.H - 110)
+	f.SliceScale = 0.32
 	for k, v in pairs(props) do
 		f[k] = v
 	end
-	corner(f, 20)
-	stroke(f, BROWN, 5)
-	local g = Instance.new("UIGradient")
-	g.Rotation = 90
-	g.Color = ColorSequence.new(Color3.fromRGB(255, 249, 236), Color3.fromRGB(250, 233, 200))
-	g.Parent = f
-	local inner = Instance.new("Frame")
-	inner.Name = "InnerLine"
-	inner.BackgroundTransparency = 1
-	inner.Position = UDim2.new(0, 8, 0, 8)
-	inner.Size = UDim2.new(1, -16, 1, -16)
-	corner(inner, 14)
-	local is = stroke(inner, Color3.fromRGB(226, 192, 140), 2)
-	is.Transparency = 0.2
-	inner.Parent = f
 	f.Parent = parent
 	return f
 end
@@ -108108,16 +108249,14 @@ hud.Size = UDim2.new(1, 0, 1, 0)
 hud.Parent = gui
 
 local function pill(y, width, icon, color, strokeColor)
-	local f = Instance.new("Frame")
+	local f = Instance.new("ImageLabel")
+	f.BackgroundTransparency = 1
 	f.Position = UDim2.new(0, 46, 0, y)
-	f.Size = UDim2.new(0, width, 0, 50)
-	f.BackgroundColor3 = WHITE
-	corner(f, 14)
-	stroke(f, BROWN, 3)
-	local g = Instance.new("UIGradient")
-	g.Rotation = 90
-	g.Color = ColorSequence.new(Color3.fromRGB(255, 249, 234), Color3.fromRGB(246, 224, 182))
-	g.Parent = f
+	f.Size = UDim2.new(0, width, 0, 52)
+	f.Image = UI_ART.Panel.Id
+	f.ScaleType = Enum.ScaleType.Slice
+	f.SliceCenter = Rect.new(110, 110, UI_ART.Panel.W - 110, UI_ART.Panel.H - 110)
+	f.SliceScale = 0.2
 	f.Parent = hud
 	Icons.Make(icon, { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0, 2, 0.5, 0), Size = UDim2.new(0, 78, 0, 78), ZIndex = 3 }).Parent = f
 	local l = Instance.new("TextLabel")
@@ -108136,6 +108275,16 @@ local cashPill, cashLabel = pill(64, 250, "Cash", GREEN_TEXT, Color3.fromRGB(230
 local _, tokenLabel = pill(124, 160, "Coin", TEXT_DARK)
 local incomeLabel = text(hud, { Position = UDim2.new(0, 306, 0, 78), Size = UDim2.new(0, 200, 0, 26), Text = "", TextColor3 = Color3.fromRGB(130, 255, 140), TextXAlignment = Enum.TextXAlignment.Left })
 
+do
+	-- dark glossy capsule behind the delivery timer
+	local timerBack = Instance.new("Frame")
+	timerBack.AnchorPoint = Vector2.new(0.5, 0)
+	timerBack.Position = UDim2.new(0.5, 0, 0, 8)
+	timerBack.Size = UDim2.new(0, 250, 0, 68)
+	timerBack.BackgroundTransparency = 1
+	timerBack.Parent = hud
+	slicedPill(timerBack, UI_ART.Bar)
+end
 text(hud, { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 14), Size = UDim2.new(0, 260, 0, 18), Text = "CONTAINER DELIVERY", StrokeThickness = 1.5 })
 local timerLabel = text(hud, { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 34), Size = UDim2.new(0, 200, 0, 36), Text = "--:--", StrokeThickness = 2.5 })
 
@@ -109126,12 +109275,10 @@ end)
 local goalPill = Instance.new("Frame")
 goalPill.AnchorPoint = Vector2.new(0.5, 0)
 goalPill.Position = UDim2.new(0.5, 0, 0, 82)
-goalPill.Size = UDim2.new(0, 460, 0, 46)
-goalPill.BackgroundColor3 = Color3.fromRGB(24, 26, 34)
-goalPill.BackgroundTransparency = 0.2
-corner(goalPill, 23)
-stroke(goalPill, GOLD, 2).Transparency = 0.3
+goalPill.Size = UDim2.new(0, 480, 0, 50)
+goalPill.BackgroundTransparency = 1
 goalPill.Parent = hud
+slicedPill(goalPill, UI_ART.Bar).ZIndex = 0
 local goalTag = Instance.new("TextLabel")
 goalTag.BackgroundTransparency = 1
 goalTag.Position = UDim2.new(0, 18, 0, 0)
