@@ -87,7 +87,7 @@ Config.Containers = {
 		{ "Rattler Wagon '82", "wagon" }, { "Haulman Tow-Tug", "truck" }, { "Rattler Hotshot", "hatch" }, { "Puddle Bubble", "mini" },
 		{ "Haulman Ice Cream Van", "van" }, { "Rattler Taxi Classic", "sedan" }, { "Puddle Pip Gold Rally", "mini" }, { "Rattler Junkyard King", "muscle" },
 	} },
-	{ Name = "City Streets", Color = Color3.fromRGB(90, 140, 200), Dirt = Color3.fromRGB(90, 90, 95), Cars = {
+	{ Name = "City Streets", Color = Color3.fromRGB(60, 150, 210), Dirt = Color3.fromRGB(90, 90, 95), Cars = {
 		{ "Metrolux Commuter", "sedan" }, { "Sorano Kei", "mini" }, { "Metrolux Hatch GT", "hatch" }, { "Sorano Haru", "coupe" },
 		{ "Metrolux Cab", "sedan" }, { "Sorano Pocket Rocket", "hatch" }, { "Sorano Drift-R", "coupe" }, { "Metrolux Police Cruiser", "sedan" },
 		{ "Sorano Kei Turbo Widebody", "mini" }, { "Metrolux Limo Stretch", "limo" }, { "Sorano Neon Night", "coupe" }, { "Metrolux Executive Armored", "limo" },
@@ -107,7 +107,7 @@ Config.Containers = {
 		{ "Thunderjaw Hammerhead", "muscle" }, { "Rattler Pursuit", "sedan" }, { "Thunderjaw Supercharger", "muscle" }, { "Rattler Midnight Run", "muscle" },
 		{ "Thunderjaw Drag King", "racer" }, { "Thunderjaw Twin-Blower", "muscle" }, { "Thunderjaw Inferno", "muscle" }, { "Thunderjaw Big Daddy Gold", "muscle" },
 	} },
-	{ Name = "Tuner Nights", Color = Color3.fromRGB(80, 60, 160), Dirt = Color3.fromRGB(45, 45, 50), Cars = {
+	{ Name = "Tuner Nights", Color = Color3.fromRGB(120, 110, 235), Dirt = Color3.fromRGB(45, 45, 50), Cars = {
 		{ "Hikari Tsubame", "hatch" }, { "Sorano Shiro", "sedan" }, { "Hikari Kaze GT", "coupe" }, { "Sorano Spinner", "coupe" },
 		{ "Hikari Touge", "coupe" }, { "Sorano Wing", "sedan" }, { "Hikari Kaze GT-Z", "coupe" }, { "Sorano Midnight Bay", "coupe" },
 		{ "Hikari Raijin", "coupe" }, { "Sorano Spinner Twin-Rotor", "racer" }, { "Hikari Daimyo", "super" }, { "Sorano Neo-Tokyo", "super" },
@@ -117,7 +117,7 @@ Config.Containers = {
 		{ "Strassen Bahnsturm", "coupe" }, { "Lucenti GT Classico", "classic" }, { "Strassen Flachbau", "racer" }, { "Lucenti Gran Turismo V8", "coupe" },
 		{ "Strassen Ringmeister", "racer" }, { "Lucenti Rosso Fuoco", "super" }, { "Strassen Schwarzwald Black", "super" }, { "Lucenti Principessa", "coupe" },
 	} },
-	{ Name = "Race Legends", Color = Color3.fromRGB(240, 240, 240), Dirt = Color3.fromRGB(100, 75, 50), Cars = {
+	{ Name = "Race Legends", Color = Color3.fromRGB(200, 205, 222), Dirt = Color3.fromRGB(100, 75, 50), Cars = {
 		{ "Vellora Club Racer", "racer" }, { "Strassen Touring Cup", "sedan" }, { "Vellora Rally Stage", "hatch" }, { "Strassen Endurance '72", "racer" },
 		{ "Vellora Le Grand", "racer" }, { "Strassen Group-B Monster", "hatch" }, { "Vellora Open-Wheel 90", "racer" }, { "Strassen Hillclimb Beast", "racer" },
 		{ "Vellora Prototype X", "hyper" }, { "Strassen Endurance Hybrid", "racer" }, { "Vellora Championship Winner", "racer" }, { "Vellora Golden Trophy", "racer" },
@@ -127,7 +127,7 @@ Config.Containers = {
 		{ "Vellora Falco", "super" }, { "Lucenti Ombra", "super" }, { "Vellora Saetta", "super" }, { "Lucenti Vortice", "super" },
 		{ "Vellora Falco Ultimo", "super" }, { "Lucenti Fulmine", "super" }, { "Vellora Carbonio", "super" }, { "Vellora Imperatore", "super" },
 	} },
-	{ Name = "Hypercars and Future", Color = Color3.fromRGB(40, 40, 60), Dirt = Color3.fromRGB(150, 120, 200), Cars = {
+	{ Name = "Hypercars and Future", Color = Color3.fromRGB(196, 62, 200), Dirt = Color3.fromRGB(150, 120, 200), Cars = {
 		{ "Quasar Watt", "hatch" }, { "Quasar Pulse", "sedan" }, { "Quasar Ionic GT", "coupe" }, { "Gilded Aero", "coupe" },
 		{ "Quasar Photon", "hyper" }, { "Gilded Oasis", "hyper" }, { "Quasar Singularity", "hyper" }, { "Gilded Regent", "limo" },
 		{ "Quasar Hover Prototype", "hyper" }, { "Gilded Midas", "hyper" }, { "Quasar Diamond Edge", "hyper" }, { "Gilded Fortune One", "hyper" },

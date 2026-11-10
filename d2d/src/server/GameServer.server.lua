@@ -33,6 +33,8 @@ local OpenEngineEvent = remote("RemoteEvent", "OpenEngine")
 local GoHomeEvent = remote("RemoteEvent", "GoHome")
 local EngineAction = remote("RemoteFunction", "EngineAction")
 local ClaimToken = remote("RemoteFunction", "ClaimToken")
+local YardAction = remote("RemoteEvent", "YardAction")
+local OfflineEvent = remote("RemoteEvent", "Offline")
 
 local GOLD = Color3.fromRGB(255, 220, 80)
 local RED = Color3.fromRGB(255, 110, 110)
@@ -317,11 +319,94 @@ local function yardCount(plot)
 	return n
 end
 
+-- the crate shakes, glowing cracks spread, it bursts apart with a flash
+local function crackOpen(model, color)
+	local cf, size = model:GetBoundingBox()
+	local prompt = model:FindFirstChildWhichIsA("ProximityPrompt", true)
+	if prompt then
+		prompt:Destroy()
+	end
+	local label = model.PrimaryPart and model.PrimaryPart:FindFirstChild("Label")
+	if label then
+		label:Destroy()
+	end
+	local glow = color:Lerp(Color3.new(1, 1, 1), 0.55)
+	local cracks = {}
+	local base = model:GetPivot()
+	for step = 1, 14 do
+		-- shake
+		local k = step / 14
+		local offset = Vector3.new(rng:NextNumber(-1, 1), 0, rng:NextNumber(-1, 1)) * (0.12 + 0.25 * k)
+		model:PivotTo(base * CFrame.new(offset) * CFrame.Angles(0, rng:NextNumber(-0.04, 0.04) * (1 + k * 2), 0))
+		-- a new crack on a random side every other step
+		if step % 2 == 0 then
+			local face = rng:NextInteger(1, 4)
+			local normal = ({ Vector3.xAxis, -Vector3.xAxis, Vector3.zAxis, -Vector3.zAxis })[face]
+			local half = size / 2
+			local surface = cf.Position + cf:VectorToWorldSpace(normal * ((face <= 2) and half.X or half.Z) * 1.02)
+			local c = Instance.new("Part")
+			c.Name = "Crack"
+			c.Anchored = true
+			c.CanCollide = false
+			c.CanQuery = false
+			c.Material = Enum.Material.Neon
+			c.Color = glow
+			c.Size = Vector3.new(0.18, rng:NextNumber(1.2, 3.2), 0.18)
+			c.CFrame = CFrame.lookAt(surface, surface + cf:VectorToWorldSpace(normal)) * CFrame.new(rng:NextNumber(-half.X * 0.6, half.X * 0.6), rng:NextNumber(-half.Y * 0.5, half.Y * 0.5), 0) * CFrame.Angles(0, 0, rng:NextNumber(-0.9, 0.9))
+			c.Parent = model
+			table.insert(cracks, c)
+		end
+		task.wait(0.07)
+	end
+	-- flash
+	local flash = Instance.new("Part")
+	flash.Shape = Enum.PartType.Ball
+	flash.Anchored = true
+	flash.CanCollide = false
+	flash.CanQuery = false
+	flash.Material = Enum.Material.Neon
+	flash.Color = Color3.new(1, 1, 1)
+	flash.Size = Vector3.new(2, 2, 2)
+	flash.CFrame = CFrame.new(cf.Position)
+	flash.Parent = carsFolder
+	local light = Instance.new("PointLight")
+	light.Range = 24
+	light.Brightness = 4
+	light.Parent = flash
+	TweenService:Create(flash, TweenInfo.new(0.45, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Size = Vector3.new(14, 14, 14), Transparency = 1 }):Play()
+	task.delay(0.5, function()
+		flash:Destroy()
+	end)
+	-- burst into pieces that fly out and fade
+	for _, d in ipairs(model:GetDescendants()) do
+		if d:IsA("BasePart") and d.Transparency < 1 then
+			d.Anchored = false
+			d.CanCollide = true
+			d.CanQuery = false
+			local out = (d.Position - cf.Position)
+			out = Vector3.new(out.X, 0, out.Z)
+			out = out.Magnitude > 0.01 and out.Unit or Vector3.new(rng:NextNumber(-1, 1), 0, rng:NextNumber(-1, 1)).Unit
+			d.AssemblyLinearVelocity = out * rng:NextNumber(14, 26) + Vector3.new(0, rng:NextNumber(16, 28), 0)
+			d.AssemblyAngularVelocity = Vector3.new(rng:NextNumber(-8, 8), rng:NextNumber(-8, 8), rng:NextNumber(-8, 8))
+			TweenService:Create(d, TweenInfo.new(1.4, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { Transparency = 1 }):Play()
+		end
+	end
+	model.Parent = workspace
+	task.delay(1.5, function()
+		model:Destroy()
+	end)
+end
+
 local function openContainer(player, plot, slot, entry)
-	if plotOwner[plot.Index] ~= player or state[plot.Index].Yard[slot] ~= entry then
+	if plotOwner[plot.Index] ~= player or state[plot.Index].Yard[slot] ~= entry or entry.Opening then
 		return
 	end
-	entry.Model:Destroy()
+	entry.Opening = true
+	local model = entry.Model
+	crackOpen(model, Config.Containers[entry.Level].Color)
+	if state[plot.Index].Yard[slot] ~= entry then
+		return
+	end
 	state[plot.Index].Yard[slot] = nil
 	local carId = Config.RollCar(entry.Level, rng)
 	local isNew = discover(player, carId)
@@ -337,9 +422,15 @@ local function spawnContainer(plot, slot, level, drop)
 	local owner = plotOwner[plot.Index]
 	local entry = { Kind = "Container", Level = level }
 	local model = CarBuilder.BuildContainer(level)
-	local target = plot.YardSlots[slot]
+	local target = plot.YardSlots[slot] * CFrame.Angles(0, math.rad(rng:NextNumber(-28, 28)), 0)
+	model:SetAttribute("OwnerUserId", owner and owner.UserId or 0)
+	model:SetAttribute("YardSlot", slot)
+	model:SetAttribute("Kind", "Container")
+	model:SetAttribute("Level", level)
 	model:PivotTo(drop and (target + Vector3.new(0, 40, 0)) or target)
-	addLabel(model.PrimaryPart, "CONTAINER " .. level, Config.Containers[level].Name, Config.Containers[level].Color:Lerp(Color3.new(1, 1, 1), 0.4), 9)
+	local _, _, sub = addLabel(model.PrimaryPart, "CONTAINER " .. level, "FREE", Config.Containers[level].Color:Lerp(Color3.new(1, 1, 1), 0.45), 9.5)
+	sub.TextColor3 = Color3.fromRGB(90, 230, 110)
+	sub.Font = Enum.Font.FredokaOne
 	addPrompt(model:FindFirstChild("Box"), "Open", "Container " .. level, 0.6, owner, function(player)
 		openContainer(player, plot, slot, entry)
 	end)
@@ -367,6 +458,9 @@ spawnYardCar = function(plot, slot, carId)
 	local entry = { Kind = "Car", Id = carId }
 	local model = CarBuilder.BuildCar(carId)
 	model:PivotTo(plot.YardSlots[slot])
+	model:SetAttribute("OwnerUserId", owner and owner.UserId or 0)
+	model:SetAttribute("YardSlot", slot)
+	model:SetAttribute("Kind", "Car")
 	-- a dusty look until it's washed
 	for _, p in ipairs(model:GetDescendants()) do
 		if p:IsA("BasePart") and p.Name ~= "Root" then
@@ -713,42 +807,55 @@ end
 ---------------------------------------------------------------------
 -- Upgrade pads
 ---------------------------------------------------------------------
+local function setPad(pad, levelText, price, stateName)
+	pad.Label.Text = levelText
+	if stateName == "max" then
+		pad.Price.Text = "MAX"
+		pad.Plate.Color = Color3.fromRGB(150, 160, 190)
+	elseif stateName == "locked" then
+		pad.Price.Text = price
+		pad.Plate.Color = Color3.fromRGB(225, 70, 70)
+	else
+		pad.Price.Text = "$" .. Config.FormatNumber(price)
+		pad.Plate.Color = Color3.fromRGB(60, 200, 80)
+	end
+end
+
 local function refreshPads(plot)
 	local owner = plotOwner[plot.Index]
 	local profile = owner and DataService.Get(owner)
 	local pads = plot.Pads
 	if not profile then
-		pads.Showroom.Label.Text = "Showroom"
-		pads.Truck.Label.Text = "Truck"
-		pads.Wash.Label.Text = "Wash Tools"
-		pads.Engine.Label.Text = "Engine Luck"
+		for _, pad in pairs(pads) do
+			setPad(pad, "", "FOR SALE", "locked")
+		end
 		return
 	end
 	if profile.ShowroomLevel >= Config.MaxShowroomLevel then
-		pads.Showroom.Label.Text = "Showroom MAX"
+		setPad(pads.Showroom, "Level " .. profile.ShowroomLevel, 0, "max")
 	else
-		pads.Showroom.Label.Text = "Showroom Lv " .. (profile.ShowroomLevel + 1) .. " · $" .. Config.FormatNumber(Config.GetShowroomCost(profile.ShowroomLevel + 1))
+		setPad(pads.Showroom, "Level " .. profile.ShowroomLevel .. " (" .. maxSpots(profile) .. " spots)", Config.GetShowroomCost(profile.ShowroomLevel + 1))
 	end
 	if profile.TruckLevel >= Config.MaxTruckLevel then
-		pads.Truck.Label.Text = "Truck MAX"
+		setPad(pads.Truck, "Level " .. profile.TruckLevel, 0, "max")
 	else
 		local nextLevel = profile.TruckLevel + 1
 		if nextLevel > Config.MaxTruckForShowroom[profile.ShowroomLevel] then
-			pads.Truck.Label.Text = "Truck Lv " .. nextLevel .. " · needs bigger showroom"
+			setPad(pads.Truck, "Level " .. profile.TruckLevel, "BIGGER SHOWROOM", "locked")
 		else
-			pads.Truck.Label.Text = "Truck Lv " .. nextLevel .. " (" .. nextLevel .. " containers) · $" .. Config.FormatNumber(Config.TruckCosts[nextLevel])
+			setPad(pads.Truck, "Level " .. profile.TruckLevel .. " (" .. profile.TruckLevel .. " per delivery)", Config.TruckCosts[nextLevel])
 		end
 	end
+	local tool = Config.WashTools[profile.ToolLevel]
 	if profile.ToolLevel >= #Config.WashTools then
-		pads.Wash.Label.Text = Config.WashTools[profile.ToolLevel].Name .. " (MAX)"
+		setPad(pads.Wash, tool.Name, 0, "max")
 	else
-		local t = Config.WashTools[profile.ToolLevel + 1]
-		pads.Wash.Label.Text = t.Name .. " · $" .. Config.FormatNumber(t.Cost)
+		setPad(pads.Wash, tool.Name .. " -> " .. Config.WashTools[profile.ToolLevel + 1].Name, Config.WashTools[profile.ToolLevel + 1].Cost)
 	end
 	if profile.EngineLuck >= Config.MaxEngineLuck then
-		pads.Engine.Label.Text = "Engine Luck MAX"
+		setPad(pads.Engine, "Level " .. profile.EngineLuck, 0, "max")
 	else
-		pads.Engine.Label.Text = "Engine Luck Lv " .. (profile.EngineLuck + 1) .. " · $" .. Config.FormatNumber(Config.GetEngineLuckCost(profile.EngineLuck))
+		setPad(pads.Engine, "Level " .. profile.EngineLuck, Config.GetEngineLuckCost(profile.EngineLuck))
 	end
 end
 
@@ -822,6 +929,34 @@ for _, plot in ipairs(map.Plots) do
 	refreshPads(plot)
 	refreshSpotPads(plot, nil)
 end
+
+---------------------------------------------------------------------
+-- Hotbar: click a card to open that container or wash that car
+---------------------------------------------------------------------
+YardAction.OnServerEvent:Connect(function(player, slot)
+	local plot = playerPlot[player]
+	if not plot or typeof(slot) ~= "number" then
+		return
+	end
+	local entry = state[plot.Index].Yard[slot]
+	if not entry or not entry.Model then
+		return
+	end
+	if entry.Kind == "Container" then
+		-- walk up to the crate first, then open it
+		local char = player.Character
+		if char then
+			local p = entry.Model:GetPivot().Position
+			local dir = (plot.SpawnCFrame.Position - p) * Vector3.new(1, 0, 1)
+			dir = dir.Magnitude > 0.1 and dir.Unit or Vector3.zAxis
+			local stand = p + dir * 7
+			char:PivotTo(CFrame.lookAt(Vector3.new(stand.X, p.Y + 3, stand.Z), Vector3.new(p.X, p.Y + 3, p.Z)))
+		end
+		task.spawn(openContainer, player, plot, slot, entry)
+	elseif entry.Kind == "Car" then
+		sendToWash(player, plot, slot, entry)
+	end
+end)
 
 ---------------------------------------------------------------------
 -- Truck deliveries
@@ -1168,9 +1303,9 @@ local function onPlayerAdded(player)
 		local earned = math.floor(away * profile.IncomeRate * Config.OfflineRate)
 		if earned >= 1 then
 			addCash(player, earned)
-			task.delay(4, function()
+			task.delay(3, function()
 				if player.Parent == Players then
-					notify(player, "Welcome back! Your showroom earned $" .. Config.FormatNumber(earned) .. " while you were away.", GOLD)
+					OfflineEvent:FireClient(player, earned)
 				end
 			end)
 		end

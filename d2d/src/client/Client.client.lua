@@ -22,6 +22,8 @@ local OpenEngineEvent = remotes:WaitForChild("OpenEngine")
 local GoHomeEvent = remotes:WaitForChild("GoHome")
 local EngineAction = remotes:WaitForChild("EngineAction")
 local ClaimToken = remotes:WaitForChild("ClaimToken")
+local YardAction = remotes:WaitForChild("YardAction")
+local OfflineEvent = remotes:WaitForChild("Offline")
 
 ---------------------------------------------------------------------
 -- Theme
@@ -390,11 +392,12 @@ local function reveal(carId, isNew)
 	f.BackgroundTransparency = 1
 	f.AnchorPoint = Vector2.new(0.5, 0.5)
 	f.Position = UDim2.new(0.5, 0, 0.4, 0)
-	f.Size = UDim2.new(0, 680, 0, 200)
+	f.Size = UDim2.new(0, 680, 0, 250)
 	f.Parent = gui
 	text(f, { Size = UDim2.new(1, 0, 0.3, 0), Text = isNew and "✨ NEW CAR! ✨" or "YOU GOT", TextColor3 = GOLD, StrokeThickness = 3 })
-	text(f, { Position = UDim2.new(0, 0, 0.3, 0), Size = UDim2.new(1, 0, 0.42, 0), Text = car.Name, TextColor3 = rarity.Color, StrokeThickness = 4 })
-	text(f, { Position = UDim2.new(0, 0, 0.74, 0), Size = UDim2.new(1, 0, 0.24, 0), Text = string.upper(rarity.Name) .. "  ·  " .. Config.GetOddsText(carId), StrokeThickness = 2.5 })
+	text(f, { Position = UDim2.new(0, 0, 0.3, 0), Size = UDim2.new(1, 0, 0.3, 0), Text = car.Name, StrokeThickness = 3 })
+	text(f, { Position = UDim2.new(0, 0, 0.62, 0), Size = UDim2.new(1, 0, 0.18, 0), Text = string.upper(rarity.Name), TextColor3 = rarity.Color, StrokeThickness = 3 })
+	text(f, { Position = UDim2.new(0, 0, 0.8, 0), Size = UDim2.new(1, 0, 0.32, 0), Text = Config.GetOddsText(carId), TextColor3 = Color3.fromRGB(130, 255, 120), StrokeThickness = 4 })
 	local scale = Instance.new("UIScale")
 	scale.Scale = 0.2
 	scale.Parent = f
@@ -1078,6 +1081,133 @@ player.CharacterAdded:Connect(function()
 		washUi.Visible = false
 		engineUi.Visible = false
 	end
+end)
+
+---------------------------------------------------------------------
+-- Hotbar: every container and dirty car in your yard as a card (click to open / wash)
+---------------------------------------------------------------------
+local hotbar = Instance.new("Frame")
+hotbar.BackgroundTransparency = 1
+hotbar.AnchorPoint = Vector2.new(0.5, 1)
+hotbar.Position = UDim2.new(0.5, 0, 1, -10)
+hotbar.Size = UDim2.new(0, 10 * 92, 0, 92)
+hotbar.Parent = hud
+local hl = Instance.new("UIListLayout")
+hl.FillDirection = Enum.FillDirection.Horizontal
+hl.HorizontalAlignment = Enum.HorizontalAlignment.Center
+hl.Padding = UDim.new(0, 8)
+hl.SortOrder = Enum.SortOrder.LayoutOrder
+hl.Parent = hotbar
+local cards = {}
+local function cardFor(model)
+	local kind = model:GetAttribute("Kind")
+	local slot = model:GetAttribute("YardSlot")
+	local b = Instance.new("TextButton")
+	b.Size = UDim2.new(0, 84, 0, 84)
+	b.AutoButtonColor = false
+	b.Text = ""
+	b.LayoutOrder = slot
+	corner(b, 12)
+	stroke(b, Color3.fromRGB(110, 40, 30), 3)
+	shine(b, 0.15)
+	local title = inkText(b, { Position = UDim2.new(0, 5, 0, 8), Size = UDim2.new(1, -10, 0, 44), TextColor3 = Color3.fromRGB(70, 30, 20), TextWrapped = true })
+	local sub = text(b, { Position = UDim2.new(0, 4, 1, -24), Size = UDim2.new(1, -8, 0, 18), TextColor3 = Color3.fromRGB(130, 255, 130), StrokeThickness = 1.5 })
+	if kind == "Container" then
+		local level = model:GetAttribute("Level")
+		b.BackgroundColor3 = Config.Containers[level].Color:Lerp(Color3.new(1, 1, 1), 0.25)
+		title.Text = "Container " .. level .. " (unopened)"
+		sub.Text = "OPEN"
+	else
+		local id = model:GetAttribute("CarId")
+		local car = Config.CarsById[id]
+		b.BackgroundColor3 = Color3.fromRGB(240, 110, 90)
+		title.Text = (car and car.Name or "Car") .. " (dirty)"
+		sub.Text = car and ("$" .. Config.FormatNumber(car.BaseIncome) .. "/s") or ""
+	end
+	juicy(b)
+	b.MouseButton1Click:Connect(function()
+		YardAction:FireServer(slot)
+	end)
+	b.Parent = hotbar
+	return b
+end
+local function refreshHotbar()
+	local folder = workspace:FindFirstChild("Map") and workspace.Map:FindFirstChild("Cars")
+	local seen = {}
+	if folder then
+		for _, m in ipairs(folder:GetChildren()) do
+			if m:GetAttribute("OwnerUserId") == player.UserId and m:GetAttribute("YardSlot") then
+				seen[m] = true
+				if not cards[m] then
+					cards[m] = cardFor(m)
+				end
+			end
+		end
+	end
+	for m, b in pairs(cards) do
+		if not seen[m] then
+			b:Destroy()
+			cards[m] = nil
+		end
+	end
+	hotbar.Visible = currentView == nil
+end
+task.spawn(function()
+	while true do
+		refreshHotbar()
+		task.wait(0.4)
+	end
+end)
+
+---------------------------------------------------------------------
+-- Station icons float and spin
+---------------------------------------------------------------------
+local icons = {}
+local function addIcon(m)
+	icons[m] = m:GetPivot()
+end
+for _, m in ipairs(CollectionService:GetTagged("StationIcon")) do
+	addIcon(m)
+end
+CollectionService:GetInstanceAddedSignal("StationIcon"):Connect(addIcon)
+CollectionService:GetInstanceRemovedSignal("StationIcon"):Connect(function(m)
+	icons[m] = nil
+end)
+RunService.RenderStepped:Connect(function()
+	local t = os.clock()
+	for m, base in pairs(icons) do
+		if m.Parent then
+			m:PivotTo(base * CFrame.new(0, math.sin(t * 2) * 0.25, 0) * CFrame.Angles(0, t * 0.9, 0))
+		end
+	end
+end)
+
+---------------------------------------------------------------------
+-- "While you were away" popup
+---------------------------------------------------------------------
+OfflineEvent.OnClientEvent:Connect(function(amount)
+	local f = panel(gui, { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0.48, 0), Size = UDim2.new(0, 640, 0, 360) })
+	inkText(f, { Position = UDim2.new(0, 40, 0, 30), Size = UDim2.new(0, 400, 0, 40), Text = "WHILE YOU WERE AWAY", TextXAlignment = Enum.TextXAlignment.Left })
+	local icon = Instance.new("TextLabel")
+	icon.BackgroundTransparency = 1
+	icon.Position = UDim2.new(0, 60, 0, 100)
+	icon.Size = UDim2.new(0, 120, 0, 120)
+	icon.Text = "💵"
+	icon.TextScaled = true
+	icon.Parent = f
+	text(f, { Position = UDim2.new(0, 200, 0, 115), Size = UDim2.new(0, 400, 0, 90), Text = "+$" .. Config.FormatNumber(amount), TextColor3 = Color3.fromRGB(40, 170, 60), StrokeThickness = 3, TextXAlignment = Enum.TextXAlignment.Left })
+	local collect = button(f, { AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -30), Size = UDim2.new(0, 520, 0, 72), Text = "COLLECT", TextColor3 = Color3.fromRGB(50, 40, 20) }, Color3.fromRGB(140, 210, 80))
+	local close = button(f, { AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -16, 0, 16), Size = UDim2.new(0, 64, 0, 64), Text = "X" }, BTN.Red)
+	local scale = Instance.new("UIScale")
+	scale.Scale = 0.6
+	scale.Parent = f
+	TweenService:Create(scale, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play()
+	local function done()
+		floatGain(amount)
+		f:Destroy()
+	end
+	collect.MouseButton1Click:Connect(done)
+	close.MouseButton1Click:Connect(done)
 end)
 
 task.delay(2, function()

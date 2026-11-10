@@ -5,6 +5,7 @@
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Lighting = game:GetService("Lighting")
+local CollectionService = game:GetService("CollectionService")
 local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
 local Props = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Props"))
 
@@ -19,8 +20,8 @@ local PLASTER = Color3.fromRGB(226, 223, 214)
 local PLASTER_SHADE = Color3.fromRGB(214, 210, 200)
 local NAVY = Color3.fromRGB(34, 44, 64)
 local STONE = Color3.fromRGB(150, 150, 155)
-local TILE = Color3.fromRGB(205, 205, 202)
-local GROUT = Color3.fromRGB(170, 170, 168)
+local TILE = Color3.fromRGB(196, 203, 216)
+local GROUT = Color3.fromRGB(120, 128, 146)
 local WOOD = Color3.fromRGB(232, 200, 150)
 local GLASS = Color3.fromRGB(150, 190, 215)
 local LAMP = Color3.fromRGB(255, 250, 238)
@@ -175,7 +176,7 @@ end
 
 local function lowPolyTree(parent, pos, scale)
 	scale = scale or 1
-	local name = Props.Pick({ "RealTree2" }, rng) or Props.Pick({ "Tree1", "Tree2" }, rng)
+	local name = Props.Pick({ "Tree2" }, rng)
 	if name and Props.Place(name, parent, CFrame.new(pos) * CFrame.Angles(0, rng:NextNumber(0, 6.28), 0), { Height = 17 * scale }) then
 		return
 	end
@@ -215,7 +216,7 @@ local function planter(parent, cf, length, withCypress)
 		local x = -length / 2 + (i - 0.5) * length / n
 		if withCypress and (i == 1 or i == n) then
 			cypress(parent, (cf * CFrame.new(x, 1, 0)).Position, 5)
-		elseif not Props.Place("RealBush", parent, cf * CFrame.new(x, 1.6, 0) * CFrame.Angles(0, rng:NextNumber(0, 6.28), 0), { Width = 2.6 }) then
+		elseif not Props.Place("NoSuchBush", parent, cf * CFrame.new(x, 1.6, 0) * CFrame.Angles(0, rng:NextNumber(0, 6.28), 0), { Width = 2.6 }) then
 			ball(parent, "Shrub", 2.4, cf * CFrame.new(x, 2.2, 0), LEAF[rng:NextInteger(1, #LEAF)], Enum.Material.LeafyGrass)
 		end
 	end
@@ -263,9 +264,9 @@ local function truck(parent, cf, color)
 			w.Size = Vector3.new(1.2, 3, 3)
 		end
 	end
-	local c = box(parent, "TruckContainer", Vector3.new(7.6, 7, 16), at(0, 6, 2.5), Color3.fromRGB(200, 120, 50), Enum.Material.DiamondPlate)
-	surfaceText(c, Enum.NormalId.Left, "D2D LOGISTICS", Color3.new(1, 1, 1), 20)
-	surfaceText(c, Enum.NormalId.Right, "D2D LOGISTICS", Color3.new(1, 1, 1), 20)
+	local c = box(parent, "TruckContainer", Vector3.new(7.6, 7, 16), at(0, 6, 2.5), Color3.fromRGB(232, 236, 244), Enum.Material.SmoothPlastic)
+	surfaceText(c, Enum.NormalId.Left, "D2D LOGISTICS", Color3.fromRGB(40, 60, 100), 20)
+	surfaceText(c, Enum.NormalId.Right, "D2D LOGISTICS", Color3.fromRGB(40, 60, 100), 20)
 end
 
 ---------------------------------------------------------------------
@@ -278,7 +279,7 @@ local function buildLighting()
 	Lighting.GeographicLatitude = 38
 	Lighting.Brightness = 3
 	Lighting.Ambient = Color3.fromRGB(70, 72, 82)
-	Lighting.OutdoorAmbient = Color3.fromRGB(118, 122, 134)
+	Lighting.OutdoorAmbient = Color3.fromRGB(140, 142, 152)
 	Lighting.EnvironmentDiffuseScale = 1
 	Lighting.EnvironmentSpecularScale = 1
 	Lighting.ExposureCompensation = 0.1
@@ -289,12 +290,12 @@ local function buildLighting()
 		end
 	end
 	local a = Instance.new("Atmosphere")
-	a.Density = 0.3
+	a.Density = 0.2
 	a.Offset = 0.12
 	a.Color = Color3.fromRGB(199, 212, 228)
 	a.Decay = Color3.fromRGB(106, 120, 145)
 	a.Glare = 0.15
-	a.Haze = 1.2
+	a.Haze = 0.4
 	a.Parent = Lighting
 	local bloom = Instance.new("BloomEffect")
 	bloom.Intensity = 0.2
@@ -302,7 +303,7 @@ local function buildLighting()
 	bloom.Threshold = 2.8
 	bloom.Parent = Lighting
 	local cc = Instance.new("ColorCorrectionEffect")
-	cc.Saturation = -0.02
+	cc.Saturation = 0.08
 	cc.Contrast = 0.1
 	cc.Brightness = 0
 	cc.TintColor = Color3.fromRGB(255, 252, 246)
@@ -319,10 +320,10 @@ end
 local function buildTerrain()
 	local terrain = workspace.Terrain
 	terrain:Clear()
-	terrain:SetMaterialColor(Enum.Material.Grass, Color3.fromRGB(92, 128, 62))
-	terrain:SetMaterialColor(Enum.Material.LeafyGrass, Color3.fromRGB(84, 118, 56))
-	terrain:SetMaterialColor(Enum.Material.Rock, Color3.fromRGB(122, 120, 114))
-	terrain:SetMaterialColor(Enum.Material.Slate, Color3.fromRGB(105, 104, 100))
+	terrain:SetMaterialColor(Enum.Material.Grass, Color3.fromRGB(92, 168, 66))
+	terrain:SetMaterialColor(Enum.Material.LeafyGrass, Color3.fromRGB(88, 160, 62))
+	terrain:SetMaterialColor(Enum.Material.Rock, Color3.fromRGB(88, 106, 150))
+	terrain:SetMaterialColor(Enum.Material.Slate, Color3.fromRGB(84, 100, 142))
 	terrain:SetMaterialColor(Enum.Material.Ground, Color3.fromRGB(120, 100, 75))
 	pcall(function()
 		terrain.Decoration = true -- little grass blades
@@ -402,7 +403,7 @@ local function buildWorld(map)
 		Props.Place("FlowerBed", map, CFrame.new(x + 34, 0.8, -127.8), { Width = 6 })
 	end
 	-- pine forest and rocks on the cliff terraces
-	local pine = Props.Has("RealPine") and "RealPine" or (Props.Has("Tree3") and "Tree3")
+	local pine = Props.Has("Tree2") and "Tree2"
 	if pine then
 		-- pines are detailed models, so only the two terraces nearest the plots get them
 		for _, row in ipairs({ { 158, 18 }, { -172, 18 } }) do
@@ -416,7 +417,7 @@ local function buildWorld(map)
 	if Props.Has("RealTree2") or Props.Has("Tree2") or Props.Has("Tree1") then
 		for _, row in ipairs({ { 198, 20 }, { 240, 24 }, { -203, 20 }, { -248, 24 } }) do
 			for x = -540, 540, 26 do
-				local name = Props.Pick({ "RealTree2" }, rng) or Props.Pick({ "Tree1", "Tree2" }, rng)
+				local name = Props.Pick({ "Tree2" }, rng)
 				Props.Place(name, map, CFrame.new(x + rng:NextNumber(-9, 9), 0, row[1] + rng:NextNumber(-8, 8)) * CFrame.Angles(0, rng:NextNumber(0, 6.28), 0), { Height = row[2] * rng:NextNumber(0.8, 1.2), Ground = true })
 			end
 		end
@@ -485,7 +486,7 @@ local function buildPlot(index, parent)
 	--=============== SHOWROOM (x -45..45, z -88..-8) ===============
 	local TOP = 28 -- building height
 	local CEIL = FLOOR_Y + 16 -- showroom ceiling
-	box(m, "ShowroomFloor", Vector3.new(90, FLOOR_Y, 80), at(0, FLOOR_Y / 2, -48), TILE, Enum.Material.Marble, { Reflectance = 0.06 })
+	box(m, "ShowroomFloor", Vector3.new(90, FLOOR_Y, 80), at(0, FLOOR_Y / 2, -48), TILE, Enum.Material.SmoothPlastic, { Reflectance = 0.04 })
 	-- floor tiles: grout lines every 8 studs and a darker border row
 	for x = -40, 40, 8 do
 		deco(m, "Grout", Vector3.new(0.18, 0.04, 80), at(x, FLOOR_Y + 0.02, -48), GROUT)
@@ -836,21 +837,106 @@ local function buildPlot(index, parent)
 	end
 	-- the delivery truck waiting behind the gate
 	box(m, "Driveway", Vector3.new(22, 0.3, 30), at(0, 0.15, 85), ASPHALT, Enum.Material.Asphalt)
-	truck(m, at(0, 0, 86) * CFrame.Angles(0, math.rad(180), 0), Color3.fromRGB(230, 70, 60))
+	truck(m, at(0, 0, 86) * CFrame.Angles(0, math.rad(180), 0), Color3.fromRGB(236, 239, 245))
 
-	-- upgrade pads: like Clean a Painting, a soft glowing pad on the floor
-	local function pad(name, x, z, color, y)
-		y = y or FLOOR_Y + 0.08
-		local p = box(m, name, Vector3.new(6, 0.16, 6), at(x, y, z), color, Enum.Material.Neon, { CanCollide = false, Transparency = 0.2 })
-		deco(m, name .. "Edge", Vector3.new(6.6, 0.12, 6.6), at(x, y - 0.03, z), Color3.fromRGB(255, 255, 255))
-		local l = label(p, name, Color3.new(1, 1, 1), 4.5, 260, 60)
-		return { Part = p, Label = l }
+	-- upgrade stations, like Clean a Painting: a floating icon over a glowing pad,
+	-- the name above it, the level under it and a price plate on the floor in front
+	local function icon(kind, at0)
+		local mdl = Instance.new("Model")
+		mdl.Name = "StationIcon"
+		local function ip(size, off, color, mat, shape)
+			local q = deco(mdl, "IconPart", size, at0 * off, color, mat or Enum.Material.SmoothPlastic)
+			if shape then
+				q.Shape = shape
+				q.Size = size
+			end
+			return q
+		end
+		if kind == "Showroom" then
+			ip(Vector3.new(3, 1.6, 2), CFrame.new(0, 0, 0), Color3.fromRGB(240, 225, 190))
+			for x = -1.1, 1.1, 0.73 do
+				ip(Vector3.new(0.35, 1.5, 0.35), CFrame.new(x, 0, -1.1), Color3.fromRGB(250, 245, 230))
+			end
+			ip(Vector3.new(3.4, 0.35, 2.6), CFrame.new(0, 0.95, -0.15), Color3.fromRGB(200, 160, 90))
+			local roof = Instance.new("WedgePart")
+			roof.Anchored, roof.CanCollide, roof.CanQuery = true, false, false
+			roof.Size = Vector3.new(3.4, 0.9, 1.3)
+			roof.Color = Color3.fromRGB(200, 160, 90)
+			roof.CFrame = at0 * CFrame.new(0, 1.55, -0.8)
+			roof.Parent = mdl
+			ip(Vector3.new(3.6, 0.3, 2.8), CFrame.new(0, -0.95, -0.2), Color3.fromRGB(220, 205, 170))
+		elseif kind == "Wash" then
+			ip(Vector3.new(2.8, 1.5, 1.9), CFrame.new(0, 0, 0), Color3.fromRGB(255, 220, 60))
+			for _, h in ipairs({ { -0.7, 0.3 }, { 0.5, -0.2 }, { 0.9, 0.4 }, { -0.2, -0.3 } }) do
+				ip(Vector3.new(0.12, 0.45, 0.45), CFrame.new(h[1], h[2], -0.96) * CFrame.Angles(0, math.rad(90), 0), Color3.fromRGB(220, 170, 30), nil, Enum.PartType.Cylinder)
+			end
+			for _, b in ipairs({ { -1.3, 1, 0.5 }, { 1.2, 1.1, 0.4 }, { 0, 1.3, 0.6 } }) do
+				ip(Vector3.new(b[3], b[3], b[3]), CFrame.new(b[1], b[2], 0), Color3.fromRGB(220, 240, 255), Enum.Material.Glass, Enum.PartType.Ball)
+			end
+		elseif kind == "Engine" then
+			ip(Vector3.new(2.6, 1.4, 1.6), CFrame.new(0, -0.1, 0), Color3.fromRGB(205, 60, 50), Enum.Material.Metal)
+			for x = -0.9, 0.9, 0.6 do
+				ip(Vector3.new(0.45, 0.8, 0.45), CFrame.new(x, 0.9, 0), Color3.fromRGB(200, 200, 210), Enum.Material.Metal)
+			end
+			for k, c in ipairs({ { 0.9, 0.9 }, { 1.35, 0.55 }, { 0.95, 0.35 } }) do
+				ip(Vector3.new(0.6, 0.6, 0.6), CFrame.new(c[1], c[2] + 0.4, -0.9), Color3.fromRGB(60, 190, 70), nil, Enum.PartType.Ball)
+				if k == 1 then
+					ip(Vector3.new(0.12, 0.6, 0.12), CFrame.new(1.05, 0.3, -0.9), Color3.fromRGB(40, 140, 50))
+				end
+			end
+		elseif kind == "Truck" then
+			ip(Vector3.new(1.9, 1.7, 2.6), CFrame.new(0, 0.2, 0.5), Color3.fromRGB(235, 240, 248))
+			ip(Vector3.new(1.8, 1.2, 1), CFrame.new(0, -0.05, -1.3), Color3.fromRGB(110, 170, 240))
+			ip(Vector3.new(1.4, 0.5, 0.05), CFrame.new(0, 0.2, -1.82), Color3.fromRGB(40, 60, 90), Enum.Material.Glass)
+			for _, w in ipairs({ { -0.95, -1.2 }, { 0.95, -1.2 }, { -0.95, 1.1 }, { 0.95, 1.1 } }) do
+				ip(Vector3.new(0.3, 0.75, 0.75), CFrame.new(w[1], -0.7, w[2]), Color3.fromRGB(30, 30, 32), nil, Enum.PartType.Cylinder)
+			end
+		end
+		mdl.Parent = m
+		CollectionService:AddTag(mdl, "StationIcon")
+		return mdl
+	end
+	local function pad(name, x, z, y, kind, facing)
+		y = y or FLOOR_Y
+		local base = at(x, y, z) * CFrame.Angles(0, facing or 0, 0)
+		box(m, name .. "Plinth", Vector3.new(6.6, 0.5, 6.6), base * CFrame.new(0, 0.25, 0), Color3.fromRGB(215, 218, 226), Enum.Material.Concrete, { CanCollide = false })
+		local p = box(m, name, Vector3.new(5.6, 0.18, 5.6), base * CFrame.new(0, 0.55, 0), Color3.fromRGB(150, 255, 190), Enum.Material.Neon, { CanCollide = false, Transparency = 0.35 })
+		local glow = Instance.new("PointLight")
+		glow.Color = Color3.fromRGB(150, 255, 190)
+		glow.Range = 9
+		glow.Brightness = 0.8
+		glow.Parent = p
+		local ic = icon(kind, base * CFrame.new(0, 4.4, 0))
+		-- the name above the icon and the level under it
+		local anchor = deco(m, name .. "Anchor", Vector3.new(0.2, 0.2, 0.2), base * CFrame.new(0, 4.4, 0), Color3.new(1, 1, 1), nil, { Transparency = 1 })
+		local title = label(anchor, name, Color3.new(1, 1, 1), 3, 280, 70)
+		title.Font = Enum.Font.FredokaOne
+		local lv = label(anchor, "Level 1", Color3.new(1, 1, 1), -2.3, 220, 70)
+		-- price plate on the floor, angled up toward the player
+		local plate = box(m, name .. "Price", Vector3.new(5.2, 0.35, 1.8), base * CFrame.new(0, 0.35, -4.9) * CFrame.Angles(math.rad(-14), 0, 0), Color3.fromRGB(60, 200, 80), nil, { CanCollide = false })
+		local priceGui = Instance.new("SurfaceGui")
+		priceGui.Face = Enum.NormalId.Top
+		priceGui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+		priceGui.PixelsPerStud = 40
+		priceGui.LightInfluence = 0
+		local priceText = Instance.new("TextLabel")
+		priceText.BackgroundTransparency = 1
+		priceText.Size = UDim2.new(1, 0, 1, 0)
+		priceText.Font = Enum.Font.FredokaOne
+		priceText.TextScaled = true
+		priceText.TextColor3 = Color3.new(1, 1, 1)
+		priceText.Rotation = 180
+		priceText.Text = "$0"
+		addStroke(priceText, 3)
+		priceText.Parent = priceGui
+		priceGui.Parent = plate
+		return { Part = p, Label = lv, Title = title, Plate = plate, Price = priceText, Icon = ic }
 	end
 	local pads = {
-		Showroom = pad("Showroom", -36, 0, Color3.fromRGB(120, 230, 150)),
-		Wash = pad("Wash Tools", -36, 20, Color3.fromRGB(120, 200, 255)),
-		Engine = pad("Engine Luck", 36, 20, Color3.fromRGB(255, 200, 90)),
-		Truck = pad("Truck", 36, 34, Color3.fromRGB(255, 130, 120), 0.48),
+		Showroom = pad("Showroom Size", -36, 0, nil, "Showroom"),
+		Wash = pad("Wash Tools", -36, 20, nil, "Wash"),
+		Engine = pad("Engine Luck", 36, 20, nil, "Engine"),
+		Truck = pad("Truck Tier", 36, 36, 0.4, "Truck"),
 	}
 
 	return {

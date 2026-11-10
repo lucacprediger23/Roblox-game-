@@ -497,89 +497,58 @@ end
 
 -- Shipping container in the color of its level. Pivot = ground center.
 function CarBuilder.BuildContainer(level)
+	-- an open-frame crate like in Clean a Painting: thick edge beams, a diagonal brace on every side,
+	-- recessed panels. Levels 1-2 are wooden, the rest are colored diamond-plate metal.
 	local info = Config.Containers[level]
 	local model = Instance.new("Model")
 	model.Name = "Container" .. level
 	local root = newPart(model, "Root", Vector3.new(1, 1, 1), CFrame.new(0, 0.5, 0), Color3.new(0, 0, 0), { Transparency = 1 })
 	model.PrimaryPart = root
-	-- a realistic container model from the Creator Store, with a painted band in the level's color
-	local Props = require(ReplicatedStorage.Shared:WaitForChild("Props"))
-	if Props.Has("ShippingContainer") then
-		local mesh = Props.Place("ShippingContainer", model, CFrame.new(), { Length = 14, LongZ = true })
-		if mesh then
-			-- remove any printed logos/text and paint it in the level's color
-			for _, d in ipairs(mesh:GetDescendants()) do
-				if d:IsA("Decal") or d:IsA("Texture") or d:IsA("SurfaceGui") then
-					d:Destroy()
-				elseif d:IsA("SpecialMesh") then
-					d.TextureId = ""
-				elseif d:IsA("BasePart") then
-					stripTexture(d)
-					d.Color = info.Color
-					d.Material = Enum.Material.CorrodedMetal
-				end
-			end
-			local box = newPart(model, "Box", Vector3.new(8, 7, 14), CFrame.new(0, 3.5, 0), info.Color, { Transparency = 1, CanCollide = true })
-			box.Name = "Box"
-			for _, x in ipairs({ -1, 1 }) do
-				local _, size = mesh:GetBoundingBox()
-				local band = newPart(model, "LevelBand", Vector3.new(0.12, 1.4, 13), CFrame.new(x * (size.X / 2 + 0.06), size.Y * 0.62, 0), info.Color, { Material = Enum.Material.SmoothPlastic })
-				local gui = Instance.new("SurfaceGui")
-				gui.Face = x > 0 and Enum.NormalId.Right or Enum.NormalId.Left
-				gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
-				gui.PixelsPerStud = 30
-				local t = Instance.new("TextLabel")
-				t.BackgroundTransparency = 1
-				t.Size = UDim2.new(1, 0, 1, 0)
-				t.Font = Enum.Font.GothamBlack
-				t.TextScaled = true
-				t.TextColor3 = Color3.new(1, 1, 1)
-				t.Text = "D2D LOGISTICS  ·  LEVEL " .. level
-				t.Parent = gui
-				gui.Parent = band
-			end
-			model:SetAttribute("ContainerLevel", level)
-			return model
-		end
-	end
-	local box = newPart(model, "Box", Vector3.new(8, 7, 14), CFrame.new(0, 3.5, 0), info.Color, { Material = Enum.Material.DiamondPlate, CanCollide = true })
+	local wooden = level <= 2
+	local S = 6.4 -- crate size
+	local B = 0.75 -- beam thickness
+	local h = S / 2
+	local frameColor = wooden and Color3.fromRGB(150, 98, 58) or info.Color
+	local panelColor = wooden and Color3.fromRGB(116, 74, 44) or info.Color:Lerp(Color3.new(0, 0, 0), 0.25)
+	local material = wooden and Enum.Material.WoodPlanks or Enum.Material.DiamondPlate
+	local box = newPart(model, "Box", Vector3.new(S, S, S), CFrame.new(0, h, 0), frameColor, { Transparency = 1, CanCollide = true })
 	box.Name = "Box"
-	local darker = info.Color:Lerp(Color3.new(0, 0, 0), 0.3)
-	for _, z in ipairs({ -6.8, -2.3, 2.3, 6.8 }) do
-		newPart(model, "Rib", Vector3.new(8.2, 7.1, 0.3), CFrame.new(0, 3.5, z), darker, { Material = Enum.Material.Metal })
+	local function beam(size, cf)
+		newPart(model, "Beam", size, cf, frameColor, { Material = material })
 	end
-	-- door bars at the back
-	for _, x in ipairs({ -1.5, 1.5 }) do
-		newPart(model, "Bar", Vector3.new(0.2, 6.5, 0.2), CFrame.new(x, 3.5, 7.15), Color3.fromRGB(200, 200, 200), { Material = Enum.Material.Metal })
-	end
-	-- corner castings, top rails and a painted level number
-	for _, x in ipairs({ -4.05, 4.05 }) do
-		for _, z in ipairs({ -7.05, 7.05 }) do
-			newPart(model, "Corner", Vector3.new(0.5, 7.3, 0.5), CFrame.new(x, 3.6, z), darker:Lerp(Color3.new(0, 0, 0), 0.3), { Material = Enum.Material.Metal })
+	-- 12 edges
+	for _, a in ipairs({ -1, 1 }) do
+		for _, b in ipairs({ -1, 1 }) do
+			beam(Vector3.new(B, S, B), CFrame.new(a * (h - B / 2), h, b * (h - B / 2)))
+			beam(Vector3.new(S, B, B), CFrame.new(0, h + a * (h - B / 2), b * (h - B / 2)))
+			beam(Vector3.new(B, B, S), CFrame.new(a * (h - B / 2), h + b * (h - B / 2), 0))
 		end
-		newPart(model, "Rail", Vector3.new(0.4, 0.4, 14.2), CFrame.new(x, 7.1, 0), darker, { Material = Enum.Material.Metal })
 	end
-	for _, x in ipairs({ -0.6, 0.6 }) do
-		newPart(model, "Handle", Vector3.new(0.15, 1.2, 0.15), CFrame.new(x, 3.2, 7.25), Color3.fromRGB(240, 200, 60), { Material = Enum.Material.Metal })
+	-- recessed panels and diagonal braces on the 4 sides and the top
+	local inner = S - B * 2
+	local diag = math.sqrt(2) * inner
+	local sides = {
+		{ CFrame.new(0, h, -h + 0.35), CFrame.Angles(0, 0, 0) },
+		{ CFrame.new(0, h, h - 0.35), CFrame.Angles(0, math.pi, 0) },
+		{ CFrame.new(-h + 0.35, h, 0), CFrame.Angles(0, math.pi / 2, 0) },
+		{ CFrame.new(h - 0.35, h, 0), CFrame.Angles(0, -math.pi / 2, 0) },
+	}
+	for i, sdef in ipairs(sides) do
+		local cf = sdef[1] * sdef[2]
+		newPart(model, "Panel", Vector3.new(inner, inner, 0.2), cf * CFrame.new(0, 0, 0.12), panelColor, { Material = material })
+		beam(Vector3.new(B * 0.9, diag, B * 0.7), cf * CFrame.new(0, 0, -0.05) * CFrame.Angles(0, 0, math.rad(i % 2 == 0 and 45 or -45)))
 	end
-	for _, face in ipairs({ Enum.NormalId.Left, Enum.NormalId.Right }) do
-		local gui = Instance.new("SurfaceGui")
-		gui.Face = face
-		gui.LightInfluence = 0.3
-		gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
-		gui.PixelsPerStud = 20
-		local t = Instance.new("TextLabel")
-		t.BackgroundTransparency = 1
-		t.AnchorPoint = Vector2.new(0.5, 0.5)
-		t.Position = UDim2.new(0.5, 0, 0.32, 0)
-		t.Size = UDim2.new(0.5, 0, 0.26, 0)
-		t.Font = Enum.Font.FredokaOne
-		t.TextScaled = true
-		t.TextColor3 = Color3.new(1, 1, 1)
-		t.TextTransparency = 0.1
-		t.Text = "D2D  #" .. level
-		t.Parent = gui
-		gui.Parent = box
+	local top = CFrame.new(0, S - 0.35, 0) * CFrame.Angles(math.rad(90), 0, 0)
+	newPart(model, "Panel", Vector3.new(inner, inner, 0.2), top * CFrame.new(0, 0, 0.12), panelColor, { Material = material })
+	beam(Vector3.new(B * 0.9, diag, B * 0.7), top * CFrame.new(0, 0, -0.05) * CFrame.Angles(0, 0, math.rad(45)))
+	-- a faint glow inside for the higher levels so they feel special
+	if level >= 7 then
+		local core = newPart(model, "Glow", Vector3.new(inner * 0.8, inner * 0.8, inner * 0.8), CFrame.new(0, h, 0), info.Color:Lerp(Color3.new(1, 1, 1), 0.4), { Material = Enum.Material.Neon, Transparency = 0.55 })
+		local light = Instance.new("PointLight")
+		light.Color = info.Color
+		light.Range = 12
+		light.Brightness = 1.2
+		light.Parent = core
 	end
 	model:SetAttribute("ContainerLevel", level)
 	return model
