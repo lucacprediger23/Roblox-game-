@@ -98,11 +98,12 @@ local function addStroke(l, thickness)
 	s.Parent = l
 end
 
+-- floating text sized in studs, only visible up close
 local function label(adornee, text, color, offsetY, width, maxDist)
 	local gui = Instance.new("BillboardGui")
-	gui.Size = UDim2.new(0, width or 220, 0, 48)
+	gui.Size = UDim2.new((width or 220) / 36, 0, 1.4, 0)
 	gui.StudsOffset = Vector3.new(0, offsetY or 4, 0)
-	gui.MaxDistance = maxDist or 90
+	gui.MaxDistance = maxDist or 34
 	gui.LightInfluence = 0
 	local l = Instance.new("TextLabel")
 	l.Size = UDim2.new(1, 0, 1, 0)
@@ -111,7 +112,7 @@ local function label(adornee, text, color, offsetY, width, maxDist)
 	l.TextScaled = true
 	l.TextColor3 = color or Color3.new(1, 1, 1)
 	l.Text = text
-	addStroke(l, 2.5)
+	addStroke(l, 2)
 	l.Parent = gui
 	gui.Parent = adornee
 	return l
@@ -796,6 +797,11 @@ local function buildPlot(index, parent)
 	end
 	plot.SetWashTier(1)
 	local washLabel = label(washPad, "WASH SPOT", Color3.fromRGB(150, 220, 255), 9, 240)
+	washLabel.Parent.Enabled = false
+	-- a standing sign so you always know where the wash spot is
+	box(m, "WashSignPost", Vector3.new(0.5, 7, 0.5), at(WX - 8.6, 3.9, WZ - 10.6), NAVY)
+	local washSign = box(m, "WashSign", Vector3.new(7, 2.2, 0.3), at(WX - 8.6, 7.6, WZ - 10.6), Color3.fromRGB(40, 110, 210))
+	surfaceText(washSign, Enum.NormalId.Front, "WASH", Color3.new(1, 1, 1), 26)
 
 	--=========================== TIRE SHOP ===========================
 	local TX, TZ = 62, 120
@@ -829,6 +835,7 @@ local function buildPlot(index, parent)
 		end
 	end
 	local liftLabel = label(lift, "TIRE SHOP", Color3.fromRGB(255, 215, 100), 10, 240)
+	liftLabel.Parent.Enabled = false
 
 	--=========================== UPGRADE STATIONS ===========================
 
@@ -900,9 +907,10 @@ local function buildPlot(index, parent)
 		local ic = icon(kind, base * CFrame.new(0, 4.4, 0))
 		-- the name above the icon and the level under it
 		local anchor = deco(m, name .. "Anchor", Vector3.new(0.2, 0.2, 0.2), base * CFrame.new(0, 4.4, 0), Color3.new(1, 1, 1), nil, { Transparency = 1 })
-		local title = label(anchor, name, Color3.new(1, 1, 1), 3, 280, 70)
-		title.Font = Enum.Font.FredokaOne
-		local lv = label(anchor, "Level 1", Color3.new(1, 1, 1), -2.3, 220, 70)
+		local title = label(anchor, name, Color3.new(1, 1, 1), 2.6, 140, 45)
+		title.Parent.Size = UDim2.new(3.9, 0, 0.95, 0)
+		local lv = label(anchor, "Level 1", Color3.fromRGB(255, 225, 120), -2.2, 120, 30)
+		lv.Parent.Size = UDim2.new(3.3, 0, 0.7, 0)
 		-- price plate on the floor, angled up toward the player
 		local plate = box(m, name .. "Price", Vector3.new(5.2, 0.35, 1.8), base * CFrame.new(0, 0.35, -4.9) * CFrame.Angles(math.rad(-14), 0, 0), Color3.fromRGB(60, 200, 80), nil, { CanCollide = false })
 		local priceGui = Instance.new("SurfaceGui")

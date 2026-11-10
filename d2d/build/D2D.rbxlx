@@ -1078,8 +1078,26 @@ builders.Clover = function(m)
 	p(m, Vector3.new(0.3, 1.6, 0.3), CFrame.new(0.5, -1.4, 0) * R(0, 0, math.rad(25)), Color3.fromRGB(40, 140, 50))
 end
 
--- Returns a ViewportFrame showing the icon. props are applied to the frame.
+-- Uploaded artwork (rbxassetid). When an id is set, Make returns an ImageLabel with
+-- the painted icon; otherwise it falls back to the 3D ViewportFrame icon below.
+Icons.Images = {
+	Cash = "", Coin = "", Book = "", Home = "", Tire = "", Truck = "",
+	Crate = "", Sponge = "", Showroom = "", Clover = "", Car = "", Upgrade = "",
+}
+
+-- Returns an icon GuiObject. props are applied to it.
 function Icons.Make(kind, props)
+	local id = Icons.Images[kind]
+	if id and id ~= "" then
+		local img = Instance.new("ImageLabel")
+		img.BackgroundTransparency = 1
+		img.ScaleType = Enum.ScaleType.Fit
+		img.Image = "rbxassetid://" .. id
+		for k, v in pairs(props or {}) do
+			img[k] = v
+		end
+		return img
+	end
 	local vp = Instance.new("ViewportFrame")
 	vp.BackgroundTransparency = 1
 	vp.Ambient = Color3.fromRGB(170, 170, 180)
@@ -105264,34 +105282,47 @@ local function syncAttributes(player)
 	end
 end
 
-local function addLabel(adornee, title, subtitle, color, offsetY)
+-- Small world tag: a dark rounded pill with a title and an optional second line.
+-- Sized in studs (shrinks with distance) and only visible up close, so the world stays clean.
+local function addLabel(adornee, title, subtitle, color, offsetY, maxDist)
 	local gui = Instance.new("BillboardGui")
 	gui.Name = "Label"
-	gui.Size = UDim2.new(0, 260, 0, 58)
+	local twoLines = subtitle and subtitle ~= ""
+	gui.Size = UDim2.new(7, 0, twoLines and 1.9 or 1.15, 0)
 	gui.StudsOffset = Vector3.new(0, offsetY or 6, 0)
-	gui.MaxDistance = 70
+	gui.MaxDistance = maxDist or 24
 	gui.LightInfluence = 0
+	local bg = Instance.new("Frame")
+	bg.AnchorPoint = Vector2.new(0.5, 0.5)
+	bg.Position = UDim2.new(0.5, 0, 0.5, 0)
+	bg.Size = UDim2.new(1, 0, 1, 0)
+	bg.BackgroundColor3 = Color3.fromRGB(24, 26, 34)
+	bg.BackgroundTransparency = 0.25
+	local c = Instance.new("UICorner")
+	c.CornerRadius = UDim.new(0.3, 0)
+	c.Parent = bg
+	bg.Parent = gui
 	local t = Instance.new("TextLabel")
 	t.BackgroundTransparency = 1
-	t.Size = UDim2.new(1, 0, 0.55, 0)
+	t.Position = UDim2.new(0.06, 0, 0.08, 0)
+	t.Size = UDim2.new(0.88, 0, twoLines and 0.5 or 0.84, 0)
 	t.Font = Enum.Font.FredokaOne
 	t.TextScaled = true
 	t.TextColor3 = color or Color3.new(1, 1, 1)
-	t.TextStrokeTransparency = 0.2
 	t.Text = title
-	t.Parent = gui
-	local s = Instance.new("TextLabel")
-	s.BackgroundTransparency = 1
-	s.Position = UDim2.new(0, 0, 0.55, 0)
-	s.Size = UDim2.new(1, 0, 0.45, 0)
-	s.Font = Enum.Font.GothamBold
-	s.TextScaled = true
-	s.TextColor3 = Color3.new(1, 1, 1)
-	s.TextStrokeTransparency = 0.3
-	s.Text = subtitle or ""
-	s.Parent = gui
+	t.Parent = bg
+	local sl = Instance.new("TextLabel")
+	sl.BackgroundTransparency = 1
+	sl.Position = UDim2.new(0.06, 0, 0.56, 0)
+	sl.Size = UDim2.new(0.88, 0, 0.36, 0)
+	sl.Font = Enum.Font.GothamBold
+	sl.TextScaled = true
+	sl.TextColor3 = Color3.fromRGB(230, 232, 240)
+	sl.Text = subtitle or ""
+	sl.Visible = twoLines
+	sl.Parent = bg
 	gui.Parent = adornee
-	return gui, t, s
+	return gui, t, sl
 end
 
 local function addPrompt(parentPart, action, object, hold, owner, callback)
@@ -105351,7 +105382,7 @@ local function showSpot(plot, spotIndex, entry)
 	end
 	local model = CarBuilder.BuildCar(entry.Id, { Tires = entry.Engine })
 	model:PivotTo(plot.Spots[spotIndex].CFrame)
-	addLabel(model.PrimaryPart, carTitle(entry.Id), carSubtitle(entry.Id, entry.Engine), rarityOf(entry.Id).Color, 7)
+	addLabel(model.PrimaryPart, carTitle(entry.Id), "$" .. Config.FormatNumber(Config.GetCarIncome(entry.Id, entry.Engine)) .. "/s", rarityOf(entry.Id).Color, 6.5, 22)
 	local value = Config.GetCarIncome(entry.Id, entry.Engine) * Config.SellSeconds
 	addPrompt(model:FindFirstChild("Body"), "Sell $" .. Config.FormatNumber(value), carTitle(entry.Id), 1, owner, function(player)
 		sellSpot(player, plot, spotIndex, entry)
@@ -105580,9 +105611,8 @@ local function spawnContainer(plot, slot, level, drop)
 	local price = Config.GetContainerPrice(level)
 	local priceText = price > 0 and ("$" .. Config.FormatNumber(price)) or "FREE"
 	model:SetAttribute("Price", price)
-	local _, _, sub = addLabel(model.PrimaryPart, "CONTAINER " .. level, priceText, Config.Containers[level].Color:Lerp(Color3.new(1, 1, 1), 0.45), 9.5)
-	sub.TextColor3 = Color3.fromRGB(90, 230, 110)
-	sub.Font = Enum.Font.FredokaOne
+	local _, tl = addLabel(model.PrimaryPart, priceText, nil, Color3.fromRGB(110, 240, 120), 8.4, 30)
+	tl.Parent.Parent.Size = UDim2.new(3.6, 0, 1.15, 0)
 	addPrompt(model:FindFirstChild("Box"), "Open · " .. priceText, "Container " .. level, 0.6, owner, function(player)
 		openContainer(player, plot, slot, entry)
 	end)
@@ -105619,7 +105649,7 @@ spawnYardCar = function(plot, slot, carId)
 			p.Color = p.Color:Lerp(Config.Containers[Config.CarsById[carId].Container].Dirt, 0.6)
 		end
 	end
-	addLabel(model.PrimaryPart, carTitle(carId) .. " (dirty)", carSubtitle(carId), rarityOf(carId).Color, 7)
+	addLabel(model.PrimaryPart, carTitle(carId), "dirty · wash me", rarityOf(carId).Color, 6, 18)
 	addPrompt(model:FindFirstChild("Body"), "Send to Wash Bay", carTitle(carId), 0.3, owner, function(player)
 		sendToWash(player, plot, slot, entry)
 	end)
@@ -105866,7 +105896,8 @@ local function rebuildLift(plot)
 	local owner = plotOwner[plot.Index]
 	local model = CarBuilder.BuildCar(lift.Id, { Tires = lift.Engine })
 	model:PivotTo(plot.LiftCFrame)
-	addLabel(model.PrimaryPart, carTitle(lift.Id), carSubtitle(lift.Id, lift.Engine), rarityOf(lift.Id).Color, 8)
+	model:SetAttribute("OwnerUserId", owner and owner.UserId or 0)
+	model:SetAttribute("Kind", "Lift")
 	addPrompt(model:FindFirstChild("Body"), "Change Tires", carTitle(lift.Id), 0, owner, function(player)
 		if plotOwner[plot.Index] == player and state[plot.Index].Lift == lift then
 			OpenEngineEvent:FireClient(player, lift.Id, lift.Engine)
@@ -106354,7 +106385,7 @@ local function runCustomer(plot)
 		local entry = state[plot.Index].Spots[pick.Index]
 		if entry then
 			local amount = Config.GetCarIncome(entry.Id, entry.Engine) * 3
-			local gui, t = addLabel(body, "+$" .. Config.FormatNumber(amount), "Wow!", GREEN, 3)
+			local gui, t = addLabel(body, "+$" .. Config.FormatNumber(amount), nil, GREEN, 3, 40)
 			t.TextColor3 = GREEN
 			task.wait(2.5)
 			gui:Destroy()
@@ -106691,11 +106722,12 @@ local function addStroke(l, thickness)
 	s.Parent = l
 end
 
+-- floating text sized in studs, only visible up close
 local function label(adornee, text, color, offsetY, width, maxDist)
 	local gui = Instance.new("BillboardGui")
-	gui.Size = UDim2.new(0, width or 220, 0, 48)
+	gui.Size = UDim2.new((width or 220) / 36, 0, 1.4, 0)
 	gui.StudsOffset = Vector3.new(0, offsetY or 4, 0)
-	gui.MaxDistance = maxDist or 90
+	gui.MaxDistance = maxDist or 34
 	gui.LightInfluence = 0
 	local l = Instance.new("TextLabel")
 	l.Size = UDim2.new(1, 0, 1, 0)
@@ -106704,7 +106736,7 @@ local function label(adornee, text, color, offsetY, width, maxDist)
 	l.TextScaled = true
 	l.TextColor3 = color or Color3.new(1, 1, 1)
 	l.Text = text
-	addStroke(l, 2.5)
+	addStroke(l, 2)
 	l.Parent = gui
 	gui.Parent = adornee
 	return l
@@ -107389,6 +107421,11 @@ local function buildPlot(index, parent)
 	end
 	plot.SetWashTier(1)
 	local washLabel = label(washPad, "WASH SPOT", Color3.fromRGB(150, 220, 255), 9, 240)
+	washLabel.Parent.Enabled = false
+	-- a standing sign so you always know where the wash spot is
+	box(m, "WashSignPost", Vector3.new(0.5, 7, 0.5), at(WX - 8.6, 3.9, WZ - 10.6), NAVY)
+	local washSign = box(m, "WashSign", Vector3.new(7, 2.2, 0.3), at(WX - 8.6, 7.6, WZ - 10.6), Color3.fromRGB(40, 110, 210))
+	surfaceText(washSign, Enum.NormalId.Front, "WASH", Color3.new(1, 1, 1), 26)
 
 	--=========================== TIRE SHOP ===========================
 	local TX, TZ = 62, 120
@@ -107422,6 +107459,7 @@ local function buildPlot(index, parent)
 		end
 	end
 	local liftLabel = label(lift, "TIRE SHOP", Color3.fromRGB(255, 215, 100), 10, 240)
+	liftLabel.Parent.Enabled = false
 
 	--=========================== UPGRADE STATIONS ===========================
 
@@ -107493,9 +107531,10 @@ local function buildPlot(index, parent)
 		local ic = icon(kind, base * CFrame.new(0, 4.4, 0))
 		-- the name above the icon and the level under it
 		local anchor = deco(m, name .. "Anchor", Vector3.new(0.2, 0.2, 0.2), base * CFrame.new(0, 4.4, 0), Color3.new(1, 1, 1), nil, { Transparency = 1 })
-		local title = label(anchor, name, Color3.new(1, 1, 1), 3, 280, 70)
-		title.Font = Enum.Font.FredokaOne
-		local lv = label(anchor, "Level 1", Color3.new(1, 1, 1), -2.3, 220, 70)
+		local title = label(anchor, name, Color3.new(1, 1, 1), 2.6, 140, 45)
+		title.Parent.Size = UDim2.new(3.9, 0, 0.95, 0)
+		local lv = label(anchor, "Level 1", Color3.fromRGB(255, 225, 120), -2.2, 120, 30)
+		lv.Parent.Size = UDim2.new(3.3, 0, 0.7, 0)
 		-- price plate on the floor, angled up toward the player
 		local plate = box(m, name .. "Price", Vector3.new(5.2, 0.35, 1.8), base * CFrame.new(0, 0.35, -4.9) * CFrame.Angles(math.rad(-14), 0, 0), Color3.fromRGB(60, 200, 80), nil, { CanCollide = false })
 		local priceGui = Instance.new("SurfaceGui")
@@ -107972,7 +108011,7 @@ end)
 local notifyList = Instance.new("Frame")
 notifyList.BackgroundTransparency = 1
 notifyList.AnchorPoint = Vector2.new(0.5, 0)
-notifyList.Position = UDim2.new(0.5, 0, 0, 80)
+notifyList.Position = UDim2.new(0.5, 0, 0, 140)
 notifyList.Size = UDim2.new(0, 640, 0, 200)
 notifyList.Parent = gui
 local nl = Instance.new("UIListLayout")
@@ -108723,23 +108762,40 @@ local function cardFor(model)
 	corner(b, 12)
 	stroke(b, Color3.fromRGB(110, 40, 30), 3)
 	shine(b, 0.15)
-	local title = inkText(b, { Position = UDim2.new(0, 6, 0, 12), Size = UDim2.new(1, -12, 0, 52), TextColor3 = Color3.fromRGB(70, 30, 20), TextWrapped = true })
-	local sub = text(b, { Position = UDim2.new(0, 4, 1, -28), Size = UDim2.new(1, -8, 0, 22), TextColor3 = Color3.fromRGB(120, 255, 120), StrokeThickness = 2 })
-	local tc = Instance.new("UITextSizeConstraint")
-	tc.MaxTextSize = 18
-	tc.Parent = title
-	if kind == "Container" then
+	-- picture-first card: big icon, small level badge, price strip
+	local isCrate = kind == "Container"
+	Icons.Make(isCrate and "Crate" or "Car", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 4), Size = UDim2.new(0, 74, 0, 70), ZIndex = 2 }).Parent = b
+	local strip = Instance.new("Frame")
+	strip.AnchorPoint = Vector2.new(0.5, 1)
+	strip.Position = UDim2.new(0.5, 0, 1, -5)
+	strip.Size = UDim2.new(1, -10, 0, 24)
+	strip.BackgroundColor3 = Color3.fromRGB(28, 30, 38)
+	strip.BackgroundTransparency = 0.15
+	strip.ZIndex = 3
+	corner(strip, 8)
+	strip.Parent = b
+	local sub = text(strip, { Size = UDim2.new(1, -6, 1, -4), Position = UDim2.new(0, 3, 0, 2), TextColor3 = Color3.fromRGB(130, 255, 130), StrokeThickness = 1.5, ZIndex = 4 })
+	local badge = Instance.new("TextLabel")
+	badge.Size = UDim2.new(0, 30, 0, 22)
+	badge.Position = UDim2.new(0, 4, 0, 4)
+	badge.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+	badge.Font = Enum.Font.FredokaOne
+	badge.TextScaled = true
+	badge.TextColor3 = Color3.fromRGB(50, 40, 30)
+	badge.ZIndex = 4
+	corner(badge, 8)
+	badge.Parent = b
+	if isCrate then
 		local level = model:GetAttribute("Level")
-		b.BackgroundColor3 = Config.Containers[level].Color:Lerp(Color3.new(1, 1, 1), 0.25)
-		title.Text = "Container " .. level .. " (unopened)"
+		b.BackgroundColor3 = Config.Containers[level].Color:Lerp(Color3.new(1, 1, 1), 0.35)
+		badge.Text = tostring(level)
 		local price = model:GetAttribute("Price") or 0
 		sub.Text = price > 0 and ("$" .. Config.FormatNumber(price)) or "FREE"
 	else
-		local id = model:GetAttribute("CarId")
-		local car = Config.CarsById[id]
-		b.BackgroundColor3 = Color3.fromRGB(240, 110, 90)
-		title.Text = (car and car.Name or "Car") .. " (dirty)"
-		sub.Text = car and ("$" .. Config.FormatNumber(car.BaseIncome) .. "/s") or ""
+		b.BackgroundColor3 = Color3.fromRGB(150, 205, 255)
+		badge.Visible = false
+		sub.Text = "WASH"
+		sub.TextColor3 = Color3.fromRGB(140, 220, 255)
 	end
 	juicy(b)
 	b.MouseButton1Click:Connect(function()
@@ -108821,8 +108877,169 @@ OfflineEvent.OnClientEvent:Connect(function(amount)
 	close.MouseButton1Click:Connect(done)
 end)
 
+---------------------------------------------------------------------
+-- Objective guide: one clear "next step" at the top + a glowing arrow over the target
+---------------------------------------------------------------------
+local goalPill = Instance.new("Frame")
+goalPill.AnchorPoint = Vector2.new(0.5, 0)
+goalPill.Position = UDim2.new(0.5, 0, 0, 82)
+goalPill.Size = UDim2.new(0, 460, 0, 46)
+goalPill.BackgroundColor3 = Color3.fromRGB(24, 26, 34)
+goalPill.BackgroundTransparency = 0.2
+corner(goalPill, 23)
+stroke(goalPill, GOLD, 2).Transparency = 0.3
+goalPill.Parent = hud
+local goalTag = Instance.new("TextLabel")
+goalTag.BackgroundTransparency = 1
+goalTag.Position = UDim2.new(0, 18, 0, 0)
+goalTag.Size = UDim2.new(0, 80, 1, 0)
+goalTag.Font = Enum.Font.FredokaOne
+goalTag.TextSize = 20
+goalTag.TextColor3 = GOLD
+goalTag.Text = "NEXT"
+goalTag.TextXAlignment = Enum.TextXAlignment.Left
+goalTag.Parent = goalPill
+local goalText = Instance.new("TextLabel")
+goalText.BackgroundTransparency = 1
+goalText.Position = UDim2.new(0, 78, 0, 0)
+goalText.Size = UDim2.new(1, -96, 1, 0)
+goalText.Font = Enum.Font.FredokaOne
+goalText.TextSize = 22
+goalText.TextColor3 = WHITE
+goalText.TextXAlignment = Enum.TextXAlignment.Left
+goalText.Text = ""
+goalText.Parent = goalPill
+
+-- the 3D arrow and the beam from the player to the target (only you see them)
+local guide = Instance.new("Model")
+guide.Name = "GuideArrow"
+local function gpart(size, cf, shape)
+	local q = Instance.new(shape and "Part" or "WedgePart")
+	if shape then
+		q.Shape = shape
+	end
+	q.Anchored = true
+	q.CanCollide = false
+	q.CanQuery = false
+	q.CanTouch = false
+	q.CastShadow = false
+	q.Material = Enum.Material.Neon
+	q.Color = Color3.fromRGB(255, 205, 60)
+	q.Size = size
+	q.CFrame = cf
+	q.Parent = guide
+	return q
+end
+local shaft = gpart(Vector3.new(0.9, 2.4, 0.9), CFrame.new(0, 2.2, 0), Enum.PartType.Block)
+gpart(Vector3.new(0.9, 1.6, 1.4), CFrame.new(0, 0.2, 0.7) * CFrame.Angles(math.rad(180), 0, 0))
+gpart(Vector3.new(0.9, 1.6, 1.4), CFrame.new(0, 0.2, -0.7) * CFrame.Angles(math.rad(180), math.rad(180), 0))
+guide.PrimaryPart = shaft
+local anchorPart = Instance.new("Part")
+anchorPart.Anchored = true
+anchorPart.CanCollide = false
+anchorPart.CanQuery = false
+anchorPart.Transparency = 1
+anchorPart.Size = Vector3.new(0.2, 0.2, 0.2)
+anchorPart.Parent = guide
+local a1 = Instance.new("Attachment")
+a1.Parent = anchorPart
+local beam = Instance.new("Beam")
+beam.Attachment1 = a1
+beam.Width0 = 0.35
+beam.Width1 = 0.35
+beam.FaceCamera = true
+beam.LightEmission = 1
+beam.Color = ColorSequence.new(Color3.fromRGB(255, 215, 80))
+beam.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.9), NumberSequenceKeypoint.new(0.3, 0.35), NumberSequenceKeypoint.new(1, 0.15) })
+beam.Parent = anchorPart
+local glow = Instance.new("PointLight")
+glow.Color = Color3.fromRGB(255, 210, 80)
+glow.Range = 10
+glow.Parent = shaft
+
+local function ownedModels(kind)
+	local out = {}
+	local folder = workspace:FindFirstChild("Map") and workspace.Map:FindFirstChild("Cars")
+	if folder then
+		for _, m in ipairs(folder:GetChildren()) do
+			if m:GetAttribute("OwnerUserId") == player.UserId and m:GetAttribute("Kind") == kind then
+				table.insert(out, m)
+			end
+		end
+	end
+	return out
+end
+local function nearest(list)
+	local char = player.Character
+	local root = char and char:FindFirstChild("HumanoidRootPart")
+	local best, bestD = nil, math.huge
+	for _, m in ipairs(list) do
+		local d = root and (m:GetPivot().Position - root.Position).Magnitude or 0
+		if d < bestD then
+			best, bestD = m, d
+		end
+	end
+	return best
+end
+
+local function currentGoal()
+	local cash = player:FindFirstChild("leaderstats") and player.leaderstats:FindFirstChild("Cash")
+	cash = cash and cash.Value or 0
+	if player:GetAttribute("WashProgress") ~= nil then
+		local cf = player:GetAttribute("WashFocus")
+		return "Scrub the dirt off your car", cf and cf.Position
+	end
+	local lift = ownedModels("Lift")[1]
+	if lift then
+		return "Pick new tires at the Tire Shop", lift:GetPivot().Position
+	end
+	local car = nearest(ownedModels("Car"))
+	if car then
+		return "Walk to your new car and wash it", car:GetPivot().Position
+	end
+	local affordable = {}
+	for _, c in ipairs(ownedModels("Container")) do
+		if (c:GetAttribute("Price") or 0) <= cash then
+			table.insert(affordable, c)
+		end
+	end
+	local crate = nearest(affordable)
+	if crate then
+		return "Open a container in your yard", crate:GetPivot().Position
+	end
+	if #ownedModels("Container") > 0 then
+		return "Earn cash from your showroom to open more containers", nil
+	end
+	return "Wait for the truck. Upgrade your yard stations meanwhile", nil
+end
+
+RunService.RenderStepped:Connect(function()
+	local goal, target = currentGoal()
+	goalText.Text = goal
+	goalPill.Visible = currentView == nil
+	local char = player.Character
+	local root = char and char:FindFirstChild("HumanoidRootPart")
+	local show = target ~= nil and currentView == nil and root ~= nil and (target - root.Position).Magnitude > 9
+	if show then
+		local t = os.clock()
+		guide.Parent = workspace
+		guide:PivotTo(CFrame.new(target + Vector3.new(0, 9.5 + math.sin(t * 3) * 0.6, 0)) * CFrame.Angles(0, t * 1.5, 0))
+		anchorPart.CFrame = CFrame.new(target + Vector3.new(0, 1, 0))
+		local a0 = root:FindFirstChild("GuideA0")
+		if not a0 then
+			a0 = Instance.new("Attachment")
+			a0.Name = "GuideA0"
+			a0.Position = Vector3.new(0, -2.5, 0)
+			a0.Parent = root
+		end
+		beam.Attachment0 = a0
+	else
+		guide.Parent = nil
+	end
+end)
+
 task.delay(2, function()
-	showNotification("Welcome to D2D! Your first container is landing in your backyard.", GOLD)
+	showNotification("Welcome to D2D! Follow the golden arrow to get started.", GOLD)
 end)
 ]]></ProtectedString></Properties></Item></Item></Item><SharedStrings><SharedString md5="ADvZZ4WLWnoIXyj3Alj10w==">Q1NHUEhTCAAAAAIAKLUv/WDYIy3IABpL4U85EBBrzwGExjyqt8ncY7cRtDw+RZvCMcp6j9OM
 AoJgdKWqGGmlaGvg0s2LJZOxsNPQ7EUPB9KxX38y/QTqBO4EVkfEUD87dL49LfMGTFQP2zbG

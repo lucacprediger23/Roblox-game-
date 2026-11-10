@@ -137,34 +137,47 @@ local function syncAttributes(player)
 	end
 end
 
-local function addLabel(adornee, title, subtitle, color, offsetY)
+-- Small world tag: a dark rounded pill with a title and an optional second line.
+-- Sized in studs (shrinks with distance) and only visible up close, so the world stays clean.
+local function addLabel(adornee, title, subtitle, color, offsetY, maxDist)
 	local gui = Instance.new("BillboardGui")
 	gui.Name = "Label"
-	gui.Size = UDim2.new(0, 260, 0, 58)
+	local twoLines = subtitle and subtitle ~= ""
+	gui.Size = UDim2.new(7, 0, twoLines and 1.9 or 1.15, 0)
 	gui.StudsOffset = Vector3.new(0, offsetY or 6, 0)
-	gui.MaxDistance = 70
+	gui.MaxDistance = maxDist or 24
 	gui.LightInfluence = 0
+	local bg = Instance.new("Frame")
+	bg.AnchorPoint = Vector2.new(0.5, 0.5)
+	bg.Position = UDim2.new(0.5, 0, 0.5, 0)
+	bg.Size = UDim2.new(1, 0, 1, 0)
+	bg.BackgroundColor3 = Color3.fromRGB(24, 26, 34)
+	bg.BackgroundTransparency = 0.25
+	local c = Instance.new("UICorner")
+	c.CornerRadius = UDim.new(0.3, 0)
+	c.Parent = bg
+	bg.Parent = gui
 	local t = Instance.new("TextLabel")
 	t.BackgroundTransparency = 1
-	t.Size = UDim2.new(1, 0, 0.55, 0)
+	t.Position = UDim2.new(0.06, 0, 0.08, 0)
+	t.Size = UDim2.new(0.88, 0, twoLines and 0.5 or 0.84, 0)
 	t.Font = Enum.Font.FredokaOne
 	t.TextScaled = true
 	t.TextColor3 = color or Color3.new(1, 1, 1)
-	t.TextStrokeTransparency = 0.2
 	t.Text = title
-	t.Parent = gui
-	local s = Instance.new("TextLabel")
-	s.BackgroundTransparency = 1
-	s.Position = UDim2.new(0, 0, 0.55, 0)
-	s.Size = UDim2.new(1, 0, 0.45, 0)
-	s.Font = Enum.Font.GothamBold
-	s.TextScaled = true
-	s.TextColor3 = Color3.new(1, 1, 1)
-	s.TextStrokeTransparency = 0.3
-	s.Text = subtitle or ""
-	s.Parent = gui
+	t.Parent = bg
+	local sl = Instance.new("TextLabel")
+	sl.BackgroundTransparency = 1
+	sl.Position = UDim2.new(0.06, 0, 0.56, 0)
+	sl.Size = UDim2.new(0.88, 0, 0.36, 0)
+	sl.Font = Enum.Font.GothamBold
+	sl.TextScaled = true
+	sl.TextColor3 = Color3.fromRGB(230, 232, 240)
+	sl.Text = subtitle or ""
+	sl.Visible = twoLines
+	sl.Parent = bg
 	gui.Parent = adornee
-	return gui, t, s
+	return gui, t, sl
 end
 
 local function addPrompt(parentPart, action, object, hold, owner, callback)
@@ -224,7 +237,7 @@ local function showSpot(plot, spotIndex, entry)
 	end
 	local model = CarBuilder.BuildCar(entry.Id, { Tires = entry.Engine })
 	model:PivotTo(plot.Spots[spotIndex].CFrame)
-	addLabel(model.PrimaryPart, carTitle(entry.Id), carSubtitle(entry.Id, entry.Engine), rarityOf(entry.Id).Color, 7)
+	addLabel(model.PrimaryPart, carTitle(entry.Id), "$" .. Config.FormatNumber(Config.GetCarIncome(entry.Id, entry.Engine)) .. "/s", rarityOf(entry.Id).Color, 6.5, 22)
 	local value = Config.GetCarIncome(entry.Id, entry.Engine) * Config.SellSeconds
 	addPrompt(model:FindFirstChild("Body"), "Sell $" .. Config.FormatNumber(value), carTitle(entry.Id), 1, owner, function(player)
 		sellSpot(player, plot, spotIndex, entry)
@@ -453,9 +466,8 @@ local function spawnContainer(plot, slot, level, drop)
 	local price = Config.GetContainerPrice(level)
 	local priceText = price > 0 and ("$" .. Config.FormatNumber(price)) or "FREE"
 	model:SetAttribute("Price", price)
-	local _, _, sub = addLabel(model.PrimaryPart, "CONTAINER " .. level, priceText, Config.Containers[level].Color:Lerp(Color3.new(1, 1, 1), 0.45), 9.5)
-	sub.TextColor3 = Color3.fromRGB(90, 230, 110)
-	sub.Font = Enum.Font.FredokaOne
+	local _, tl = addLabel(model.PrimaryPart, priceText, nil, Color3.fromRGB(110, 240, 120), 8.4, 30)
+	tl.Parent.Parent.Size = UDim2.new(3.6, 0, 1.15, 0)
 	addPrompt(model:FindFirstChild("Box"), "Open · " .. priceText, "Container " .. level, 0.6, owner, function(player)
 		openContainer(player, plot, slot, entry)
 	end)
@@ -492,7 +504,7 @@ spawnYardCar = function(plot, slot, carId)
 			p.Color = p.Color:Lerp(Config.Containers[Config.CarsById[carId].Container].Dirt, 0.6)
 		end
 	end
-	addLabel(model.PrimaryPart, carTitle(carId) .. " (dirty)", carSubtitle(carId), rarityOf(carId).Color, 7)
+	addLabel(model.PrimaryPart, carTitle(carId), "dirty · wash me", rarityOf(carId).Color, 6, 18)
 	addPrompt(model:FindFirstChild("Body"), "Send to Wash Bay", carTitle(carId), 0.3, owner, function(player)
 		sendToWash(player, plot, slot, entry)
 	end)
@@ -739,7 +751,8 @@ local function rebuildLift(plot)
 	local owner = plotOwner[plot.Index]
 	local model = CarBuilder.BuildCar(lift.Id, { Tires = lift.Engine })
 	model:PivotTo(plot.LiftCFrame)
-	addLabel(model.PrimaryPart, carTitle(lift.Id), carSubtitle(lift.Id, lift.Engine), rarityOf(lift.Id).Color, 8)
+	model:SetAttribute("OwnerUserId", owner and owner.UserId or 0)
+	model:SetAttribute("Kind", "Lift")
 	addPrompt(model:FindFirstChild("Body"), "Change Tires", carTitle(lift.Id), 0, owner, function(player)
 		if plotOwner[plot.Index] == player and state[plot.Index].Lift == lift then
 			OpenEngineEvent:FireClient(player, lift.Id, lift.Engine)
@@ -1227,7 +1240,7 @@ local function runCustomer(plot)
 		local entry = state[plot.Index].Spots[pick.Index]
 		if entry then
 			local amount = Config.GetCarIncome(entry.Id, entry.Engine) * 3
-			local gui, t = addLabel(body, "+$" .. Config.FormatNumber(amount), "Wow!", GREEN, 3)
+			local gui, t = addLabel(body, "+$" .. Config.FormatNumber(amount), nil, GREEN, 3, 40)
 			t.TextColor3 = GREEN
 			task.wait(2.5)
 			gui:Destroy()

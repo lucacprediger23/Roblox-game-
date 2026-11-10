@@ -422,7 +422,7 @@ end)
 local notifyList = Instance.new("Frame")
 notifyList.BackgroundTransparency = 1
 notifyList.AnchorPoint = Vector2.new(0.5, 0)
-notifyList.Position = UDim2.new(0.5, 0, 0, 80)
+notifyList.Position = UDim2.new(0.5, 0, 0, 140)
 notifyList.Size = UDim2.new(0, 640, 0, 200)
 notifyList.Parent = gui
 local nl = Instance.new("UIListLayout")
@@ -1173,23 +1173,40 @@ local function cardFor(model)
 	corner(b, 12)
 	stroke(b, Color3.fromRGB(110, 40, 30), 3)
 	shine(b, 0.15)
-	local title = inkText(b, { Position = UDim2.new(0, 6, 0, 12), Size = UDim2.new(1, -12, 0, 52), TextColor3 = Color3.fromRGB(70, 30, 20), TextWrapped = true })
-	local sub = text(b, { Position = UDim2.new(0, 4, 1, -28), Size = UDim2.new(1, -8, 0, 22), TextColor3 = Color3.fromRGB(120, 255, 120), StrokeThickness = 2 })
-	local tc = Instance.new("UITextSizeConstraint")
-	tc.MaxTextSize = 18
-	tc.Parent = title
-	if kind == "Container" then
+	-- picture-first card: big icon, small level badge, price strip
+	local isCrate = kind == "Container"
+	Icons.Make(isCrate and "Crate" or "Car", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 4), Size = UDim2.new(0, 74, 0, 70), ZIndex = 2 }).Parent = b
+	local strip = Instance.new("Frame")
+	strip.AnchorPoint = Vector2.new(0.5, 1)
+	strip.Position = UDim2.new(0.5, 0, 1, -5)
+	strip.Size = UDim2.new(1, -10, 0, 24)
+	strip.BackgroundColor3 = Color3.fromRGB(28, 30, 38)
+	strip.BackgroundTransparency = 0.15
+	strip.ZIndex = 3
+	corner(strip, 8)
+	strip.Parent = b
+	local sub = text(strip, { Size = UDim2.new(1, -6, 1, -4), Position = UDim2.new(0, 3, 0, 2), TextColor3 = Color3.fromRGB(130, 255, 130), StrokeThickness = 1.5, ZIndex = 4 })
+	local badge = Instance.new("TextLabel")
+	badge.Size = UDim2.new(0, 30, 0, 22)
+	badge.Position = UDim2.new(0, 4, 0, 4)
+	badge.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+	badge.Font = Enum.Font.FredokaOne
+	badge.TextScaled = true
+	badge.TextColor3 = Color3.fromRGB(50, 40, 30)
+	badge.ZIndex = 4
+	corner(badge, 8)
+	badge.Parent = b
+	if isCrate then
 		local level = model:GetAttribute("Level")
-		b.BackgroundColor3 = Config.Containers[level].Color:Lerp(Color3.new(1, 1, 1), 0.25)
-		title.Text = "Container " .. level .. " (unopened)"
+		b.BackgroundColor3 = Config.Containers[level].Color:Lerp(Color3.new(1, 1, 1), 0.35)
+		badge.Text = tostring(level)
 		local price = model:GetAttribute("Price") or 0
 		sub.Text = price > 0 and ("$" .. Config.FormatNumber(price)) or "FREE"
 	else
-		local id = model:GetAttribute("CarId")
-		local car = Config.CarsById[id]
-		b.BackgroundColor3 = Color3.fromRGB(240, 110, 90)
-		title.Text = (car and car.Name or "Car") .. " (dirty)"
-		sub.Text = car and ("$" .. Config.FormatNumber(car.BaseIncome) .. "/s") or ""
+		b.BackgroundColor3 = Color3.fromRGB(150, 205, 255)
+		badge.Visible = false
+		sub.Text = "WASH"
+		sub.TextColor3 = Color3.fromRGB(140, 220, 255)
 	end
 	juicy(b)
 	b.MouseButton1Click:Connect(function()
@@ -1271,6 +1288,167 @@ OfflineEvent.OnClientEvent:Connect(function(amount)
 	close.MouseButton1Click:Connect(done)
 end)
 
+---------------------------------------------------------------------
+-- Objective guide: one clear "next step" at the top + a glowing arrow over the target
+---------------------------------------------------------------------
+local goalPill = Instance.new("Frame")
+goalPill.AnchorPoint = Vector2.new(0.5, 0)
+goalPill.Position = UDim2.new(0.5, 0, 0, 82)
+goalPill.Size = UDim2.new(0, 460, 0, 46)
+goalPill.BackgroundColor3 = Color3.fromRGB(24, 26, 34)
+goalPill.BackgroundTransparency = 0.2
+corner(goalPill, 23)
+stroke(goalPill, GOLD, 2).Transparency = 0.3
+goalPill.Parent = hud
+local goalTag = Instance.new("TextLabel")
+goalTag.BackgroundTransparency = 1
+goalTag.Position = UDim2.new(0, 18, 0, 0)
+goalTag.Size = UDim2.new(0, 80, 1, 0)
+goalTag.Font = Enum.Font.FredokaOne
+goalTag.TextSize = 20
+goalTag.TextColor3 = GOLD
+goalTag.Text = "NEXT"
+goalTag.TextXAlignment = Enum.TextXAlignment.Left
+goalTag.Parent = goalPill
+local goalText = Instance.new("TextLabel")
+goalText.BackgroundTransparency = 1
+goalText.Position = UDim2.new(0, 78, 0, 0)
+goalText.Size = UDim2.new(1, -96, 1, 0)
+goalText.Font = Enum.Font.FredokaOne
+goalText.TextSize = 22
+goalText.TextColor3 = WHITE
+goalText.TextXAlignment = Enum.TextXAlignment.Left
+goalText.Text = ""
+goalText.Parent = goalPill
+
+-- the 3D arrow and the beam from the player to the target (only you see them)
+local guide = Instance.new("Model")
+guide.Name = "GuideArrow"
+local function gpart(size, cf, shape)
+	local q = Instance.new(shape and "Part" or "WedgePart")
+	if shape then
+		q.Shape = shape
+	end
+	q.Anchored = true
+	q.CanCollide = false
+	q.CanQuery = false
+	q.CanTouch = false
+	q.CastShadow = false
+	q.Material = Enum.Material.Neon
+	q.Color = Color3.fromRGB(255, 205, 60)
+	q.Size = size
+	q.CFrame = cf
+	q.Parent = guide
+	return q
+end
+local shaft = gpart(Vector3.new(0.9, 2.4, 0.9), CFrame.new(0, 2.2, 0), Enum.PartType.Block)
+gpart(Vector3.new(0.9, 1.6, 1.4), CFrame.new(0, 0.2, 0.7) * CFrame.Angles(math.rad(180), 0, 0))
+gpart(Vector3.new(0.9, 1.6, 1.4), CFrame.new(0, 0.2, -0.7) * CFrame.Angles(math.rad(180), math.rad(180), 0))
+guide.PrimaryPart = shaft
+local anchorPart = Instance.new("Part")
+anchorPart.Anchored = true
+anchorPart.CanCollide = false
+anchorPart.CanQuery = false
+anchorPart.Transparency = 1
+anchorPart.Size = Vector3.new(0.2, 0.2, 0.2)
+anchorPart.Parent = guide
+local a1 = Instance.new("Attachment")
+a1.Parent = anchorPart
+local beam = Instance.new("Beam")
+beam.Attachment1 = a1
+beam.Width0 = 0.35
+beam.Width1 = 0.35
+beam.FaceCamera = true
+beam.LightEmission = 1
+beam.Color = ColorSequence.new(Color3.fromRGB(255, 215, 80))
+beam.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.9), NumberSequenceKeypoint.new(0.3, 0.35), NumberSequenceKeypoint.new(1, 0.15) })
+beam.Parent = anchorPart
+local glow = Instance.new("PointLight")
+glow.Color = Color3.fromRGB(255, 210, 80)
+glow.Range = 10
+glow.Parent = shaft
+
+local function ownedModels(kind)
+	local out = {}
+	local folder = workspace:FindFirstChild("Map") and workspace.Map:FindFirstChild("Cars")
+	if folder then
+		for _, m in ipairs(folder:GetChildren()) do
+			if m:GetAttribute("OwnerUserId") == player.UserId and m:GetAttribute("Kind") == kind then
+				table.insert(out, m)
+			end
+		end
+	end
+	return out
+end
+local function nearest(list)
+	local char = player.Character
+	local root = char and char:FindFirstChild("HumanoidRootPart")
+	local best, bestD = nil, math.huge
+	for _, m in ipairs(list) do
+		local d = root and (m:GetPivot().Position - root.Position).Magnitude or 0
+		if d < bestD then
+			best, bestD = m, d
+		end
+	end
+	return best
+end
+
+local function currentGoal()
+	local cash = player:FindFirstChild("leaderstats") and player.leaderstats:FindFirstChild("Cash")
+	cash = cash and cash.Value or 0
+	if player:GetAttribute("WashProgress") ~= nil then
+		local cf = player:GetAttribute("WashFocus")
+		return "Scrub the dirt off your car", cf and cf.Position
+	end
+	local lift = ownedModels("Lift")[1]
+	if lift then
+		return "Pick new tires at the Tire Shop", lift:GetPivot().Position
+	end
+	local car = nearest(ownedModels("Car"))
+	if car then
+		return "Walk to your new car and wash it", car:GetPivot().Position
+	end
+	local affordable = {}
+	for _, c in ipairs(ownedModels("Container")) do
+		if (c:GetAttribute("Price") or 0) <= cash then
+			table.insert(affordable, c)
+		end
+	end
+	local crate = nearest(affordable)
+	if crate then
+		return "Open a container in your yard", crate:GetPivot().Position
+	end
+	if #ownedModels("Container") > 0 then
+		return "Earn cash from your showroom to open more containers", nil
+	end
+	return "Wait for the truck. Upgrade your yard stations meanwhile", nil
+end
+
+RunService.RenderStepped:Connect(function()
+	local goal, target = currentGoal()
+	goalText.Text = goal
+	goalPill.Visible = currentView == nil
+	local char = player.Character
+	local root = char and char:FindFirstChild("HumanoidRootPart")
+	local show = target ~= nil and currentView == nil and root ~= nil and (target - root.Position).Magnitude > 9
+	if show then
+		local t = os.clock()
+		guide.Parent = workspace
+		guide:PivotTo(CFrame.new(target + Vector3.new(0, 9.5 + math.sin(t * 3) * 0.6, 0)) * CFrame.Angles(0, t * 1.5, 0))
+		anchorPart.CFrame = CFrame.new(target + Vector3.new(0, 1, 0))
+		local a0 = root:FindFirstChild("GuideA0")
+		if not a0 then
+			a0 = Instance.new("Attachment")
+			a0.Name = "GuideA0"
+			a0.Position = Vector3.new(0, -2.5, 0)
+			a0.Parent = root
+		end
+		beam.Attachment0 = a0
+	else
+		guide.Parent = nil
+	end
+end)
+
 task.delay(2, function()
-	showNotification("Welcome to D2D! Your first container is landing in your backyard.", GOLD)
+	showNotification("Welcome to D2D! Follow the golden arrow to get started.", GOLD)
 end)

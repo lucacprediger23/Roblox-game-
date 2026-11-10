@@ -170,8 +170,26 @@ builders.Clover = function(m)
 	p(m, Vector3.new(0.3, 1.6, 0.3), CFrame.new(0.5, -1.4, 0) * R(0, 0, math.rad(25)), Color3.fromRGB(40, 140, 50))
 end
 
--- Returns a ViewportFrame showing the icon. props are applied to the frame.
+-- Uploaded artwork (rbxassetid). When an id is set, Make returns an ImageLabel with
+-- the painted icon; otherwise it falls back to the 3D ViewportFrame icon below.
+Icons.Images = {
+	Cash = "", Coin = "", Book = "", Home = "", Tire = "", Truck = "",
+	Crate = "", Sponge = "", Showroom = "", Clover = "", Car = "", Upgrade = "",
+}
+
+-- Returns an icon GuiObject. props are applied to it.
 function Icons.Make(kind, props)
+	local id = Icons.Images[kind]
+	if id and id ~= "" then
+		local img = Instance.new("ImageLabel")
+		img.BackgroundTransparency = 1
+		img.ScaleType = Enum.ScaleType.Fit
+		img.Image = "rbxassetid://" .. id
+		for k, v in pairs(props or {}) do
+			img[k] = v
+		end
+		return img
+	end
 	local vp = Instance.new("ViewportFrame")
 	vp.BackgroundTransparency = 1
 	vp.Ambient = Color3.fromRGB(170, 170, 180)
