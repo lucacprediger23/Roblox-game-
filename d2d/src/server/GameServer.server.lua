@@ -1657,6 +1657,17 @@ if game:GetService("RunService"):IsStudio() then
 					applyShowroom(plot, player, profile)
 				elseif cmd == "cash" then
 					setCash(player, value)
+				elseif cmd == "fill" then
+					-- top showroom with one of every generated model (2 per era)
+					profile.ShowroomLevel = Config.MaxShowroomLevel
+					local i = 0
+					for c = 1, #Config.Containers do
+						for slot = 1, 2 do
+							i = i + 1
+							state[plot.Index].Spots[i] = { Id = "c" .. c .. "_" .. slot, Engine = (value or 1) }
+						end
+					end
+					applyShowroom(plot, player, profile)
 				end
 			end
 		end
