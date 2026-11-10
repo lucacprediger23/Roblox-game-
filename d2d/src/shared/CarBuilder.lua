@@ -130,13 +130,15 @@ local ASSET_FOR_SHAPE = {
 
 local function findAsset(car)
 	local assets = ReplicatedStorage:FindFirstChild("Assets")
-	local cars = assets and assets:FindFirstChild("Cars")
-	if not cars then
+	if not assets then
 		return nil
 	end
+	local cars = assets:FindFirstChild("Cars") or Instance.new("Folder")
 	-- a model made for this exact car wins, then one for its body shape
+	-- real Creator Store models first, then the older generated era cars
+	local store = assets:FindFirstChild("StoreCars")
 	local era = assets:FindFirstChild("EraCars")
-	local exact = cars:FindFirstChild(car.Id) or (car.Model and era and era:FindFirstChild(car.Model))
+	local exact = (car.Model and store and store:FindFirstChild(car.Model)) or cars:FindFirstChild(car.Id) or (car.Model and era and era:FindFirstChild(car.Model))
 	if exact then
 		return exact
 	end
@@ -170,16 +172,38 @@ local function buildFromAsset(car, source, opts)
 	local model = Instance.new("Model")
 	model.Name = car.Name
 	local parts = {}
+	local frontHints = {}
+	for _, d in ipairs(clone:GetDescendants()) do
+		-- no scripts, sounds, plates or logos from store models
+		if d:IsA("LuaSourceContainer") or d:IsA("Sound") or d:IsA("Decal") or d:IsA("Texture") or d:IsA("SurfaceGui") or d:IsA("BillboardGui") or d:IsA("ParticleEmitter") or d:IsA("Fire") or d:IsA("Smoke") or d:IsA("ProximityPrompt") or d:IsA("ClickDetector") or d:IsA("JointInstance") or d:IsA("WeldConstraint") or d:IsA("Constraint") or d:IsA("Humanoid") then
+			d:Destroy()
+		end
+	end
+	for _, d in ipairs(clone:GetDescendants()) do
+		if d:IsA("BasePart") and (d.Transparency >= 0.95 or d:IsA("Seat") or d:IsA("VehicleSeat")) and not d:FindFirstChildWhichIsA("Light", true) then
+			-- hitboxes, seats and invisible helpers from store models
+			d:Destroy()
+		end
+	end
 	for _, d in ipairs(clone:GetDescendants()) do
 		if d:IsA("BasePart") then
-			local group = (d.Parent and d.Parent ~= clone and d.Parent.Name or d.Name):lower()
+			-- look at the whole path (store models nest wheels as Wheels/FL/Rim etc.)
+			local path = d.Name:lower()
+			local a = d.Parent
+			while a and a ~= clone do
+				path = a.Name:lower() .. "/" .. path
+				a = a.Parent
+			end
 			local name = "Trim"
-			if group:find("body") then
-				name = "Body"
-			elseif group:find("hood") then
-				name = "Hood"
-			elseif group:find("wheel") then
+			if path:find("wheel") or path:find("tire") or path:find("tyre") or path:find("%f[%a]rim") then
 				name = "Wheel"
+			elseif path:find("hood") or path:find("bonnet") then
+				name = "Hood"
+			elseif path:find("body") then
+				name = "Body"
+			end
+			if path:find("headlight") or path:find("grille") or path:find("grill") or path:find("front") then
+				table.insert(frontHints, d)
 			end
 			d.Name = name
 			d.Anchored = true
@@ -190,6 +214,20 @@ local function buildFromAsset(car, source, opts)
 		end
 	end
 	clone:Destroy()
+	if not model:FindFirstChild("Body") then
+		-- store models rarely name their body: use the biggest part
+		local best, bestV = nil, 0
+		for _, p in ipairs(parts) do
+			local vol = p.Size.X * p.Size.Y * p.Size.Z
+			if p.Name == "Trim" and vol > bestV then
+				best, bestV = p, vol
+			end
+		end
+		if best then
+			best.Name = "Body"
+			best.CanCollide = true
+		end
+	end
 	local body = model:FindFirstChild("Body") or parts[1]
 	local hood = model:FindFirstChild("Hood")
 
@@ -215,8 +253,18 @@ local function buildFromAsset(car, source, opts)
 	local center, size = worldBox()
 	local alongX = size.X > size.Z
 	local front
-	if hood then
-		local d = hood.Position - center
+	local hint = hood
+	if not hint and #frontHints > 0 then
+		local sum = Vector3.zero
+		for _, h in ipairs(frontHints) do
+			if h.Parent then
+				sum += h.Position
+			end
+		end
+		hint = { Position = sum / #frontHints }
+	end
+	if hint then
+		local d = hint.Position - center
 		if alongX then
 			front = Vector3.new(d.X >= 0 and 1 or -1, 0, 0)
 		else
@@ -231,7 +279,7 @@ local function buildFromAsset(car, source, opts)
 	local _, size2 = worldBox()
 	pcall(function()
 		-- AI cars are taller and rounder than the old block cars, so make them a bit longer to read well
-		model:ScaleTo(math.min(L * 1.25, 14.5) / math.max(size2.Z, 0.1))
+		model:ScaleTo(math.min(L * 1.25, 13) / math.max(size2.Z, 0.1))
 	end)
 	-- sit on the ground, centered
 	local c3, _, min3 = worldBox()
@@ -549,7 +597,145 @@ function CarBuilder.BuildCar(carId, opts)
 end
 
 -- Shipping container in the color of its level. Pivot = ground center.
+-- a real Creator Store container (levels 4+) or wooden crate (levels 1-3), tinted in the level colour.
+-- Returns nil when the asset is not in ReplicatedStorage.Assets.Props, so the built crate is used.
+local function storeContainer(level)
+	local assets = ReplicatedStorage:FindFirstChild("Assets")
+	local props = assets and assets:FindFirstChild("Props")
+	local src = props and props:FindFirstChild(level <= 3 and "WoodCrate" or "Container")
+	if not src then
+		return nil
+	end
+	local info = Config.Containers[level]
+	local model = Instance.new("Model")
+	model.Name = "Container" .. level
+	local clone = src:Clone()
+	local parts = {}
+	for _, d in ipairs(clone:GetDescendants()) do
+		if d:IsA("LuaSourceContainer") or d:IsA("Sound") or d:IsA("Decal") or d:IsA("Texture") or d:IsA("JointInstance") or d:IsA("WeldConstraint") or d:IsA("ProximityPrompt") or d:IsA("ClickDetector") then
+			d:Destroy()
+		end
+	end
+	for _, d in ipairs(clone:GetDescendants()) do
+		if d:IsA("BasePart") then
+			if d.Transparency >= 0.95 then
+				d:Destroy()
+			else
+				table.insert(parts, d)
+			end
+		end
+	end
+	if #parts == 0 then
+		clone:Destroy()
+		return nil
+	end
+	-- keep the model's own shading: brightness of each part relative to the brightest one
+	local maxLum = 0
+	for _, p in ipairs(parts) do
+		local c = p.Color
+		maxLum = math.max(maxLum, 0.3 * c.R + 0.59 * c.G + 0.11 * c.B)
+	end
+	for _, p in ipairs(parts) do
+		local c = p.Color
+		local lum = (0.3 * c.R + 0.59 * c.G + 0.11 * c.B) / math.max(maxLum, 0.01)
+		pcall(function()
+			p.TextureID = ""
+		end)
+		for _, sa in ipairs(p:GetChildren()) do
+			if sa:IsA("SurfaceAppearance") then
+				sa:Destroy()
+			end
+		end
+		p.Color = info.Color:Lerp(Color3.new(0, 0, 0), (1 - math.clamp(lum, 0.45, 1)) * 0.9)
+		if level >= 4 and p.Material ~= Enum.Material.Neon and p.Material ~= Enum.Material.Glass then
+			p.Material = Enum.Material.Metal
+		end
+		p.Reflectance = 0
+		p.Anchored = true
+		p.CanCollide = false
+		p.CanTouch = false
+		p.CanQuery = false
+		p.Parent = model
+	end
+	clone:Destroy()
+	-- store models are often saved at an angle: square it up using the biggest part's rotation
+	-- (snapped to its nearest upright yaw) so the bounding box below is tight
+	local biggest, bigV = parts[1], 0
+	for _, p in ipairs(parts) do
+		local vol = p.Size.X * p.Size.Y * p.Size.Z
+		if vol > bigV then
+			biggest, bigV = p, vol
+		end
+	end
+	local look = biggest.CFrame.LookVector
+	local right = biggest.CFrame.RightVector
+	local flat = math.abs(look.Y) < 0.7 and Vector3.new(look.X, 0, look.Z) or Vector3.new(right.X, 0, right.Z)
+	if flat.Magnitude > 0.01 then
+		local c0 = model:GetBoundingBox()
+		model.WorldPivot = CFrame.lookAt(c0.Position, c0.Position + flat.Unit)
+		model:PivotTo(CFrame.new())
+		model.WorldPivot = CFrame.new()
+	end
+	-- lay it with the long side along X, base on the ground, then fit it to the yard slot
+	local cf, size = model:GetBoundingBox()
+	model.WorldPivot = CFrame.new(cf.Position.X, cf.Position.Y - size.Y / 2, cf.Position.Z)
+	model:PivotTo(CFrame.new())
+	cf, size = model:GetBoundingBox()
+	if size.Z > size.X then
+		model:PivotTo(CFrame.Angles(0, math.rad(90), 0))
+		model.WorldPivot = CFrame.new(model.WorldPivot.Position)
+		cf, size = model:GetBoundingBox()
+	end
+	-- a 40ft store container is too long for a yard slot: shorten it to 20ft proportions
+	-- (move every part toward the middle along X and shrink the parts lying along X)
+	if size.X / math.max(size.Y, 0.1) > 2.6 then
+		local k = 2.3 * size.Y / size.X
+		local mid = cf.Position.X
+		for _, p in ipairs(model:GetDescendants()) do
+			if p:IsA("BasePart") then
+				local pcf = p.CFrame
+				local axes = { pcf.RightVector, pcf.UpVector, pcf.LookVector }
+				local sz = { p.Size.X, p.Size.Y, p.Size.Z }
+				for i = 1, 3 do
+					if math.abs(axes[i].X) > 0.9 then
+						sz[i] = math.max(sz[i] * k, 0.05)
+					end
+				end
+				p.Size = Vector3.new(sz[1], sz[2], sz[3])
+				p.CFrame = pcf - Vector3.new((pcf.Position.X - mid) * (1 - k), 0, 0)
+			end
+		end
+		cf, size = model:GetBoundingBox()
+	end
+	local target = level <= 3 and 6.4 or 9.2
+	pcall(function()
+		model:ScaleTo(target / math.max(size.X, size.Z, 0.1))
+	end)
+	cf, size = model:GetBoundingBox()
+	model.WorldPivot = CFrame.new(cf.Position.X, cf.Position.Y - size.Y / 2, cf.Position.Z)
+	model:PivotTo(CFrame.new())
+	cf, size = model:GetBoundingBox()
+	local root = newPart(model, "Root", Vector3.new(1, 1, 1), CFrame.new(0, 0.5, 0), Color3.new(0, 0, 0), { Transparency = 1 })
+	model.PrimaryPart = root
+	newPart(model, "Box", size, CFrame.new(cf.Position), info.Color, { Transparency = 1, CanCollide = true })
+	if level >= 8 then
+		local light = Instance.new("PointLight")
+		light.Color = level == 10 and Color3.fromRGB(90, 230, 255) or info.Color
+		light.Range = 14
+		light.Brightness = 1.4
+		light.Parent = root
+		local glow = newPart(model, "Glow", Vector3.new(size.X + 0.3, 0.25, size.Z + 0.3), CFrame.new(0, 0.12, 0), light.Color, { Material = Enum.Material.Neon, Transparency = 0.35 })
+		glow.CanCollide = false
+	end
+	model:SetAttribute("ContainerLevel", level)
+	return model
+end
+
 function CarBuilder.BuildContainer(level)
+	local store = storeContainer(level)
+	if store then
+		return store
+	end
 	-- an open-frame crate like in Clean a Painting: thick edge beams, a diagonal brace on every side,
 	-- recessed panels. Levels 1-2 are wooden, the rest are colored diamond-plate metal.
 	local info = Config.Containers[level]

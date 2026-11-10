@@ -296,6 +296,21 @@ local ROAD_HALF = 18 -- road from z -18 to 18
 local SIDEWALK = 8
 local PLOT_FRONT = ROAD_HALF + SIDEWALK -- plot front edge at |z| = 26
 local PLOT_DEPTH = 206
+-- turn (radians) that makes each store prop face -Z (toward the showroom front); set after looking at them in Studio
+local PROP_FRONT = {
+	Workbench = 0,
+	ToolCabinet = 0,
+	TireRack = 0,
+	Compressor = 0,
+	OilDrum = 0,
+	GarageShelf = 0,
+	ShowroomDesk = 0,
+	Plant = 0,
+	Neon = 0,
+	WoodCrate = 0,
+	Barrier = 0,
+	CarLift = 0,
+}
 local NORTH_X = { -180, 30, 240 }
 
 local function plotFrame(index)
@@ -494,7 +509,7 @@ local function buildPlot(index, parent)
 			{ Name = "workshop", Wall = Color3.fromRGB(196, 198, 202), Floor = Color3.fromRGB(110, 120, 134), Trim = Color3.fromRGB(40, 90, 170), Ceiling = Color3.fromRGB(200, 202, 208), Light = LAMP, Front = Color3.fromRGB(196, 198, 202) },
 			{ Name = "dealer", Wall = PLASTER, Floor = TILE, Trim = NAVY, Ceiling = Color3.fromRGB(226, 226, 230), Light = LAMP, Front = PLASTER },
 			{ Name = "luxury", Wall = Color3.fromRGB(120, 80, 56), Floor = Color3.fromRGB(44, 42, 48), Trim = Color3.fromRGB(222, 180, 90), Ceiling = Color3.fromRGB(236, 226, 210), Light = Color3.fromRGB(255, 226, 170), Front = Color3.fromRGB(70, 52, 44) },
-			{ Name = "future", Wall = Color3.fromRGB(232, 236, 244), Floor = Color3.fromRGB(196, 202, 214), Trim = Color3.fromRGB(40, 220, 255), Ceiling = Color3.fromRGB(240, 244, 250), Light = Color3.fromRGB(190, 245, 255), Front = Color3.fromRGB(232, 236, 244) },
+			{ Name = "future", Wall = Color3.fromRGB(214, 220, 232), Floor = Color3.fromRGB(70, 78, 94), Trim = Color3.fromRGB(40, 220, 255), Ceiling = Color3.fromRGB(240, 244, 250), Light = Color3.fromRGB(190, 245, 255), Front = Color3.fromRGB(232, 236, 244) },
 		}
 		local theme = THEMES[level]
 		-- the lot behind follows the same style
@@ -606,13 +621,44 @@ local function buildPlot(index, parent)
 			end
 		end
 
+		-- real Creator Store furniture in the free corners behind the last cars (never in the aisle)
+		local function furnish(name, x, z, faceYaw, opts)
+			local turn = PROP_FRONT[name] or 0
+			return Props.Place(name, sm, s(x, FLOOR_Y, z) * CFrame.Angles(0, faceYaw + turn, 0), opts)
+		end
+		local backZ = D - 0.8 -- just inside the back wall
+		local cornerX = W / 2 - 1 -- just inside the side walls
+		local FACE_FRONT, FACE_RIGHT, FACE_LEFT = 0, -math.pi / 2, math.pi / 2
+		if theme.Name == "street" or theme.Name == "workshop" then
+			-- left corner: workbench on the back wall, tool cabinet on the side wall
+			furnish("Workbench", -(backDoor / 2 + 5.5), backZ - 1.6, FACE_FRONT, { Width = 7.5 })
+			furnish("ToolCabinet", -(cornerX - 1.6), backZ - 6.5, FACE_RIGHT, { Height = 4.4 })
+			-- right corner: tyre rack, compressor and oil drums
+			furnish("TireRack", backDoor / 2 + 5.5, backZ - 1.4, FACE_FRONT, { Width = 7 })
+			furnish("Compressor", cornerX - 1.8, backZ - 6, FACE_LEFT, { Height = 3.4 })
+			furnish("OilDrum", cornerX - 1.4, backZ - 9.2, 0.4, { Height = 3 })
+			if theme.Name == "workshop" then
+				furnish("GarageShelf", -(cornerX - 1.2), backZ - 11, FACE_RIGHT, { Height = 7 })
+				furnish("OilDrum", cornerX - 3.6, backZ - 9.6, 1.3, { Height = 3 })
+			end
+		else
+			-- dealership: a sales desk with plants, and plants by the entrance
+			furnish("ShowroomDesk", -(backDoor / 2 + 6), backZ - 3.2, FACE_FRONT, { Width = 8 })
+			furnish("Plant", -(cornerX - 1.6), backZ - 1.6, 0, { Height = 5.5 })
+			furnish("Plant", backDoor / 2 + 2, backZ - 1.6, 1, { Height = 5.5 })
+			for _, side in ipairs({ -1, 1 }) do
+				furnish("Plant", side * (doorW / 2 + 2.4), 3.2, side, { Height = 5 })
+			end
+		end
+
 		-- display spots along the left and right walls, angled toward the aisle (no floor platforms)
 		local spots = {}
 		for i = 1, perSide do
 			for _, side in ipairs({ -1, 1 }) do
+				-- nose to the aisle, nearly square to the wall, so parked cars never touch their neighbours
 				local x = side * (W / 2 - 9)
 				local z = 12 + (i - 1) * 10
-				local dir = Vector3.new(-side, 0, -0.6)
+				local dir = Vector3.new(-side, 0, -0.18)
 				local yaw = math.atan2(-dir.X, -dir.Z)
 				local cf = s(x, FLOOR_Y + 0.02, z) * CFrame.Angles(0, yaw, 0)
 				table.insert(spots, { CFrame = cf, Front = s(side * 4, FLOOR_Y, z - 2) })

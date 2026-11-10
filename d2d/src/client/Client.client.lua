@@ -343,7 +343,7 @@ local function pill(y, width, icon, color, strokeColor)
 	f.SliceCenter = Rect.new(110, 110, UI_ART.Panel.W - 110, UI_ART.Panel.H - 110)
 	f.SliceScale = 0.2
 	f.Parent = hud
-	Icons.Make(icon, { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0, 2, 0.5, 0), Size = UDim2.new(0, 78, 0, 78), ZIndex = 3 }).Parent = f
+	Icons.Make(icon, { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0, 2, 0.5, 0), Size = UDim2.new(0, 64, 0, 64), ZIndex = 3 }).Parent = f
 	local l = Instance.new("TextLabel")
 	l.BackgroundTransparency = 1
 	l.Position = UDim2.new(0, 40, 0, 6)
@@ -357,7 +357,7 @@ local function pill(y, width, icon, color, strokeColor)
 	return f, l
 end
 local cashPill, cashLabel = pill(64, 250, "Cash", GREEN_TEXT, Color3.fromRGB(230, 255, 230))
-local _, tokenLabel = pill(124, 160, "Coin", TEXT_DARK)
+local _, tokenLabel = pill(136, 160, "Coin", TEXT_DARK)
 local incomeLabel = text(hud, { Position = UDim2.new(0, 306, 0, 78), Size = UDim2.new(0, 200, 0, 26), Text = "", TextColor3 = Color3.fromRGB(130, 255, 140), TextXAlignment = Enum.TextXAlignment.Left })
 
 do
@@ -1002,7 +1002,8 @@ local containerList = Instance.new("ScrollingFrame")
 containerList.BackgroundTransparency = 1
 containerList.Position = UDim2.new(0, 24, 0, 110)
 containerList.Size = UDim2.new(0, 200, 1, -130)
-containerList.CanvasSize = UDim2.new(0, 0, 0, #Config.Containers * 64)
+containerList.CanvasSize = UDim2.new(0, 0, 0, 0)
+containerList.AutomaticCanvasSize = Enum.AutomaticSize.Y
 containerList.ScrollBarThickness = 6
 containerList.ScrollBarImageColor3 = BROWN
 containerList.Parent = indexFrame
@@ -1035,9 +1036,14 @@ gl.CellSize = UDim2.new(0.25, -10, 0, 200)
 gl.CellPadding = UDim2.new(0, 10, 0, 10)
 gl.SortOrder = Enum.SortOrder.LayoutOrder
 gl.Parent = grid
-gl:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-	grid.CanvasSize = UDim2.new(0, 0, 0, gl.AbsoluteContentSize.Y + 10)
-end)
+-- AutomaticCanvasSize measures in unscaled units, so the UIScale on the index no longer cuts the last row off
+grid.CanvasSize = UDim2.new(0, 0, 0, 0)
+grid.AutomaticCanvasSize = Enum.AutomaticSize.Y
+grid.ScrollingDirection = Enum.ScrollingDirection.Y
+local gridPad = Instance.new("UIPadding")
+gridPad.PaddingTop = UDim.new(0, 4)
+gridPad.PaddingBottom = UDim.new(0, 24)
+gridPad.Parent = grid
 
 local selectedContainer = 1
 local containerButtons = {}

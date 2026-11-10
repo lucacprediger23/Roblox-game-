@@ -526,7 +526,7 @@ local function spawnContainer(plot, slot, level, drop)
 	local owner = plotOwner[plot.Index]
 	local entry = { Kind = "Container", Level = level }
 	local model = CarBuilder.BuildContainer(level)
-	local target = plot.YardSlots[slot] * CFrame.Angles(0, math.rad(rng:NextNumber(-28, 28)), 0)
+	local target = plot.YardSlots[slot] * CFrame.Angles(0, math.rad(rng:NextNumber(-12, 12)), 0)
 	model:SetAttribute("OwnerUserId", owner and owner.UserId or 0)
 	model:SetAttribute("YardSlot", slot)
 	model:SetAttribute("Kind", "Container")
