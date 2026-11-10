@@ -37,6 +37,9 @@ local function default()
 		Storage = {}, -- { {Id=, Engine=} } cars kept in the Storage Unit
 		GarageClaimed = false, -- opened their garage door for the first time
 		TutorialDone = false,
+		Trophies = {}, -- [trophyId] = true, bought in the Token Shop
+		StarterBought = false, -- the one-time Robux starter pack
+		Receipts = {}, -- recent Robux purchase ids (so a purchase is never granted twice)
 	}
 end
 
@@ -98,7 +101,7 @@ local function sanitize(data)
 	end
 	if type(data.Storage) == "table" then
 		for _, c in ipairs(data.Storage) do
-			if type(c) == "table" and Config.CarsById[c.Id] and #p.Storage < Config.StorageSize then
+			if type(c) == "table" and Config.CarsById[c.Id] and #p.Storage < Config.StorageSize * 2 then
 				table.insert(p.Storage, { Id = c.Id, Engine = num(c.Engine, 1, #Config.Tunes, 1) })
 			end
 		end
@@ -119,6 +122,21 @@ local function sanitize(data)
 		for k, v in pairs(data.Completed) do
 			if v and tonumber(k) then
 				p.Completed[tostring(k)] = true
+			end
+		end
+	end
+	if type(data.Trophies) == "table" then
+		for id, v in pairs(data.Trophies) do
+			if v and Config.TrophiesById[id] then
+				p.Trophies[id] = true
+			end
+		end
+	end
+	p.StarterBought = data.StarterBought == true
+	if type(data.Receipts) == "table" then
+		for _, r in ipairs(data.Receipts) do
+			if type(r) == "string" and #p.Receipts < 50 then
+				table.insert(p.Receipts, r)
 			end
 		end
 	end

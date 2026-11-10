@@ -416,6 +416,79 @@ local function applyTires(model, tier)
 	end
 end
 
+-- Paint finishes (Config.Paints). The first call remembers which parts are the car's paint
+-- (the body and everything in the body's colour), so the finish can be changed again later.
+local function colorDist(a, b)
+	return math.abs(a.R - b.R) + math.abs(a.G - b.G) + math.abs(a.B - b.B)
+end
+function CarBuilder.ApplyPaint(model, paintIndex)
+	local paint = Config.Paints[paintIndex or 1]
+	if not paint or not model then
+		return
+	end
+	local carId = model:GetAttribute("CarId")
+	local car = carId and Config.CarsById[carId]
+	if car and car.Rarity >= 6 then
+		return -- Diamond and Millionaire's cars keep their own special finish
+	end
+	local paintParts = {}
+	if model:GetAttribute("PaintTagged") then
+		for _, p in ipairs(model:GetChildren()) do
+			if p:IsA("BasePart") and p:GetAttribute("OrigColor") then
+				table.insert(paintParts, p)
+			end
+		end
+	else
+		local body = model:FindFirstChild("Body")
+		if not body or not body:IsA("BasePart") then
+			return
+		end
+		local base = body.Color
+		for _, p in ipairs(model:GetChildren()) do
+			if p:IsA("BasePart") and p.Name ~= "Wheel" and p.Name ~= "Root" and p.Transparency < 0.3 and p.Material ~= Enum.Material.Glass and p.Material ~= Enum.Material.Neon then
+				if p == body or p.Name == "Hood" or colorDist(p.Color, base) < 0.22 then
+					p:SetAttribute("OrigColor", p.Color)
+					p:SetAttribute("OrigMaterial", p.Material.Name)
+					table.insert(paintParts, p)
+				end
+			end
+		end
+		model:SetAttribute("PaintTagged", true)
+	end
+	local old = model:FindFirstChild("PaintSparkles", true)
+	while old do
+		old:Destroy()
+		old = model:FindFirstChild("PaintSparkles", true)
+	end
+	for i, p in ipairs(paintParts) do
+		if paintIndex > 1 then
+			stripTexture(p)
+		end
+		local orig = p:GetAttribute("OrigColor")
+		if paintIndex <= 1 then
+			p.Color = orig
+			p.Material = Enum.Material[p:GetAttribute("OrigMaterial") or "SmoothPlastic"]
+			p.Reflectance = 0
+		elseif paint.Camo then
+			local pos = p.Position
+			local k = (math.floor(pos.X * 1.7) + math.floor(pos.Z * 1.3) + i) % #paint.Camo + 1
+			p.Color = paint.Camo[k]
+			p.Material = paint.Material
+			p.Reflectance = 0
+		else
+			p.Color = paint.Keep and orig or paint.Paint
+			p.Material = paint.Material or Enum.Material.SmoothPlastic
+			p.Reflectance = paint.Reflectance or 0
+		end
+	end
+	if paint.Sparkle and paintParts[1] then
+		local sp = Instance.new("Sparkles")
+		sp.Name = "PaintSparkles"
+		sp.SparkleColor = paint.Color
+		sp.Parent = paintParts[1]
+	end
+end
+
 function CarBuilder.BuildCar(carId, opts)
 	opts = opts or {}
 	local car = Config.CarsById[carId]
@@ -425,6 +498,9 @@ function CarBuilder.BuildCar(carId, opts)
 		if ok and result then
 			if not opts.Silhouette then
 				applyTires(result, opts.Tires)
+				if opts.Paint and opts.Paint > 1 then
+					pcall(CarBuilder.ApplyPaint, result, opts.Paint)
+				end
 			end
 			return result
 		end

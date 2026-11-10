@@ -379,7 +379,7 @@ local function buildTerrain(map)
 	-- rolling hills beyond the town: overlapping terrain domes with trees on top
 	local function hill(x, z, r)
 		terrain:FillBall(Vector3.new(x, -2 - 0.45 * r, z), r, Enum.Material.Grass)
-		local count = math.floor(r / 14)
+		local count = math.floor(r / 30)
 		for _ = 1, count do
 			local a = rng:NextNumber(0, math.pi * 2)
 			local d = rng:NextNumber(0, r * 0.6)
@@ -438,7 +438,7 @@ local function buildWorld(map)
 	-- median: grass strip with trees, shrubs and lamps
 	box(map, "Median", Vector3.new(LEN, 0.7, 6), CFrame.new(0, 0.35, 0), Color3.fromRGB(205, 205, 210), Enum.Material.Concrete)
 	deco(map, "MedianGrass", Vector3.new(LEN - 1, 0.1, 5), CFrame.new(0, 0.75, 0), Color3.fromRGB(92, 118, 60), Enum.Material.Grass)
-	for x = -LEN / 2 + 30, LEN / 2 - 30, 70 do
+	for x = -LEN / 2 + 30, LEN / 2 - 30, 140 do
 		lowPolyTree(map, Vector3.new(x, 0.7, 0), 0.8)
 	end
 	-- crosswalks between facing plots
@@ -449,8 +449,8 @@ local function buildWorld(map)
 	end
 	-- the town around the plots: real store buildings in the gaps between plots and at the ends
 	local TOWN = {
-		{ "ShopA", -75, 1 }, { "ShopC", 135, 1 }, { "GasStation", -320, 1 }, { "HouseB", 335, 1 },
-		{ "ShopC", -75, -1 }, { "ShopA", 135, -1 }, { "HouseB", -320, -1 }, { "GasStation", 335, -1 },
+		{ "ShopA", -75, 1 }, { "HouseB", 135, 1 }, { "GasStation", -320, 1 }, { "HouseB", 335, 1 },
+		{ "HouseB", -75, -1 }, { "ShopA", 135, -1 }, { "HouseB", -320, -1 }, { "GasStation", 335, -1 },
 	}
 	for _, b in ipairs(TOWN) do
 		local name, x, sz = b[1], b[2], b[3]
@@ -466,7 +466,7 @@ local function buildWorld(map)
 	end
 	-- trees between the plots and on the edges
 	for _, sz in ipairs({ -1, 1 }) do
-		for x = -370, 370, 40 do
+		for x = -370, 370, 90 do
 			lowPolyTree(map, Vector3.new(x + rng:NextNumber(-6, 6), 0, sz * (PLOT_FRONT + PLOT_DEPTH + 32 + rng:NextNumber(0, 12))), rng:NextNumber(1, 1.4))
 		end
 	end
@@ -598,6 +598,11 @@ local function buildPlot(index, parent)
 		local wallColor = theme.Wall
 		local trim = theme.Trim
 
+		-- no grass blades under the floor (they would poke through it)
+		do
+			local c = s(0, 0, D / 2)
+			workspace.Terrain:FillBlock(CFrame.new(c.X, -4, c.Z) * c.Rotation, Vector3.new(W + 3, 4, D + 3), Enum.Material.Ground)
+		end
 		-- floor, walls, roof
 		local wallMat = theme.WallMat
 		box(sm, "Floor", Vector3.new(W, FLOOR_Y, D), s(0, FLOOR_Y / 2, D / 2), theme.Floor, theme.FloorMat, { Reflectance = theme.Name == "luxury" and 0.08 or 0 })
@@ -820,16 +825,11 @@ local function buildPlot(index, parent)
 			end
 		end
 
-		-- the front lawn in front of this level's building: trees along the path, shrubs at the corners
+		-- the front lawn in front of this level's building: trees along the path
 		local lawn = Random.new(index * 31 + level)
-		for z = 10, Z0 - 12, 22 do
+		for z = 14, Z0 - 14, 36 do
 			for _, side in ipairs({ -1, 1 }) do
 				Props.Place(lawn:NextNumber() < 0.75 and "RealTree2" or "RealPine", sm, at(side * 12, 0, z) * CFrame.Angles(0, lawn:NextNumber(0, 6.28), 0), { Height = lawn:NextNumber(17, 22), Ground = true })
-			end
-		end
-		for _, side in ipairs({ -1, 1 }) do
-			for k = 0, 1 do
-				Props.Place("RealBush", sm, s(side * (W / 2 - 2 - k * 3.2), 0, -3 - k * 1.5) * CFrame.Angles(0, lawn:NextNumber(0, 6.28), 0), { Height = lawn:NextNumber(2.6, 3.4), Ground = true })
 			end
 		end
 
@@ -860,6 +860,59 @@ local function buildPlot(index, parent)
 			end
 			if theme.Name == "dealer" then
 				outside("TubeMan", -(W / 2 + 7), 0, -9, FACE_STREET, { Height = 13 })
+			end
+		end
+
+		-- the showroom gets nicer with every level: real store furniture and lights
+		if theme.Name == "dealer" or theme.Name == "luxury" or theme.Name == "future" then
+			-- a customer lounge by the back wall: sofa, coffee table and a rug
+			local lx = backDoor / 2 + 7
+			furnish("XRug", lx, backZ - 6, FACE_FRONT, { Width = 8 })
+			furnish("XSofa", lx, backZ - 2.2, FACE_FRONT + math.pi, { Width = 7 }, "back")
+			furnish("XCoffeeTable", lx, backZ - 6, FACE_FRONT, { Width = 3.6 })
+			-- framed art on the side walls between the cars
+			for _, side in ipairs({ -1, 1 }) do
+				for i = 1, math.max(1, perSide - 1) do
+					Props.Place("XWallArt", sm, s(side * (W / 2 - WT / 2 - 0.25), FLOOR_Y + 6, 17 + (i - 1) * 10) * CFrame.Angles(0, (side < 0 and 0 or math.pi) + (PROP_FRONT.XWallArt or 0), 0), { Width = 4.5 })
+				end
+			end
+			-- velvet rope along the entrance aisle
+			for _, side in ipairs({ -1, 1 }) do
+				furnish("XRopeBarrier", side * 4.2, 8, FACE_RIGHT, { Width = 4 })
+			end
+		end
+		if theme.Name == "luxury" then
+			-- crystal chandeliers down the middle
+			for z = 12, D - 10, 16 do
+				local ch = Props.Place("XChandelier", sm, s(0, FLOOR_Y + H - 0.5, z), { Height = 3.2 })
+				if ch then
+					ch:PivotTo(ch:GetPivot() * CFrame.new(0, -3.2, 0))
+				end
+			end
+		elseif theme.Name == "future" then
+			-- spotlights on the side walls aimed at the cars, and a turntable stage in the middle
+			for _, side in ipairs({ -1, 1 }) do
+				for i = 1, perSide do
+					Props.Place("XSpotlight", sm, s(side * (W / 2 - 1.2), FLOOR_Y + H - 3, 12 + (i - 1) * 10) * CFrame.Angles(0, side < 0 and FACE_RIGHT or FACE_LEFT, 0), { Height = 1.8 })
+				end
+			end
+			-- a glowing turntable stage in the middle of the aisle
+			local stage = deco(sm, "Turntable", Vector3.new(0.5, 9, 9), s(0, FLOOR_Y + 0.25, D * 0.55) * CFrame.Angles(0, 0, math.rad(90)), Color3.fromRGB(40, 44, 54), Enum.Material.Metal)
+			stage.Shape = Enum.PartType.Cylinder
+			local ring = deco(sm, "TurntableRing", Vector3.new(0.3, 9.6, 9.6), s(0, FLOOR_Y + 0.15, D * 0.55) * CFrame.Angles(0, 0, math.rad(90)), trim, Enum.Material.Neon)
+			ring.Shape = Enum.PartType.Cylinder
+		end
+		-- pedestals for Token Shop trophies, in front of the windows by the entrance
+		plot.TrophySpots = {}
+		plot.TrophyParent = sm
+		if level >= Config.TrophyUnlockLevel then
+			for k2 = 0, 2 do
+				for _, side in ipairs({ -1, 1 }) do
+					local x = side * (doorW / 2 + 4.6 + k2 * 3.4)
+					if math.abs(x) < W / 2 - 2 then
+						table.insert(plot.TrophySpots, s(x, FLOOR_Y, 4.6) * CFrame.Angles(0, math.pi, 0))
+					end
+				end
 			end
 		end
 
@@ -1050,7 +1103,7 @@ local function buildPlot(index, parent)
 		deco(m, "DoorFrame", Vector3.new(0.8, tH, 0.8), t(side * (tW / 2 - 0.4), FLOOR_Y + tH / 2, -tD / 2), Color3.fromRGB(60, 64, 72), Enum.Material.Metal)
 	end
 	local shopSign = box(m, "TireSign", Vector3.new(10, 1.5, 0.15), t(0, FLOOR_Y + tH - 0.9, -tD / 2 - 0.1), NAVY)
-	surfaceText(shopSign, Enum.NormalId.Front, "SERVICE", GOLD, 26)
+	surfaceText(shopSign, Enum.NormalId.Front, "PAINT SHOP", GOLD, 22)
 	local lightPart = deco(m, "ShopLight", Vector3.new(8, 0.3, 1), t(0, FLOOR_Y + tH - 0.5, 0), LAMP, Enum.Material.Neon)
 	light(lightPart, 24, 0.5)
 	local lift = box(m, "TireLift", Vector3.new(12, 0.12, 18), t(0, FLOOR_Y + 0.06, 0), Color3.fromRGB(120, 124, 132), nil, { CanCollide = false })
@@ -1064,7 +1117,7 @@ local function buildPlot(index, parent)
 	Props.Place("TireRack", m, t(-7, FLOOR_Y, tD / 2 - 1.6) * CFrame.Angles(0, PROP_FRONT.TireRack or 0, 0), { Width = 7 })
 	Props.Place("TireStack", m, t(tW / 2 - 2.4, FLOOR_Y, tD / 2 - 2.4), { Height = 4 })
 	Props.Place("ToolCabinet", m, t(7, FLOOR_Y, tD / 2 - 1.4) * CFrame.Angles(0, PROP_FRONT.ToolCabinet or 0, 0), { Height = 4.2 })
-	local liftLabel = label(lift, "SERVICE", Color3.fromRGB(255, 215, 100), 10, 240)
+	local liftLabel = label(lift, "PAINT SHOP", Color3.fromRGB(255, 215, 100), 10, 240)
 	liftLabel.Parent.Enabled = false
 
 	--=========================== SELL STATION + STORAGE UNIT (right behind the garage) ===========================
@@ -1087,7 +1140,7 @@ local function buildPlot(index, parent)
 		bb.Parent = parentPart
 	end
 	do -- Sell Station: an open kiosk with a counter, facing the middle of the lot
-		local base = at(19, 0.4, 131) * CFrame.Angles(0, math.pi / 2, 0)
+		local base = at(-19, 0.4, LOT_Z1 - 4.5)
 		local function k(x, y, z)
 			return base * CFrame.new(x, y, z)
 		end
@@ -1106,9 +1159,68 @@ local function buildPlot(index, parent)
 		iconBoard(counter, "Cash", 6.8)
 		plot.SellPart = counter
 		plot.SellCFrame = k(0, 2, -3)
+		-- the dealer: a shady guy in a suit behind the counter who buys any car, no questions asked
+		local npc = Props.Place("XMafiaNPC", m, k(0, 0.25, 0.3) * CFrame.Angles(0, PROP_FRONT.XMafiaNPC or 0, 0), { Height = 5.6 })
+		if npc then
+			for _, d in ipairs(npc:GetDescendants()) do
+				if d:IsA("Humanoid") then
+					d.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
+				end
+			end
+			-- a suspicious face: narrowed shifty eyes and a smirk on the head
+			local head = npc:FindFirstChild("Head", true)
+			if head and head:IsA("BasePart") then
+				for _, d in ipairs(head:GetChildren()) do
+					if d:IsA("Decal") then
+						d:Destroy()
+					end
+				end
+				-- the round head mesh bulges in front of the head part, so the face goes on a thin
+				-- invisible plate just in front of it
+				local plate = Instance.new("Part")
+				plate.Name = "FacePlate"
+				plate.Size = Vector3.new(1.2 * head.Size.Y, head.Size.Y, 0.05)
+				plate.CFrame = head.CFrame * CFrame.new(0, 0, -head.Size.Z * 0.62)
+				plate.Transparency = 1
+				plate.Anchored = true
+				plate.CanCollide = false
+				plate.CanQuery = false
+				plate.CanTouch = false
+				plate.Parent = npc
+				local face = Instance.new("SurfaceGui")
+				face.Face = Enum.NormalId.Front
+				face.CanvasSize = Vector2.new(120, 100)
+				face.LightInfluence = 0.6
+				face.Parent = plate
+				local function bar(x, y, w, h, rot, color)
+					local f = Instance.new("Frame")
+					f.BorderSizePixel = 0
+					f.BackgroundColor3 = color or Color3.fromRGB(20, 18, 18)
+					f.AnchorPoint = Vector2.new(0.5, 0.5)
+					f.Position = UDim2.new(0, x, 0, y)
+					f.Size = UDim2.new(0, w, 0, h)
+					f.Rotation = rot
+					f.Parent = face
+					return f
+				end
+				-- (the hat brim covers the top of the head, so the face sits low)
+				bar(42, 63, 26, 4, 16) -- heavy brows just under the brim
+				bar(78, 63, 26, 4, -16)
+				bar(42, 71, 24, 5, 10) -- narrow squinting eyes, angled in
+				bar(78, 71, 24, 5, -10)
+				bar(48, 71, 4, 3, 0, Color3.fromRGB(235, 235, 235)) -- a glint, eyes to the side
+				bar(84, 71, 4, 3, 0, Color3.fromRGB(235, 235, 235))
+				bar(64, 87, 26, 4, -10) -- a crooked smirk
+				bar(78, 84, 7, 3, -35)
+				bar(30, 79, 4, 12, 18, Color3.fromRGB(150, 40, 40)) -- an old scar
+				for i = 0, 5 do -- stubble
+					bar(48 + i * 5, 94 + (i % 2) * 2, 3, 3, 0, Color3.fromRGB(80, 64, 54))
+				end
+			end
+		end
 	end
 	do -- Storage Unit: a self-storage unit with an orange roll-up door
-		local base = at(-19, 0.4, 132) * CFrame.Angles(0, -math.pi / 2, 0)
+		local base = at(-33, 0.4, LOT_Z1 - 4.5)
 		local function k(x, y, z)
 			return base * CFrame.new(x, y, z)
 		end
@@ -1129,6 +1241,32 @@ local function buildPlot(index, parent)
 		iconBoard(door, "Crate", 5.6)
 		plot.StoragePart = door
 		plot.StorageCFrame = k(0, 2, -ud / 2 - 2)
+	end
+	do -- Token Shop: a trophy kiosk next to the storage unit
+		local base = at(-46, 0.4, LOT_Z1 - 4.5)
+		local function k(x, y, z)
+			return base * CFrame.new(x, y, z)
+		end
+		local PURPLE = Color3.fromRGB(110, 70, 200)
+		box(m, "TokenSlab", Vector3.new(7, 0.25, 5.4), k(0, 0.12, 0), Color3.fromRGB(150, 152, 156), Enum.Material.Concrete)
+		local kiosk = Props.Place("XTokenKiosk", m, k(0, 0.25, 0.4) * CFrame.Angles(0, PROP_FRONT.XTokenKiosk or 0, 0), { Height = 6.5 })
+		local counter = box(m, "TokenCounter", Vector3.new(6, 3.1, 1.2), k(0, 1.8, -1.9), PURPLE, Enum.Material.SmoothPlastic)
+		deco(m, "TokenCounterTop", Vector3.new(6.3, 0.18, 1.6), k(0, 3.42, -1.9), Color3.fromRGB(245, 215, 120), Enum.Material.Metal)
+		if not kiosk then
+			for _, x in ipairs({ -3.2, 3.2 }) do
+				for _, z in ipairs({ -2.4, 2.4 }) do
+					deco(m, "TokenPost", Vector3.new(0.22, 6.6, 0.22), k(x, 3.4, z), Color3.fromRGB(60, 64, 72), Enum.Material.Metal)
+				end
+			end
+		end
+		deco(m, "TokenRoof", Vector3.new(7.4, 0.22, 5.6), k(0, 6.8, 0), PURPLE, Enum.Material.Metal)
+		local sign = deco(m, "TokenSign", Vector3.new(5.4, 1.2, 0.12), k(0, 7.6, -2.6), Color3.fromRGB(28, 32, 40))
+		surfaceText(sign, Enum.NormalId.Front, "TOKEN SHOP", Color3.fromRGB(255, 215, 100), 26)
+		Props.Place("XTrophyGold", m, k(-1.8, 3.5, -1.9), { Height = 1.4 })
+		Props.Place("XTrophyStar", m, k(1.8, 3.5, -1.9), { Height = 1.4 })
+		iconBoard(counter, "Coin", 6.8)
+		plot.TokenPart = counter
+		plot.TokenCFrame = k(0, 2, -3)
 	end
 
 	--=========================== UPGRADE STATIONS (a row just behind the showroom) ===========================
@@ -1248,7 +1386,7 @@ local function buildPlot(index, parent)
 		Showroom = pad("Showroom Size", -46, 138, 0.4, "Showroom"),
 		Truck = pad("Truck Tier", -32, 138, 0.4, "Truck"),
 		Wash = pad("Car Wash", 32, 138, 0.4, "Wash"),
-		Engine = pad("Service Tools", 46, 138, 0.4, "Engine"),
+		Engine = pad("Paint Luck", 46, 138, 0.4, "Engine"),
 	}
 
 	plot.WashCFrame = washCF

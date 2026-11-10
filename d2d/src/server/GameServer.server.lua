@@ -1,5 +1,5 @@
 -- D2D (Dust to Dealership) - main server script.
--- Claim your garage -> free starter car -> wash it -> service (tune-up mini-game) -> the car goes in
+-- Claim your garage -> free starter car -> wash it -> paint shop (gacha paint finish) -> the car goes in
 -- your toolbar -> hold it as a toy and place it on a glowing spot -> customers walk in and pay per view.
 -- The truck brings containers with more cars once the tutorial is done.
 
@@ -13,6 +13,7 @@ local HttpService = game:GetService("HttpService")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared:WaitForChild("Config"))
 local CarBuilder = require(Shared:WaitForChild("CarBuilder"))
+local Props = require(Shared:WaitForChild("Props"))
 local DataService = require(script.Parent:WaitForChild("DataService"))
 local MapBuilder = require(script.Parent:WaitForChild("MapBuilder"))
 
@@ -45,6 +46,28 @@ local OpenSellEvent = remote("RemoteEvent", "OpenSell")
 local OpenStorageEvent = remote("RemoteEvent", "OpenStorage")
 local SellAction = remote("RemoteFunction", "SellAction")
 local StorageAction = remote("RemoteFunction", "StorageAction")
+local OpenTokenShopEvent = remote("RemoteEvent", "OpenTokenShop")
+local TokenShopAction = remote("RemoteFunction", "TokenShopAction")
+local MarketplaceService = game:GetService("MarketplaceService")
+-- Robux game passes this server has seen each profile own (not saved: checked on join)
+local passFlags = setmetatable({}, { __mode = "k" }) -- [profile] = { x2cash = true, ... }
+local function hasPass(profile, key)
+	return profile ~= nil and passFlags[profile] ~= nil and passFlags[profile][key] == true
+end
+local function paintLuck(profile)
+	return profile.EngineLuck + (hasPass(profile, "luckypaint") and 3 or 0)
+end
+local function storageCap(profile)
+	return Config.StorageSize + (hasPass(profile, "bigstorage") and 60 or 0)
+end
+local function trophyBonus(profile)
+	local b = 0
+	for id in pairs(profile and profile.Trophies or {}) do
+		local t = Config.TrophiesById[id]
+		b = b + (t and t.Bonus or 0)
+	end
+	return b
+end
 
 local GOLD = Color3.fromRGB(255, 220, 80)
 local RED = Color3.fromRGB(255, 110, 110)
@@ -121,6 +144,7 @@ local function completedCount(profile)
 	return n
 end
 
+local applyTrophies -- forward declaration (needs Props)
 local function syncAttributes(player)
 	local profile = DataService.Get(player)
 	if not profile then
@@ -150,6 +174,14 @@ local function syncAttributes(player)
 	end
 	player:SetAttribute("Storage", HttpService:JSONEncode(store))
 	player:SetAttribute("Tutorial", not profile.TutorialDone)
+	local trophies = {}
+	for id in pairs(profile.Trophies) do
+		table.insert(trophies, id)
+	end
+	player:SetAttribute("Trophies", table.concat(trophies, ","))
+	player:SetAttribute("StarterBought", profile.StarterBought)
+	player:SetAttribute("StorageCap", storageCap(profile))
+	player:SetAttribute("TrophyBonus", trophyBonus(profile))
 	player:SetAttribute("Discovered", table.concat(d, ","))
 	player:SetAttribute("Claimed", table.concat(c, ","))
 	local ls = player:FindFirstChild("leaderstats")
@@ -237,6 +269,15 @@ local function maxSpots(profile)
 	return Config.GetSpots(profile.ShowroomLevel)
 end
 
+local spotLabelText -- forward declaration
+local function refreshSpotLabels(plot, profile)
+	for _, entry in pairs(state[plot.Index].Spots) do
+		if entry.Sub and entry.Sub.Parent then
+			entry.Sub.Text = spotLabelText(entry, profile)
+		end
+	end
+end
+
 local function refreshSpotPads(plot, profile)
 	local open = profile and maxSpots(profile) or 0
 	for i, spot in ipairs(plot.Spots) do
@@ -255,11 +296,12 @@ local applyShowroom -- forward declaration
 
 local takeBack -- forward declaration
 local function viewValue(entry, profile)
-	local bonus = profile and (1 + Config.CompletionBonus * completedCount(profile)) or 1
-	return Config.GetCarIncome(entry.Id, entry.Engine) * Config.ViewSeconds * bonus
+	local bonus = profile and (1 + Config.CompletionBonus * completedCount(profile) + trophyBonus(profile)) or 1
+	local x2 = hasPass(profile, "x2cash") and 2 or 1
+	return Config.GetCarIncome(entry.Id, entry.Engine) * Config.ViewSeconds * bonus * x2
 end
 
-local function spotLabelText(entry, profile)
+spotLabelText = function(entry, profile)
 	local views = entry.Views or 0
 	return "$" .. Config.FormatNumber(viewValue(entry, profile)) .. " per view" .. (views > 0 and ("  ·  " .. views .. (views == 1 and " view" or " views")) or "")
 end
@@ -270,7 +312,7 @@ local function showSpot(plot, spotIndex, entry)
 		entry.Model:Destroy()
 	end
 	local spot = plot.Spots[spotIndex]
-	local model = CarBuilder.BuildCar(entry.Id)
+	local model = CarBuilder.BuildCar(entry.Id, { Paint = entry.Engine })
 	model:PivotTo(spot.CFrame)
 	local profile = owner and DataService.Get(owner)
 	local _, _, sub = addLabel(model.PrimaryPart, carTitle(entry.Id), spotLabelText(entry, profile), rarityOf(entry.Id).Color, 6.5, 18)
@@ -289,6 +331,54 @@ end
 
 local placeCar -- forward declaration
 local claimGarage -- forward declaration
+
+-- trophies from the Token Shop stand on pedestals near the showroom entrance
+applyTrophies = function(plot, profile)
+	if plot.TrophyFolder then
+		plot.TrophyFolder:Destroy()
+		plot.TrophyFolder = nil
+	end
+	local spots = plot.TrophySpots
+	if not spots or #spots == 0 or not plot.TrophyParent then
+		return
+	end
+	local folder = Instance.new("Model")
+	folder.Name = "Trophies"
+	folder.Parent = plot.TrophyParent
+	plot.TrophyFolder = folder
+	local n = 0
+	for _, t in ipairs(Config.Trophies) do
+		if profile.Trophies[t.Id] and spots[n + 1] then
+			n = n + 1
+			local cf = spots[n]
+			local ped = Props.Place("XPedestal", folder, cf, { Height = 3.2 })
+			local top = 3.2
+			if ped then
+				local bcf, bsize = ped:GetBoundingBox()
+				top = (bcf.Position.Y + bsize.Y / 2) - cf.Position.Y
+			else
+				local base = Instance.new("Part")
+				base.Anchored = true
+				base.Size = Vector3.new(2.4, 3.2, 2.4)
+				base.CFrame = cf * CFrame.new(0, 1.6, 0)
+				base.Material = Enum.Material.Marble
+				base.Color = Color3.fromRGB(235, 235, 240)
+				base.Parent = folder
+			end
+			local trophy = Props.Place(t.Model, folder, cf * CFrame.new(0, top, 0), { Height = t.Height, Width = t.Width })
+			if trophy then
+				local glowPart = trophy:FindFirstChildWhichIsA("BasePart", true)
+				if glowPart then
+					local l = Instance.new("PointLight")
+					l.Color = Color3.fromRGB(255, 220, 150)
+					l.Range = 7
+					l.Brightness = 0.8
+					l.Parent = glowPart
+				end
+			end
+		end
+	end
+end
 
 -- (re)builds the showroom for the owner's level and puts the displayed cars back on their spots
 applyShowroom = function(plot, player, profile)
@@ -315,6 +405,7 @@ applyShowroom = function(plot, player, profile)
 			claimGarage(who, plot)
 		end)
 	end
+	applyTrophies(plot, profile)
 	refreshSpotPads(plot, profile)
 end
 
@@ -501,15 +592,17 @@ local function openContainer(player, plot, slot, entry)
 	end
 	entry.Opening = true
 	local model = entry.Model
+	-- the car is decided now; the client plays the rarity reveal, then the container breaks open
+	local carId = Config.RollCar(entry.Level, rng)
+	local isNew = discover(player, carId)
+	RevealEvent:FireClient(player, carId, isNew, entry.Level)
+	task.wait(Config.RevealSeconds(Config.CarsById[carId].Rarity))
 	crackOpen(model, Config.Containers[entry.Level].Color)
 	if state[plot.Index].Yard[slot] ~= entry then
 		return
 	end
 	state[plot.Index].Yard[slot] = nil
-	local carId = Config.RollCar(entry.Level, rng)
-	local isNew = discover(player, carId)
 	spawnYardCar(plot, slot, carId)
-	RevealEvent:FireClient(player, carId, isNew)
 	local car = Config.CarsById[carId]
 	if car.Rarity >= 6 then
 		notifyAll(player.DisplayName .. " found a " .. string.upper(rarityOf(carId).Name) .. " car: " .. car.Name .. "!", rarityOf(carId).Color)
@@ -573,7 +666,8 @@ local function expireContainers(plot)
 	local yard = state[plot.Index].Yard
 	local n = 0
 	for slot, entry in pairs(yard) do
-		if entry.Kind == "Container" and not entry.Opening then
+		-- unopened containers and cars nobody sent to the wash both leave with the old delivery
+		if (entry.Kind == "Container" and not entry.Opening) or entry.Kind == "Car" then
 			yard[slot] = nil
 			vanish(entry.Model)
 			n = n + 1
@@ -648,7 +742,7 @@ spawnYardCar = function(plot, slot, carId)
 			p.Color = p.Color:Lerp(dust, 0.5)
 		end
 	end
-	addLabel(model.PrimaryPart, carTitle(carId), "dusty · needs a wash", rarityOf(carId).Color, 6, 18)
+	addLabel(model.PrimaryPart, carTitle(carId), "rusty · needs a wash", rarityOf(carId).Color, 6, 18)
 	addPrompt(model:FindFirstChild("Body"), "Send to Car Wash", carTitle(carId), 0.3, owner, function(player)
 		sendToWash(player, plot, slot, entry)
 	end)
@@ -662,8 +756,10 @@ end
 ---------------------------------------------------------------------
 local moveToLift -- forward declaration
 
+-- rust is tough: even the first containers need a few passes with the starter wire brush
+local RUST = { Color3.fromRGB(122, 56, 28), Color3.fromRGB(140, 68, 32), Color3.fromRGB(104, 48, 26), Color3.fromRGB(156, 82, 40), Color3.fromRGB(88, 46, 30) }
 local function dirtHealth(containerLevel)
-	return math.min(4, math.ceil(containerLevel / 3))
+	return 5 + math.ceil(containerLevel / 3)
 end
 
 local function setWashProgress(plot, value)
@@ -726,7 +822,7 @@ local function finishWash(plot)
 	plot.WashLabel.Text = "SPARKLING CLEAN!"
 	local owner = plotOwner[plot.Index]
 	if owner then
-		notify(owner, "Sparkling clean! Take " .. carTitle(wash.Id) .. " to the Service bay.", GREEN)
+		notify(owner, "Sparkling clean! Take " .. carTitle(wash.Id) .. " to the Paint Shop.", GREEN)
 	end
 	local sparkles = Instance.new("Sparkles")
 	sparkles.Parent = wash.Model:FindFirstChild("Body")
@@ -735,10 +831,10 @@ local function finishWash(plot)
 			moveToLift(plot)
 		end)
 	else
-		addPrompt(wash.Model:FindFirstChild("Body"), "Move to Service", carTitle(wash.Id), 0, owner, function(player)
+		addPrompt(wash.Model:FindFirstChild("Body"), "Move to Paint Shop", carTitle(wash.Id), 0, owner, function(player)
 			if plotOwner[plot.Index] == player then
 				if state[plot.Index].Lift then
-					notify(player, "The service bay is busy. Finish that car first!", RED)
+					notify(player, "The paint shop is busy. Finish that car first!", RED)
 				else
 					moveToLift(plot)
 				end
@@ -754,8 +850,8 @@ local function startWash(plot, carId)
 	model.Parent = carsFolder
 	local health = dirtHealth(car.Container)
 	local dirtColor = Config.Containers[car.Container].Dirt
-	-- dust is a pale, sandy grey (not dark mud) tinted a little by the container
-	local dustColor = Color3.fromRGB(196, 178, 150):Lerp(dirtColor, 0.25)
+	-- years in a container: faded paint with a brown rust tint
+	local dustColor = Color3.fromRGB(120, 78, 50):Lerp(dirtColor, 0.15)
 	-- the paint itself starts dull and dusty and comes back as you scrub
 	local paint = {}
 	local film = {}
@@ -767,7 +863,7 @@ local function startWash(plot, carId)
 	end
 	-- a soft, even film of dust hugging the whole car (a slightly larger see-through copy of each part)
 	for part in pairs(paint) do
-		if part.Transparency < 0.3 and part.Size.Magnitude > 0.8 then
+		if false and part.Transparency < 0.3 and part.Size.Magnitude > 0.8 then
 			local f = part:Clone()
 			f:ClearAllChildren()
 			f.Name = "DustFilm"
@@ -795,7 +891,7 @@ local function startWash(plot, carId)
 	-- only the visible parts of the car catch dirt
 	local visible = {}
 	for _, d in ipairs(model:GetDescendants()) do
-		if d:IsA("BasePart") and d.Transparency < 0.9 then
+		if d:IsA("BasePart") and d.Transparency < 0.9 and d.Name ~= "Wheel" then
 			table.insert(visible, d)
 		end
 	end
@@ -811,30 +907,35 @@ local function startWash(plot, carId)
 			return
 		end
 		local pos = hit.Position
-		local key = math.floor(pos.X / 1.2) .. "," .. math.floor(pos.Y / 1.2) .. "," .. math.floor(pos.Z / 1.2)
+		-- only surfaces that face the ray: patches on glancing edges would stick out like coins
+		if hit.Normal:Dot(-dir.Unit) < 0.5 then
+			return
+		end
+		local key = math.floor(pos.X / 0.7) .. "," .. math.floor(pos.Y / 0.7) .. "," .. math.floor(pos.Z / 0.7)
 		if taken[key] then
 			return
 		end
 		taken[key] = true
-		-- scrub target lying flat on the paint
-		local sz = rng:NextNumber(1.7, 2.2)
+		-- a patch of rust lying flat on the paint: it fades, then pops off, exactly where you scrub
+		local sz = rng:NextNumber(1.0, 1.75)
 		local p = Instance.new("Part")
-		p.Name = "Dirt"
+		p.Name = "Rust"
 		p.Shape = Enum.PartType.Cylinder
-		p.Size = Vector3.new(0.04, sz, sz)
-		p.CFrame = CFrame.lookAt(pos + hit.Normal * 0.03, pos + hit.Normal * 2) * CFrame.Angles(0, math.rad(90), 0) * CFrame.Angles(rng:NextNumber(0, 6.28), 0, 0)
+		p.Size = Vector3.new(0.03, sz, sz)
+		local lift = rng:NextNumber(0.015, 0.04) -- stagger the patches so overlapping ones never flicker
+		p.CFrame = CFrame.lookAt(pos + hit.Normal * lift, pos + hit.Normal * 2) * CFrame.Angles(0, math.rad(90), 0) * CFrame.Angles(rng:NextNumber(0, 6.28), 0, 0)
 		p.Anchored = true
 		p.CanCollide = false
 		p.CanTouch = false
 		p.CastShadow = false
-		p.Material = Enum.Material.SmoothPlastic
-		p.Color = dustColor
-		p.Transparency = 1 -- invisible scrub target; the visible dust is the film over the paint
+		p.Material = Enum.Material.Sand
+		p.Color = RUST[rng:NextInteger(1, #RUST)]
+		p.Transparency = 0
 		p.Parent = dirtFolder
 		table.insert(blobs, { Part = p, Health = health, StartSize = sz })
 	end
 	-- shoot rays at the car from above and from all four sides; dirt sticks where they land
-	local spacing = 1.05
+	local spacing = 0.62
 	local reach = 2 * math.max(hx, hy, hz) + 4
 	for x = -hx + 0.6, hx - 0.6, spacing do
 		for z = -hz + 0.6, hz - 0.6, spacing do
@@ -954,6 +1055,11 @@ ScrubEvent.OnServerEvent:Connect(function(player, hitPosition)
 			if b.Health <= 0 then
 				b.Part:Destroy()
 				table.remove(wash.Blobs, i)
+			else
+				-- thinner and lighter with every pass
+				local k = b.Health / wash.Health
+				b.Part.Transparency = 0.05 + 0.75 * (1 - k)
+				b.Part.Size = Vector3.new(0.05, b.StartSize * (0.6 + 0.4 * k), b.StartSize * (0.6 + 0.4 * k))
 			end
 		end
 	end
@@ -973,7 +1079,7 @@ WashFinish.OnServerEvent:Connect(function(player)
 end)
 
 ---------------------------------------------------------------------
--- Service bay: a tune-up timing mini-game that raises what customers pay per view
+-- Paint Shop: a gacha spin picks a random paint finish that multiplies what customers pay per view
 ---------------------------------------------------------------------
 local inventoryAdd -- forward declaration
 
@@ -986,12 +1092,12 @@ local function rebuildLift(plot)
 		lift.Model:Destroy()
 	end
 	local owner = plotOwner[plot.Index]
-	local model = CarBuilder.BuildCar(lift.Id)
+	local model = CarBuilder.BuildCar(lift.Id, { Paint = lift.Engine })
 	model:PivotTo(plot.LiftCFrame)
 	model:SetAttribute("OwnerUserId", owner and owner.UserId or 0)
 	model:SetAttribute("Kind", "Lift")
 	model:SetAttribute("Tuned", lift.Tuned == true)
-	addPrompt(model:FindFirstChild("Body"), lift.Tuned and "Finish Service" or "Service Car", carTitle(lift.Id), 0, owner, function(player)
+	addPrompt(model:FindFirstChild("Body"), lift.Tuned and "Finish Paint Job" or "Paint Car", carTitle(lift.Id), 0, owner, function(player)
 		if plotOwner[plot.Index] == player and state[plot.Index].Lift == lift then
 			OpenTuneEvent:FireClient(player, lift.Id, lift.Tuned and lift.Engine or nil)
 		end
@@ -1010,90 +1116,69 @@ moveToLift = function(plot)
 	plot.WashLabel.Text = "WASH SPOT"
 	state[plot.Index].Lift = { Id = wash.Id, Engine = 1, Tuned = false }
 	rebuildLift(plot)
-	plot.LiftLabel.Text = "SERVICE"
+	plot.LiftLabel.Text = "PAINT SHOP"
 end
 
-local function nextRound(lift, toolsLevel)
-	local good, perfect, slow = Config.GetTuneZones(toolsLevel)
-	lift.Speed = Config.TuneSpeeds[lift.Round] * slow
-	lift.Center = rng:NextNumber(0.25, 0.75)
-	lift.Good, lift.Perfect = good, perfect
-	lift.RoundStart = now() + 0.7
-	return { Ok = true, Round = lift.Round, Start = lift.RoundStart, Speed = lift.Speed, Center = lift.Center, Good = good, Perfect = perfect, Score = lift.Score }
+local function paintReply(lift, rolled)
+	local paint = Config.Paints[lift.Engine]
+	return { Ok = true, Paint = lift.Engine, Rolled = rolled, Spin = Config.PaintSpinSeconds(Config.Paints[rolled].Rarity), RerollCost = Config.PaintRerollCost(lift.Id), Name = paint.Name }
 end
 
-TuneAction.OnServerInvoke = function(player, action, clientTime)
+TuneAction.OnServerInvoke = function(player, action)
 	local plot = playerPlot[player]
 	local profile = DataService.Get(player)
 	local lift = plot and state[plot.Index].Lift
 	if not profile or not lift then
-		return { Ok = false, Message = "There's no car in the service bay." }
+		return { Ok = false, Message = "There's no car in the paint shop." }
 	end
-	if action == "Start" then
+	if lift.Spinning then
+		return { Ok = false }
+	end
+	local rolled
+	if action == "Spray" then
 		if lift.Tuned then
-			return { Ok = false, Message = "This car is already serviced." }
+			return paintReply(lift, lift.Engine)
 		end
-		lift.Round = 1
-		lift.Score = 0
-		return nextRound(lift, profile.EngineLuck)
-	elseif action == "Hit" then
-		if lift.Tuned or not lift.Round or not lift.RoundStart then
-			return { Ok = false }
+		rolled = Config.RollPaint(paintLuck(profile), rng)
+		lift.Engine = rolled
+		lift.Tuned = true
+	elseif action == "Reroll" or action == "Lucky" then
+		if not lift.Tuned then
+			return { Ok = false, Message = "Spray the car first!" }
 		end
-		-- judge on the server clock; the client's press time is trusted only within a short window
-		local t = now()
-		if type(clientTime) == "number" and clientTime == clientTime then
-			t = math.clamp(clientTime, t - 0.35, t)
+		if lift.Engine >= #Config.Paints then
+			return { Ok = false, Message = "This car already has the best paint!" }
 		end
-		local elapsed = t - lift.RoundStart
-		if elapsed < 0 then
-			return { Ok = false }
-		end
-		local pos = Config.NeedleAt(elapsed, lift.Speed)
-		local d = math.abs(pos - lift.Center)
-		local result = d <= lift.Perfect and "Perfect" or (d <= lift.Good and "Good" or "Miss")
-		lift.Score = lift.Score + (result == "Perfect" and 2 or (result == "Good" and 1 or 0))
-		local reply
-		if lift.Round >= Config.TuneRounds then
-			lift.Tuned = true
-			lift.Round = nil
-			lift.Engine = Config.GetTuneForScore(lift.Score)
-			rebuildLift(plot)
-			local tune = Config.Tunes[lift.Engine]
-			reply = { Ok = true, Done = true, Tune = lift.Engine, Score = lift.Score }
-			if lift.Engine >= 4 then
-				notify(player, tune.Name .. "! Customers will pay x" .. tune.Mult .. " to see this car.", tune.Color)
+		if action == "Reroll" then
+			local cost = Config.PaintRerollCost(lift.Id)
+			if profile.Cash < cost then
+				return { Ok = false, Message = "You need $" .. Config.FormatNumber(cost) .. " to repaint." }
 			end
+			profile.Cash = profile.Cash - cost
+			rolled = Config.RollPaint(paintLuck(profile), rng)
 		else
-			lift.Round = lift.Round + 1
-			reply = nextRound(lift, profile.EngineLuck)
+			if profile.Tokens < 1 then
+				return { Ok = false, Message = "A Lucky Roll costs 1 token." }
+			end
+			profile.Tokens = profile.Tokens - 1
+			rolled = 2
+			for _ = 1, 3 do
+				rolled = math.max(rolled, Config.RollPaint(paintLuck(profile) + 3, rng))
+			end
 		end
-		reply.Result = result
-		reply.Pos = pos
-		return reply
-	elseif action == "Turbo" then
-		if not lift.Tuned or lift.Turbo or lift.Engine >= #Config.Tunes then
-			return { Ok = false, Message = "Turbo can be added once, after the tune-up." }
-		end
-		if profile.Tokens < 1 then
-			return { Ok = false, Message = "You need 1 token. Collect tokens in the Index!" }
-		end
-		profile.Tokens = profile.Tokens - 1
-		lift.Turbo = true
-		lift.Engine = lift.Engine + 1
 		syncAttributes(player)
-		rebuildLift(plot)
-		return { Ok = true, Tune = lift.Engine }
+		-- a repaint only ever upgrades the finish
+		lift.Engine = math.max(lift.Engine, rolled)
 	elseif action == "Finish" then
 		if not lift.Tuned then
-			return { Ok = false, Message = "Tune the engine first!" }
+			return { Ok = false, Message = "Spray the car first!" }
 		end
 		if #profile.Inventory >= Config.InventorySize then
 			return { Ok = false, Message = "Your toolbar is full! Put some cars on display first." }
 		end
 		lift.Model:Destroy()
 		state[plot.Index].Lift = nil
-		plot.LiftLabel.Text = "SERVICE"
+		plot.LiftLabel.Text = "PAINT SHOP"
 		inventoryAdd(player, { Id = lift.Id, Engine = lift.Engine })
 		notify(player, carTitle(lift.Id) .. " is in your toolbar. Hold it and put it on display!", GREEN)
 		if state[plot.Index].Wash and state[plot.Index].Wash.Done then
@@ -1102,8 +1187,23 @@ TuneAction.OnServerInvoke = function(player, action, clientTime)
 			end)
 		end
 		return { Ok = true, Done = true }
+	else
+		return { Ok = false }
 	end
-	return { Ok = false }
+	-- the client plays the spin; the real car is repainted when it lands
+	lift.Spinning = true
+	local reply = paintReply(lift, rolled)
+	task.delay(reply.Spin + 0.2, function()
+		lift.Spinning = false
+		if state[plot.Index].Lift == lift then
+			rebuildLift(plot)
+			local paint = Config.Paints[rolled]
+			if paint.Rarity >= 3 then
+				notify(player, paint.Name .. "! Customers pay x" .. paint.Mult .. " to see this car.", paint.Color)
+			end
+		end
+	end)
+	return reply
 end
 
 ---------------------------------------------------------------------
@@ -1170,7 +1270,7 @@ local function giveToy(player, car)
 	handle.CanTouch = false
 	handle.Massless = true
 	handle.Parent = tool
-	local model = CarBuilder.BuildCar(car.Id)
+	local model = CarBuilder.BuildCar(car.Id, { Paint = car.Engine })
 	for _, d in ipairs(model:GetDescendants()) do
 		if d:IsA("BillboardGui") or d:IsA("ProximityPrompt") or d:IsA("Light") or d:IsA("Sparkles") or d:IsA("ParticleEmitter") then
 			d:Destroy()
@@ -1318,7 +1418,7 @@ StorageAction.OnServerInvoke = function(player, action, key)
 		return { Ok = false, Message = "Walk to your Storage Unit first." }
 	end
 	if action == "Store" and typeof(key) == "number" then
-		if #profile.Storage >= Config.StorageSize then
+		if #profile.Storage >= storageCap(profile) then
 			return { Ok = false, Message = "Your storage is full." }
 		end
 		local car, i = inventoryFind(profile, key)
@@ -1359,6 +1459,153 @@ for _, plot in ipairs(map.Plots) do
 		end
 	end)
 end
+
+local estimateRate -- forward declaration
+---------------------------------------------------------------------
+-- Token Shop: trophies for the showroom (estimateRate is defined further down) (unlocks at showroom level 3)
+---------------------------------------------------------------------
+for _, plot in ipairs(map.Plots) do
+	if plot.TokenPart then
+		addPrompt(plot.TokenPart, "Token Shop", "Trophies", 0, nil, function(player)
+			if playerPlot[player] == plot then
+				OpenTokenShopEvent:FireClient(player)
+			end
+		end)
+	end
+end
+
+TokenShopAction.OnServerInvoke = function(player, action, id)
+	local profile = DataService.Get(player)
+	local plot = playerPlot[player]
+	if not profile or not plot or action ~= "Buy" or type(id) ~= "string" then
+		return { Ok = false }
+	end
+	local trophy = Config.TrophiesById[id]
+	if not trophy then
+		return { Ok = false }
+	end
+	local root = getRoot(player)
+	if not root or not plot.TokenCFrame or (root.Position - plot.TokenCFrame.Position).Magnitude > 30 then
+		return { Ok = false, Message = "Walk to the Token Shop first." }
+	end
+	if profile.ShowroomLevel < Config.TrophyUnlockLevel then
+		return { Ok = false, Message = "The Token Shop opens at showroom level " .. Config.TrophyUnlockLevel .. "." }
+	end
+	if profile.Trophies[id] then
+		return { Ok = false, Message = "You already own this trophy." }
+	end
+	if profile.Tokens < trophy.Cost then
+		return { Ok = false, Message = "You need " .. trophy.Cost .. " tokens. Find new cars to earn tokens!" }
+	end
+	profile.Tokens = profile.Tokens - trophy.Cost
+	profile.Trophies[id] = true
+	syncAttributes(player)
+	applyTrophies(plot, profile)
+	refreshSpotLabels(plot, profile)
+	notify(player, trophy.Name .. " is on display! Customers pay +" .. math.floor(trophy.Bonus * 100 + 0.5) .. "% per view.", GOLD)
+	return { Ok = true }
+end
+
+---------------------------------------------------------------------
+-- Robux: cash and token packs, the one-time starter pack, game passes
+---------------------------------------------------------------------
+local productByKey = {}
+for _, group in ipairs({ Config.Robux.Cash, Config.Robux.Tokens, { Config.Robux.Starter } }) do
+	for _, item in ipairs(group) do
+		if item.ProductId and item.ProductId ~= 0 then
+			productByKey[item.ProductId] = item
+		end
+	end
+end
+
+local function grantProduct(player, profile, item)
+	if item.Key == "starter" then
+		if profile.StarterBought then
+			return true -- already granted; never give it twice
+		end
+		profile.StarterBought = true
+		addCash(player, item.Cash)
+		profile.Tokens = profile.Tokens + item.Tokens
+		notify(player, "Starter Pack unlocked! +$" .. Config.FormatNumber(item.Cash) .. " and +" .. item.Tokens .. " tokens", GOLD)
+	elseif item.Tokens then
+		profile.Tokens = profile.Tokens + item.Tokens
+		notify(player, "+" .. item.Tokens .. " tokens. Thanks for the support!", GOLD)
+	elseif item.Minutes then
+		local plot = playerPlot[player]
+		local rate = plot and estimateRate(plot, profile) or 0
+		local amount = math.floor(math.max(item.Min, rate * 60 * item.Minutes))
+		addCash(player, amount)
+		notify(player, "+$" .. Config.FormatNumber(amount) .. ". Thanks for the support!", GOLD)
+	else
+		return false
+	end
+	syncAttributes(player)
+	return true
+end
+
+MarketplaceService.ProcessReceipt = function(info)
+	local player = Players:GetPlayerByUserId(info.PlayerId)
+	local profile = player and DataService.Get(player)
+	local item = productByKey[info.ProductId]
+	if not profile or not item then
+		return Enum.ProductPurchaseDecision.NotProcessedYet
+	end
+	local rid = tostring(info.PurchaseId)
+	if table.find(profile.Receipts, rid) then
+		return Enum.ProductPurchaseDecision.PurchaseGranted
+	end
+	local ok, granted = pcall(grantProduct, player, profile, item)
+	if not ok or not granted then
+		return Enum.ProductPurchaseDecision.NotProcessedYet
+	end
+	table.insert(profile.Receipts, rid)
+	while #profile.Receipts > 50 do
+		table.remove(profile.Receipts, 1)
+	end
+	DataService.Save(player)
+	return Enum.ProductPurchaseDecision.PurchaseGranted
+end
+
+local function refreshPasses(player)
+	local profile = DataService.Get(player)
+	if not profile then
+		return
+	end
+	local flags = passFlags[profile] or {}
+	passFlags[profile] = flags
+	for _, pass in ipairs(Config.Robux.Passes) do
+		if pass.PassId ~= 0 and not flags[pass.Key] then
+			local ok, owns = pcall(MarketplaceService.UserOwnsGamePassAsync, MarketplaceService, player.UserId, pass.PassId)
+			if ok and owns then
+				flags[pass.Key] = true
+			end
+		end
+		player:SetAttribute("Pass_" .. pass.Key, flags[pass.Key] == true)
+	end
+	syncAttributes(player)
+	local plot = playerPlot[player]
+	if plot then
+		refreshSpotLabels(plot, profile)
+	end
+end
+
+MarketplaceService.PromptGamePassPurchaseFinished:Connect(function(player, passId, bought)
+	if not bought then
+		return
+	end
+	local profile = DataService.Get(player)
+	if not profile then
+		return
+	end
+	for _, pass in ipairs(Config.Robux.Passes) do
+		if pass.PassId == passId then
+			passFlags[profile] = passFlags[profile] or {}
+			passFlags[profile][pass.Key] = true
+			notify(player, pass.Name .. " unlocked! " .. pass.Text, GOLD)
+		end
+	end
+	refreshPasses(player)
+end)
 
 ---------------------------------------------------------------------
 -- Upgrade pads
@@ -1481,11 +1728,11 @@ for _, plot in ipairs(map.Plots) do
 	end)
 	padPrompt("Engine", function(player, profile)
 		if profile.EngineLuck >= Config.MaxEngineLuck then
-			return notify(player, "Service Tools are maxed!", GOLD)
+			return notify(player, "Paint Luck is maxed!", GOLD)
 		end
 		tryBuy(player, Config.GetEngineLuckCost(profile.EngineLuck), function(p)
 			p.EngineLuck = p.EngineLuck + 1
-			notify(player, "Service Tools level " .. p.EngineLuck .. "! The tune-up needle is slower and the zones are bigger.", GREEN)
+			notify(player, "Paint Luck level " .. p.EngineLuck .. "! Rare paint finishes come up more often.", GREEN)
 		end)
 	end)
 	refreshPads(plot)
@@ -1524,7 +1771,7 @@ local function deliver(player)
 	-- last delivery's unopened containers expire before the new ones arrive
 	local expired = expireContainers(plot)
 	if expired > 0 then
-		notify(player, expired .. " unopened container" .. (expired > 1 and "s" or "") .. " expired.", Color3.fromRGB(255, 190, 120))
+		notify(player, expired .. (expired > 1 and " old items" or " old item") .. " left with the truck (unopened containers and unwashed cars).", Color3.fromRGB(255, 190, 120))
 		task.wait(1)
 	end
 	local delivered = 0
@@ -1586,7 +1833,7 @@ local function finishTutorial(player)
 end
 
 -- estimated earnings per second (only used for offline earnings)
-local function estimateRate(plot, profile)
+estimateRate = function(plot, profile)
 	local total, n = 0, 0
 	for _, entry in pairs(state[plot.Index].Spots) do
 		total = total + viewValue(entry, profile)
@@ -1911,6 +2158,7 @@ local function onPlayerAdded(player)
 		end
 		refreshPads(plot)
 		refreshSpotPads(plot, profile)
+		task.spawn(refreshPasses, player)
 	else
 		notify(player, "All showrooms are taken, sorry! Try another server.", RED)
 	end
@@ -2080,6 +2328,15 @@ if game:GetService("RunService"):IsStudio() then
 					applyShowroom(plot, player, profile)
 				elseif cmd == "cash" then
 					setCash(player, value)
+				elseif cmd == "tokens" then
+					profile.Tokens = value
+					syncAttributes(player)
+				elseif cmd == "trophies" then
+					for _, t in ipairs(Config.Trophies) do
+						profile.Trophies[t.Id] = true
+					end
+					syncAttributes(player)
+					applyTrophies(plot, profile)
 				elseif cmd == "give" then
 					-- put a few finished cars straight into the toolbar
 					for k = 1, (value or 3) do

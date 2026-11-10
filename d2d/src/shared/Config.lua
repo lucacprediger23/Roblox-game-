@@ -19,49 +19,53 @@ Config.Rarities = {
 	{ Name = "Diamond", Color = Color3.fromRGB(110, 240, 255), Chance = 0.45, BaseIncome = 120 },
 	{ Name = "Millionaire's", Color = Color3.fromRGB(120, 255, 120), Chance = 0.05, BaseIncome = 500 },
 }
+-- how long the container-opening reveal runs for a car of this rarity (client and server agree on it):
+-- one beat per rarity it climbs through, plus a long suspense hold for Epic and up
+function Config.RevealSeconds(rarity)
+	return 1.0 + 0.55 * (rarity - 1) + (rarity >= 3 and 1.4 or 0) + (rarity >= 4 and 1.0 or 0)
+end
 -- position in a container (1..12) -> rarity index
 Config.SlotRarity = { 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 7 }
 
 Config.ContainerMultiplier = 10 -- income x10 per container level (matches the x10 container prices)
 
 ---------------------------------------------------------------------
--- Service: a tune-up mini-game in the service bay. Three timing rounds: stop the needle in the
--- green zone (gold centre = perfect). Perfect = 2 points, good = 1. The score picks the tune,
--- and the tune multiplies what every customer pays to look at the car.
--- (Saved data calls it "Engine" for compatibility with older saves.)
+-- Paint Shop: the car gets a random paint finish (a gacha spin). Rarer finishes multiply what
+-- every customer pays to look at the car. Rerolls cost cash and only ever upgrade the paint;
+-- a token buys a Lucky Roll (best of three). Paint Luck (the old Service Tools pad) makes rare
+-- finishes more likely.
+-- (Saved data calls the finish "Engine" for compatibility with older saves.)
 ---------------------------------------------------------------------
-Config.Tunes = {
-	{ Name = "Quick Service", MinScore = 0, Mult = 1, Color = Color3.fromRGB(170, 175, 185) },
-	{ Name = "Tune-Up", MinScore = 2, Mult = 1.5, Color = Color3.fromRGB(95, 170, 255) },
-	{ Name = "Performance Tune", MinScore = 4, Mult = 2.5, Color = Color3.fromRGB(70, 210, 120) },
-	{ Name = "Perfect Tune", MinScore = 6, Mult = 4, Color = Color3.fromRGB(255, 200, 50) },
-	{ Name = "Turbo Tune", MinScore = 99, Mult = 6, Color = Color3.fromRGB(255, 110, 70) }, -- Perfect Tune + 1 turbo token
+Config.Paints = {
+	{ Name = "Factory Paint", Rarity = 1, Weight = 0, Mult = 1, Color = Color3.fromRGB(170, 175, 185) },
+	{ Name = "Fresh Gloss", Rarity = 1, Weight = 38, Mult = 1.3, Color = Color3.fromRGB(205, 215, 230), Keep = true, Reflectance = 0.12 },
+	{ Name = "Matte Black", Rarity = 1, Weight = 24, Mult = 1.6, Color = Color3.fromRGB(110, 110, 120), Paint = Color3.fromRGB(30, 30, 34), Reflectance = 0 },
+	{ Name = "Metallic Blue", Rarity = 2, Weight = 16, Mult = 2, Color = Color3.fromRGB(80, 150, 255), Paint = Color3.fromRGB(35, 85, 200), Reflectance = 0.22 },
+	{ Name = "Army Camo", Rarity = 2, Weight = 10, Mult = 2.6, Color = Color3.fromRGB(130, 160, 90), Camo = { Color3.fromRGB(78, 92, 52), Color3.fromRGB(52, 62, 38), Color3.fromRGB(120, 110, 76), Color3.fromRGB(90, 72, 50) }, Material = Enum.Material.Fabric },
+	{ Name = "Candy Red", Rarity = 3, Weight = 6, Mult = 3.3, Color = Color3.fromRGB(255, 70, 90), Paint = Color3.fromRGB(205, 18, 40), Reflectance = 0.32 },
+	{ Name = "Mirror Chrome", Rarity = 3, Weight = 3.5, Mult = 4.5, Color = Color3.fromRGB(215, 225, 240), Paint = Color3.fromRGB(205, 210, 220), Material = Enum.Material.Foil, Reflectance = 0.6 },
+	{ Name = "24K Gold", Rarity = 4, Weight = 1.8, Mult = 6, Color = Color3.fromRGB(255, 200, 60), Paint = Color3.fromRGB(235, 180, 40), Material = Enum.Material.Foil, Reflectance = 0.45 },
+	{ Name = "Galaxy", Rarity = 5, Weight = 0.7, Mult = 9, Color = Color3.fromRGB(190, 110, 255), Paint = Color3.fromRGB(62, 28, 130), Reflectance = 0.35, Sparkle = true },
 }
+Config.Tunes = Config.Paints -- old name
 Config.Engines = Config.Tunes -- old name, still used by a few helpers
-Config.TuneRounds = 3
--- needle speed (sweeps per second) for each round, and zone sizes (fraction of the gauge, half-width)
-Config.TuneSpeeds = { 0.55, 0.75, 0.95 }
-Config.TuneGood = 0.11
-Config.TunePerfect = 0.03
--- Service Tools upgrade: each level slows the needle 4% and widens the zones 6%
-Config.MaxEngineLuck = 10
-function Config.GetTuneZones(toolsLevel)
-	local k = 1 + 0.06 * (toolsLevel or 0)
-	return Config.TuneGood * k, Config.TunePerfect * k, 1 - 0.04 * (toolsLevel or 0)
-end
-function Config.GetTuneForScore(score)
-	local best = 1
-	for i, t in ipairs(Config.Tunes) do
-		if score >= t.MinScore then
-			best = i
-		end
+Config.MaxEngineLuck = 10 -- Paint Luck levels
+-- roll a paint finish; luck (0..10) shifts the odds toward the rare finishes
+function Config.RollPaint(luck, rng)
+	local w = {}
+	for i, p in ipairs(Config.Paints) do
+		w[i] = p.Weight * (1 + 0.15 * (luck or 0)) ^ math.max(0, i - 2)
 	end
-	return best
+	return math.max(2, Config.WeightedIndex(w, rng))
 end
--- needle position (0..1) at time t after the round started: sweeps left -> right -> left
-function Config.NeedleAt(t, speed)
-	local x = (math.max(0, t) * speed) % 2
-	return x <= 1 and x or 2 - x
+-- how long the paint spin runs before landing (rare finishes hang on longer)
+function Config.PaintSpinSeconds(rarity)
+	return 1.6 + (rarity >= 3 and 1.3 or 0) + (rarity >= 4 and 1.0 or 0)
+end
+-- cash cost of a reroll: about three views of the car
+function Config.PaintRerollCost(carId)
+	local car = Config.CarsById[carId]
+	return math.max(25, math.floor((car and car.BaseIncome or 1) * Config.ViewSeconds * 3))
 end
 function Config.GetEngineLuckCost(level) -- cost of the next Service Tools level
 	return math.floor(2000 * 4 ^ level)
@@ -109,12 +113,13 @@ Config.FirstDeliveries = { 0, 60, 60 } -- a new player's first deliveries come f
 Config.YardCapacity = 24
 
 Config.WashTools = {
-	{ Name = "Bucket and Sponge", Radius = 1.6, Power = 1, Cost = 0 },
-	{ Name = "Garden Hose", Radius = 2.2, Power = 1, Cost = 1500 },
-	{ Name = "Pressure Washer", Radius = 2.8, Power = 2, Cost = 300000 },
-	{ Name = "Foam Cannon", Radius = 3.4, Power = 3, Cost = 100e6 },
-	{ Name = "Wash Bay", Radius = 4.2, Power = 5, Cost = 50e9 },
-	{ Name = "Automatic Car Wash", Radius = 6, Power = 8, Cost = 20e12, Auto = true },
+	-- rust removal: the starter brush is small and slow on purpose, so every upgrade feels great
+	{ Name = "Wire Brush", Radius = 1.1, Power = 1, Cost = 0 },
+	{ Name = "Sanding Block", Radius = 1.7, Power = 1, Cost = 1500 },
+	{ Name = "Pressure Washer", Radius = 2.5, Power = 2, Cost = 300000 },
+	{ Name = "Rust Remover Foam", Radius = 3.3, Power = 3, Cost = 100e6 },
+	{ Name = "Sandblaster", Radius = 4.2, Power = 5, Cost = 50e9 },
+	{ Name = "Automatic Restoration Bay", Radius = 6, Power = 8, Cost = 20e12, Auto = true },
 }
 function Config.GetMaxTool(showroomLevel)
 	return math.min(showroomLevel + 1, #Config.WashTools)
@@ -298,5 +303,49 @@ function Config.FormatTime(seconds)
 	seconds = math.max(0, math.floor(seconds))
 	return string.format("%02d:%02d", math.floor(seconds / 60), seconds % 60)
 end
+
+---------------------------------------------------------------------
+-- Token Shop (in the lot, unlocks at showroom level 3): trophies shown on pedestals in the
+-- showroom. Each one makes every customer pay a bit more per view.
+---------------------------------------------------------------------
+Config.TrophyUnlockLevel = 3
+Config.Trophies = {
+	{ Id = "silver", Name = "Silver Cup", Model = "XTrophySilver", Cost = 5, Bonus = 0.05, Height = 2.2 },
+	{ Id = "gold", Name = "Gold Cup", Model = "XTrophyGold", Cost = 12, Bonus = 0.1, Height = 2.4 },
+	{ Id = "star", Name = "Star Award", Model = "XTrophyStar", Cost = 25, Bonus = 0.15, Height = 2.4 },
+	{ Id = "belt", Name = "Champion Belt", Model = "XTrophyBelt", Cost = 45, Bonus = 0.2, Width = 3 },
+	{ Id = "car", Name = "Golden Car Trophy", Model = "XTrophyCar", Cost = 80, Bonus = 0.3, Height = 2.6 },
+	{ Id = "crown", Name = "Royal Crown", Model = "XTrophyCrown", Cost = 150, Bonus = 0.5, Height = 1.8 },
+}
+Config.TrophiesById = {}
+for _, t in ipairs(Config.Trophies) do
+	Config.TrophiesById[t.Id] = t
+end
+
+---------------------------------------------------------------------
+-- Robux shop. Fill in the real ids after publishing (Creator Hub -> Monetization).
+-- An id of 0 means "not set up yet": the button says so instead of prompting.
+---------------------------------------------------------------------
+Config.Robux = {
+	-- cash packs pay a number of minutes of your current income (with a minimum)
+	Cash = {
+		{ Key = "cash1", ProductId = 0, Price = 29, Name = "Stack of Cash", Minutes = 15, Min = 1000 },
+		{ Key = "cash2", ProductId = 0, Price = 99, Name = "Bag of Cash", Minutes = 60, Min = 6000 },
+		{ Key = "cash3", ProductId = 0, Price = 299, Name = "Briefcase", Minutes = 240, Min = 30000 },
+		{ Key = "cash4", ProductId = 0, Price = 799, Name = "Bank Vault", Minutes = 720, Min = 120000 },
+	},
+	Tokens = {
+		{ Key = "tok1", ProductId = 0, Price = 49, Name = "10 Tokens", Tokens = 10 },
+		{ Key = "tok2", ProductId = 0, Price = 129, Name = "30 Tokens", Tokens = 30 },
+		{ Key = "tok3", ProductId = 0, Price = 349, Name = "100 Tokens", Tokens = 100 },
+	},
+	Passes = {
+		{ Key = "x2cash", PassId = 0, Price = 249, Name = "2x Cash", Text = "Customers pay double, forever." },
+		{ Key = "luckypaint", PassId = 0, Price = 149, Name = "Lucky Painter", Text = "+3 Paint Luck: rare paint way more often." },
+		{ Key = "bigstorage", PassId = 0, Price = 99, Name = "Big Storage", Text = "+60 Storage Unit slots." },
+	},
+	-- one time only, for new players
+	Starter = { Key = "starter", ProductId = 0, Price = 49, WasPrice = 199, Name = "STARTER PACK", Cash = 10000, Tokens = 15 },
+}
 
 return Config
