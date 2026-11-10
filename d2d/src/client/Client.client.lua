@@ -49,20 +49,24 @@ end)
 ---------------------------------------------------------------------
 -- Theme
 ---------------------------------------------------------------------
-local CREAM = Color3.fromRGB(255, 244, 222)
-local CREAM_DARK = Color3.fromRGB(246, 226, 190)
-local BROWN = Color3.fromRGB(128, 82, 46)
-local TEXT_DARK = Color3.fromRGB(92, 58, 32)
-local GREEN_TEXT = Color3.fromRGB(40, 150, 60)
+-- modern dark-glass UI: deep slate panels, thin light borders, clean bold sans-serif type
+local CREAM = Color3.fromRGB(38, 43, 54) -- row / card background
+local CREAM_DARK = Color3.fromRGB(28, 32, 41) -- inset areas
+local BROWN = Color3.fromRGB(120, 130, 150) -- borders, scroll bars
+local TEXT_DARK = Color3.fromRGB(226, 231, 240) -- body text (light on dark)
+local GREEN_TEXT = Color3.fromRGB(120, 235, 150)
+local GLASS = Color3.fromRGB(18, 21, 28)
+local FONT = Enum.Font.GothamBold
+local FONT_TITLE = Enum.Font.GothamBlack
 local WHITE = Color3.new(1, 1, 1)
 local BLACK = Color3.fromRGB(25, 20, 18)
 local GOLD = Color3.fromRGB(255, 205, 60)
 local BTN = {
-	Green = Color3.fromRGB(90, 200, 90),
-	Orange = Color3.fromRGB(255, 150, 50),
-	Red = Color3.fromRGB(240, 85, 75),
-	Blue = Color3.fromRGB(80, 160, 255),
-	Yellow = Color3.fromRGB(255, 205, 60),
+	Green = Color3.fromRGB(52, 186, 110),
+	Orange = Color3.fromRGB(240, 146, 48),
+	Red = Color3.fromRGB(228, 74, 74),
+	Blue = Color3.fromRGB(64, 140, 240),
+	Yellow = Color3.fromRGB(240, 190, 50),
 	Cream = CREAM_DARK,
 }
 
@@ -81,8 +85,9 @@ local function stroke(p, color, t)
 end
 local function textStroke(l, t)
 	local s = Instance.new("UIStroke")
-	s.Color = BLACK
-	s.Thickness = t or 2
+	s.Color = Color3.new(0, 0, 0)
+	s.Thickness = math.max(1, (t or 2) * 0.5)
+	s.Transparency = 0.45
 	s.Parent = l
 	return s
 end
@@ -98,7 +103,7 @@ end
 local function text(parent, props)
 	local l = Instance.new("TextLabel")
 	l.BackgroundTransparency = 1
-	l.Font = Enum.Font.FredokaOne
+	l.Font = FONT
 	l.TextColor3 = WHITE
 	l.TextScaled = true
 	textStroke(l, props.StrokeThickness or 2)
@@ -113,7 +118,7 @@ end
 local function inkText(parent, props)
 	local l = Instance.new("TextLabel")
 	l.BackgroundTransparency = 1
-	l.Font = Enum.Font.FredokaOne
+	l.Font = FONT
 	l.TextColor3 = TEXT_DARK
 	l.TextScaled = true
 	for k, v in pairs(props) do
@@ -207,64 +212,49 @@ local function slicedPill(parent, art)
 	return img
 end
 
--- Glossy push button: painted pill art, white outlined text, presses down when clicked.
+-- Modern button: flat rounded colour with a soft top highlight, clean white label.
 -- Setting button.Text / TextColor3 later still works.
 local function button(parent, props, color)
 	color = color or BTN.Green
-	local art = artFor(color)
 	local isClose = props.Text == "X"
 	local b = Instance.new("TextButton")
 	b.AutoButtonColor = false
 	b.BackgroundTransparency = 1
 	b.TextTransparency = 1
 	b.Text = ""
-	local face
-	if isClose then
-		face = Instance.new("ImageLabel")
-		face.Name = "Face"
-		face.BackgroundTransparency = 1
-		face.Image = UI_ART.Close
-		face.ScaleType = Enum.ScaleType.Fit
-		face.Size = UDim2.new(1, 0, 1, 0)
-	elseif art then
-		face = Instance.new("Frame")
-		face.Name = "Face"
-		face.BackgroundTransparency = 1
-		face.Size = UDim2.new(1, 0, 1, 0)
-		slicedPill(face, art)
-	else
-		-- plain colours (cream etc.) keep the drawn style
-		b.BackgroundTransparency = 0
-		b.BackgroundColor3 = color:Lerp(Color3.new(0, 0, 0), 0.38)
-		corner(b, 14)
-		stroke(b, BLACK, 3)
-		face = Instance.new("Frame")
-		face.Name = "Face"
-		face.BorderSizePixel = 0
-		face.Size = UDim2.new(1, 0, 1, -6)
-		face.BackgroundColor3 = WHITE
-		corner(face, 13)
-		local g = Instance.new("UIGradient")
-		g.Rotation = 90
-		g.Color = ColorSequence.new(color:Lerp(WHITE, 0.22), color)
-		g.Parent = face
-	end
+	local face = Instance.new("Frame")
+	face.Name = "Face"
+	face.BorderSizePixel = 0
+	face.Size = UDim2.new(1, 0, 1, 0)
+	face.BackgroundColor3 = isClose and Color3.fromRGB(52, 56, 66) or color
+	corner(face, isClose and 999 or 12)
+	local g = Instance.new("UIGradient")
+	g.Rotation = 90
+	g.Color = ColorSequence.new(Color3.new(1, 1, 1), Color3.fromRGB(205, 205, 205))
+	g.Parent = face
+	local st = stroke(face, Color3.new(1, 1, 1), 1)
+	st.Transparency = 0.82
 	local label = Instance.new("TextLabel")
 	label.Name = "Label"
 	label.BackgroundTransparency = 1
-	label.Position = UDim2.new(0, 14, 0.2, 0)
-	label.Size = UDim2.new(1, -28, 0.56, 0)
-	label.Font = Enum.Font.FredokaOne
+	label.Position = UDim2.new(0, 14, 0.24, 0)
+	label.Size = UDim2.new(1, -28, 0.52, 0)
+	label.Font = FONT
 	label.TextScaled = true
 	label.TextColor3 = WHITE
 	label.ZIndex = 3
-	label.Visible = not isClose
-	textStroke(label, 2.5)
 	label.Parent = face
+	if isClose then
+		label.Text = "✕"
+		label.Position = UDim2.new(0.25, 0, 0.25, 0)
+		label.Size = UDim2.new(0.5, 0, 0.5, 0)
+	end
 	face.Parent = b
 	for k, v in pairs(props) do
 		if k == "Text" then
-			label.Text = v
+			if not isClose then
+				label.Text = v
+			end
 		elseif k == "TextColor3" then
 			label.TextColor3 = v
 		else
@@ -280,10 +270,10 @@ local function button(parent, props, color)
 	local pressScale = Instance.new("UIScale")
 	pressScale.Parent = face
 	b.MouseButton1Down:Connect(function()
-		TweenService:Create(pressScale, TweenInfo.new(0.06), { Scale = 0.92 }):Play()
+		TweenService:Create(pressScale, TweenInfo.new(0.06), { Scale = 0.95 }):Play()
 	end)
 	local function release()
-		TweenService:Create(pressScale, TweenInfo.new(0.18, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play()
+		TweenService:Create(pressScale, TweenInfo.new(0.16, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Scale = 1 }):Play()
 	end
 	b.MouseButton1Up:Connect(release)
 	b.MouseLeave:Connect(release)
@@ -299,7 +289,7 @@ local function keyBadge(b, key)
 	k.Position = UDim2.new(0, -2, 0.5, 0)
 	k.Size = UDim2.new(0, 34, 0, 34)
 	k.BackgroundColor3 = WHITE
-	k.Font = Enum.Font.FredokaOne
+	k.Font = FONT
 	k.TextScaled = true
 	k.TextColor3 = BLACK
 	k.Text = key
@@ -310,14 +300,23 @@ local function keyBadge(b, key)
 	return k
 end
 
--- cream "paper" panel: the painted panel art, 9-sliced so the thick rounded frame keeps its shape
+-- dark glass panel: deep slate, slightly see-through, rounded, with a hairline light border
+local function glassify(f, radius, alpha)
+	f.BackgroundColor3 = GLASS
+	f.BackgroundTransparency = alpha or 0.12
+	f.BorderSizePixel = 0
+	corner(f, radius or 18)
+	local st = stroke(f, Color3.new(1, 1, 1), 1)
+	st.Transparency = 0.84
+	local g = Instance.new("UIGradient")
+	g.Rotation = 90
+	g.Color = ColorSequence.new(Color3.fromRGB(255, 255, 255), Color3.fromRGB(200, 205, 215))
+	g.Parent = f
+	return f
+end
 local function panel(parent, props)
-	local f = Instance.new("ImageLabel")
-	f.BackgroundTransparency = 1
-	f.Image = UI_ART.Panel.Id
-	f.ScaleType = Enum.ScaleType.Slice
-	f.SliceCenter = Rect.new(110, 110, UI_ART.Panel.W - 110, UI_ART.Panel.H - 110)
-	f.SliceScale = 0.32
+	local f = Instance.new("Frame")
+	glassify(f, 20, 0.08)
 	for k, v in pairs(props) do
 		f[k] = v
 	end
@@ -353,21 +352,17 @@ hud.Size = UDim2.new(1, 0, 1, 0)
 hud.Parent = gui
 
 local function pill(y, width, icon, color, strokeColor)
-	local f = Instance.new("ImageLabel")
-	f.BackgroundTransparency = 1
+	local f = Instance.new("Frame")
+	glassify(f, 26, 0.2)
 	f.Position = UDim2.new(0, 46, 0, y)
 	f.Size = UDim2.new(0, width, 0, 52)
-	f.Image = UI_ART.Panel.Id
-	f.ScaleType = Enum.ScaleType.Slice
-	f.SliceCenter = Rect.new(110, 110, UI_ART.Panel.W - 110, UI_ART.Panel.H - 110)
-	f.SliceScale = 0.2
 	f.Parent = hud
 	Icons.Make(icon, { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0, 2, 0.5, 0), Size = UDim2.new(0, 64, 0, 64), ZIndex = 3 }).Parent = f
 	local l = Instance.new("TextLabel")
 	l.BackgroundTransparency = 1
 	l.Position = UDim2.new(0, 40, 0, 6)
 	l.Size = UDim2.new(1, -52, 1, -12)
-	l.Font = Enum.Font.FredokaOne
+	l.Font = FONT
 	l.TextScaled = true
 	l.TextColor3 = color
 	l.Text = "0"
@@ -375,8 +370,8 @@ local function pill(y, width, icon, color, strokeColor)
 	l.Parent = f
 	return f, l
 end
-local cashPill, cashLabel = pill(64, 250, "Cash", GREEN_TEXT, Color3.fromRGB(230, 255, 230))
-local _, tokenLabel = pill(136, 160, "Coin", TEXT_DARK)
+local cashPill, cashLabel = pill(64, 250, "Cash", GREEN_TEXT, Color3.new(0, 0, 0))
+local _, tokenLabel = pill(136, 160, "Coin", Color3.fromRGB(255, 214, 90), Color3.new(0, 0, 0))
 local incomeLabel = text(hud, { Position = UDim2.new(0, 306, 0, 78), Size = UDim2.new(0, 200, 0, 26), Text = "", TextColor3 = Color3.fromRGB(130, 255, 140), TextXAlignment = Enum.TextXAlignment.Left })
 
 do
@@ -388,7 +383,7 @@ do
 	timerBack.Size = UDim2.new(0, 250, 0, 68)
 	timerBack.BackgroundTransparency = 1
 	timerBack.Parent = hud
-	slicedPill(timerBack, UI_ART.Bar)
+	glassify(timerBack, 16, 0.18)
 end
 local timerTitle = text(hud, { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 14), Size = UDim2.new(0, 260, 0, 18), Text = "CONTAINER DELIVERY", StrokeThickness = 1.5 })
 local timerLabel = text(hud, { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 34), Size = UDim2.new(0, 200, 0, 36), Text = "--:--", StrokeThickness = 2.5 })
@@ -430,7 +425,7 @@ indexDot.Position = UDim2.new(1, -24, 0, 2)
 indexDot.BackgroundColor3 = Color3.fromRGB(240, 60, 60)
 indexDot.Text = "!"
 indexDot.TextScaled = true
-indexDot.Font = Enum.Font.FredokaOne
+indexDot.Font = FONT
 indexDot.TextColor3 = WHITE
 indexDot.Visible = false
 corner(indexDot, 13)
@@ -1156,9 +1151,9 @@ page.Position = UDim2.new(0, 240, 0, 84)
 page.Size = UDim2.new(1, -264, 1, -104)
 page.BackgroundColor3 = CREAM_DARK
 corner(page, 14)
-stroke(page, BROWN, 3)
+stroke(page, BROWN, 1)
 page.Parent = indexFrame
-local headerLabel = inkText(page, { Position = UDim2.new(0, 16, 0, 10), Size = UDim2.new(0.6, 0, 0, 26), Text = "", TextColor3 = Color3.fromRGB(40, 90, 170), TextXAlignment = Enum.TextXAlignment.Left })
+local headerLabel = inkText(page, { Position = UDim2.new(0, 16, 0, 10), Size = UDim2.new(0.6, 0, 0, 26), Text = "", TextColor3 = Color3.fromRGB(130, 180, 255), TextXAlignment = Enum.TextXAlignment.Left })
 local bonusLabel = inkText(page, { AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -16, 0, 12), Size = UDim2.new(0.38, 0, 0, 22), Text = "", TextXAlignment = Enum.TextXAlignment.Right })
 local grid = Instance.new("ScrollingFrame")
 grid.BackgroundTransparency = 1
@@ -1191,14 +1186,14 @@ local function makeCard(carId, discovered, claimed, order)
 	card.BackgroundColor3 = CREAM
 	card.LayoutOrder = order
 	corner(card, 12)
-	stroke(card, discovered and rarity.Color:Lerp(BROWN, 0.3) or BROWN, 3)
+	stroke(card, discovered and rarity.Color or BROWN, 1.5)
 	card.Parent = grid
 	local photo = Instance.new("Frame")
 	photo.Position = UDim2.new(0, 8, 0, 8)
 	photo.Size = UDim2.new(1, -16, 0, 92)
-	photo.BackgroundColor3 = discovered and Color3.fromRGB(205, 225, 245) or Color3.fromRGB(200, 190, 175)
+	photo.BackgroundColor3 = discovered and Color3.fromRGB(70, 84, 108) or Color3.fromRGB(140, 146, 158)
 	corner(photo, 8)
-	stroke(photo, BROWN, 2)
+	stroke(photo, BROWN, 1)
 	photo.Parent = card
 	local vp = Instance.new("ViewportFrame")
 	vp.BackgroundTransparency = 1
@@ -1246,7 +1241,7 @@ local function refreshIndex()
 			end
 		end
 		b.Text = Config.Containers[c].Era .. "\n" .. n .. " / 12"
-		b.BackgroundColor3 = (c == selectedContainer) and BTN.Green or Color3.fromRGB(255, 225, 170)
+		b.BackgroundColor3 = (c == selectedContainer) and BTN.Green or Color3.fromRGB(44, 50, 62)
 		b.TextColor3 = (c == selectedContainer) and WHITE or TEXT_DARK
 	end
 	for _, child in ipairs(grid:GetChildren()) do
@@ -1269,15 +1264,15 @@ end
 for c = 1, #Config.Containers do
 	local b = Instance.new("TextButton")
 	b.Size = UDim2.new(1, -14, 0, 56)
-	b.Font = Enum.Font.FredokaOne
+	b.Font = FONT
 	b.TextScaled = true
 	b.TextColor3 = TEXT_DARK
-	b.BackgroundColor3 = Color3.fromRGB(255, 225, 170)
+	b.BackgroundColor3 = Color3.fromRGB(44, 50, 62)
 	b.AutoButtonColor = false
 	b.LayoutOrder = c
 	b.Text = Config.Containers[c].Era
 	corner(b, 12)
-	stroke(b, BROWN, 3)
+	stroke(b, BROWN, 1)
 	shine(b, 0.12)
 	local pad = Instance.new("UIPadding")
 	pad.PaddingTop = UDim.new(0, 6)
@@ -1556,7 +1551,7 @@ local function row(list, order, car, rightText, buttonText, buttonColor, onClick
 	r.Parent = list
 	local name, color, tuneName = carLine(car)
 	local n = inkText(r, { Position = UDim2.new(0, 12, 0, 4), Size = UDim2.new(0.55, 0, 0, 22), Text = name, TextXAlignment = Enum.TextXAlignment.Left })
-	n.TextColor3 = color:Lerp(Color3.new(0, 0, 0), 0.35)
+	n.TextColor3 = color:Lerp(WHITE, 0.25)
 	inkText(r, { Position = UDim2.new(0, 12, 0, 26), Size = UDim2.new(0.55, 0, 0, 16), Text = tuneName, TextXAlignment = Enum.TextXAlignment.Left })
 	if rightText then
 		inkText(r, { AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -128, 0.5, 0), Size = UDim2.new(0, 120, 0, 22), Text = rightText, TextXAlignment = Enum.TextXAlignment.Right })
@@ -1805,12 +1800,12 @@ goalPill.Position = UDim2.new(0.5, 0, 0, 82)
 goalPill.Size = UDim2.new(0, 480, 0, 50)
 goalPill.BackgroundTransparency = 1
 goalPill.Parent = hud
-slicedPill(goalPill, UI_ART.Bar).ZIndex = 0
+glassify(goalPill, 25, 0.15)
 local goalTag = Instance.new("TextLabel")
 goalTag.BackgroundTransparency = 1
 goalTag.Position = UDim2.new(0, 18, 0, 0)
 goalTag.Size = UDim2.new(0, 80, 1, 0)
-goalTag.Font = Enum.Font.FredokaOne
+goalTag.Font = FONT
 goalTag.TextSize = 20
 goalTag.TextColor3 = GOLD
 goalTag.Text = "NEXT"
@@ -1820,7 +1815,7 @@ local goalText = Instance.new("TextLabel")
 goalText.BackgroundTransparency = 1
 goalText.Position = UDim2.new(0, 78, 0, 0)
 goalText.Size = UDim2.new(1, -96, 1, 0)
-goalText.Font = Enum.Font.FredokaOne
+goalText.Font = FONT
 goalText.TextSize = 22
 goalText.TextColor3 = WHITE
 goalText.TextXAlignment = Enum.TextXAlignment.Left

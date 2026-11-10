@@ -182,7 +182,7 @@ local function addLabel(adornee, title, subtitle, color, offsetY, maxDist)
 	t.BackgroundTransparency = 1
 	t.Position = UDim2.new(0.06, 0, 0.08, 0)
 	t.Size = UDim2.new(0.88, 0, twoLines and 0.5 or 0.84, 0)
-	t.Font = Enum.Font.FredokaOne
+	t.Font = Enum.Font.GothamBold
 	t.TextScaled = true
 	t.TextColor3 = color or Color3.new(1, 1, 1)
 	t.Text = title

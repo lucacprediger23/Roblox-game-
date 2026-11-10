@@ -109,7 +109,13 @@ def main():
     src = os.path.join(ROOT, "src")
     body = "".join(
         [
-            service("Workspace", props='<bool name="StreamingEnabled">false</bool>'),
+            service(
+                "Workspace",
+                # terrain with grass blades (Decoration) - the map script fills it at runtime
+                inner='<Item class="Terrain" referent="%s"><Properties><string name="Name">Terrain</string>'
+                '<bool name="Decoration">true</bool><float name="GrassLength">0.6</float></Properties></Item>' % ref(),
+                props='<bool name="StreamingEnabled">false</bool>',
+            ),
             # Future lighting: real light from lamps and neon, shiny reflections
             service(
                 "Lighting",

@@ -116,7 +116,7 @@ local function label(adornee, text, color, offsetY, width, maxDist)
 	local l = Instance.new("TextLabel")
 	l.Size = UDim2.new(1, 0, 1, 0)
 	l.BackgroundTransparency = 1
-	l.Font = Enum.Font.FredokaOne
+	l.Font = Enum.Font.GothamBold
 	l.TextScaled = true
 	l.TextColor3 = color or Color3.new(1, 1, 1)
 	l.Text = text
@@ -135,7 +135,7 @@ local function surfaceText(p, face, text, color, pps, font)
 	local l = Instance.new("TextLabel")
 	l.Size = UDim2.new(1, 0, 1, 0)
 	l.BackgroundTransparency = 1
-	l.Font = font or Enum.Font.FredokaOne
+	l.Font = font or Enum.Font.GothamBold
 	l.TextScaled = true
 	l.TextColor3 = color or Color3.new(1, 1, 1)
 	l.Text = text
@@ -184,8 +184,8 @@ end
 
 local function lowPolyTree(parent, pos, scale)
 	scale = scale or 1
-	local name = Props.Pick({ "Tree2" }, rng)
-	if name and Props.Place(name, parent, CFrame.new(pos) * CFrame.Angles(0, rng:NextNumber(0, 6.28), 0), { Height = 17 * scale }) then
+	local name = Props.Pick({ "RealTree2", "RealTree2", "RealPine" }, rng)
+	if name and Props.Place(name, parent, CFrame.new(pos) * CFrame.Angles(0, rng:NextNumber(0, 6.28), 0), { Height = (name == "RealPine" and 24 or 20) * scale, Ground = true }) then
 		return
 	end
 	local trunkColor = Color3.fromRGB(120, 78, 52)
@@ -296,6 +296,18 @@ local SIDEWALK = 8
 local PLOT_FRONT = ROAD_HALF + SIDEWALK -- plot front edge at |z| = 26
 local PLOT_DEPTH = 206
 -- turn (radians) that makes each store prop face -Z (toward the showroom front); set after looking at them in Studio
+-- turn that makes each town model face the road (set after looking at them in Studio)
+local TOWN_FRONT = {
+	ShopA = 0,
+	ShopB = 0,
+	ShopC = math.pi,
+	HouseA = 0,
+	HouseB = math.pi,
+	GasStation = 0,
+	Warehouse = 0,
+	BusStop = 0,
+	TrafficLight = 0,
+}
 local PROP_FRONT = {
 	Workbench = 0,
 	ToolCabinet = 0,
@@ -340,54 +352,55 @@ end
 -- Terrain: grass ground, terraced blue cliffs around the town
 ---------------------------------------------------------------------
 local function buildTerrain(map)
-	-- smooth flat ground and clean terraced cliffs built from parts (terrain textures look grainy)
+	-- real Roblox terrain: grass with grass blades, soft rolling hills, realistic trees
 	local terrain = workspace.Terrain
 	terrain:Clear()
-	-- natural, slightly muted greens with a real grass surface (not a flat toy-green plate)
-	local GRASS = Color3.fromRGB(88, 124, 62)
-	box(map, "Ground", Vector3.new(1800, 2, 1400), CFrame.new(0, -1, 0), GRASS, Enum.Material.Grass)
-	-- rolling green hills with tree lines around the town, so the sky stays open to the horizon
-	local HILLS = { Color3.fromRGB(84, 118, 60), Color3.fromRGB(94, 126, 64), Color3.fromRGB(78, 110, 56), Color3.fromRGB(100, 130, 68) }
-	local TREES = { Color3.fromRGB(46, 78, 42), Color3.fromRGB(54, 88, 46), Color3.fromRGB(40, 70, 40), Color3.fromRGB(62, 94, 50) }
-	local function blob(name, size, cf, color)
-		local p = deco(map, name, size, cf, color, Enum.Material.Grass)
-		local mesh = Instance.new("SpecialMesh")
-		mesh.MeshType = Enum.MeshType.Sphere
-		mesh.Parent = p
-		return p
+	pcall(function()
+		terrain.Decoration = true
+	end)
+	terrain:SetMaterialColor(Enum.Material.Grass, Color3.fromRGB(86, 108, 56))
+	terrain:SetMaterialColor(Enum.Material.Ground, Color3.fromRGB(102, 92, 76))
+	terrain:SetMaterialColor(Enum.Material.Asphalt, Color3.fromRGB(70, 70, 74))
+	-- smooth terrain samples voxel centres, so a fill that ends at y = -2 gives a surface at about y = 0
+	terrain:FillBlock(CFrame.new(0, -6, 0), Vector3.new(1800, 8, 1400), Enum.Material.Grass)
+	-- no grass blades under the thin paved parts (roads, the lot, the walk) - they would poke through
+	local function paved(cx, cz, sx, sz)
+		terrain:FillBlock(CFrame.new(cx, -4, cz), Vector3.new(sx, 4, sz), Enum.Material.Ground)
 	end
-	local function hill(x, z, rx, rz, h)
-		blob("Hill", Vector3.new(rx * 2, h * 2, rz * 2), CFrame.new(x, 0, z) * CFrame.Angles(0, rng:NextNumber(-0.3, 0.3), 0), HILLS[rng:NextInteger(1, #HILLS)])
-		-- a scatter of round trees on the hillside
-		local count = math.floor(rx * rz / 380)
-		for _ = 1, count do
-			local u, v = rng:NextNumber(-0.85, 0.85), rng:NextNumber(-0.85, 0.85)
-			local k = 1 - u * u - v * v
-			if k > 0.05 then
-				local y = h * math.sqrt(k)
-				local sz = rng:NextNumber(7, 12)
-				local pos = Vector3.new(x + u * rx, y, z + v * rz)
-				deco(map, "HillTrunk", Vector3.new(1.2, sz * 0.6, 1.2), CFrame.new(pos + Vector3.new(0, sz * 0.25, 0)), Color3.fromRGB(110, 76, 52))
-				blob("HillTree", Vector3.new(sz, sz * 1.15, sz), CFrame.new(pos + Vector3.new(0, sz * 0.75, 0)), TREES[rng:NextInteger(1, #TREES)])
-			end
-		end
-	end
-	-- behind the back service roads (north and south)
+	paved(0, 0, 800, 2 * (PLOT_FRONT + 1))
 	for _, sz in ipairs({ -1, 1 }) do
-		for x = -680, 680, 70 do
-			hill(x + rng:NextNumber(-20, 20), sz * rng:NextNumber(310, 335), rng:NextNumber(45, 70), rng:NextNumber(28, 40), rng:NextNumber(10, 18))
-			hill(x + 35 + rng:NextNumber(-20, 20), sz * rng:NextNumber(395, 440), rng:NextNumber(60, 90), rng:NextNumber(40, 60), rng:NextNumber(22, 36))
-			hill(x + rng:NextNumber(-30, 30), sz * rng:NextNumber(500, 545), rng:NextNumber(80, 120), rng:NextNumber(50, 70), rng:NextNumber(35, 55))
+		paved(0, sz * (PLOT_FRONT + PLOT_DEPTH + 10), 800, 20)
+		for _, x in ipairs(NORTH_X) do
+			-- the container lot and the walk from the sidewalk to the garage
+			paved(x, sz * (PLOT_FRONT + 165), 128, 86)
+			paved(x, sz * (PLOT_FRONT + 62), 14, 126)
 		end
 	end
-	-- at both ends of the boulevard (east and west)
-	for _, sx in ipairs({ -1, 1 }) do
-		for z = -300, 300, 60 do
-			if math.abs(z) > 30 then
-				hill(sx * rng:NextNumber(430, 460), z + rng:NextNumber(-15, 15), rng:NextNumber(30, 45), rng:NextNumber(40, 60), rng:NextNumber(10, 18))
+	-- rolling hills beyond the town: overlapping terrain domes with trees on top
+	local function hill(x, z, r)
+		terrain:FillBall(Vector3.new(x, -2 - 0.45 * r, z), r, Enum.Material.Grass)
+		local count = math.floor(r / 14)
+		for _ = 1, count do
+			local a = rng:NextNumber(0, math.pi * 2)
+			local d = rng:NextNumber(0, r * 0.6)
+			local px, pz = x + math.cos(a) * d, z + math.sin(a) * d
+			local h = math.sqrt(math.max(0, r * r - d * d)) - 0.45 * r - 2
+			if h > 2 then
+				local name = rng:NextNumber() < 0.6 and "RealTree2" or "RealPine"
+				Props.Place(name, map, CFrame.new(px, h, pz) * CFrame.Angles(0, rng:NextNumber(0, 6.28), 0), { Height = rng:NextNumber(20, 30), Ground = true })
 			end
-			hill(sx * rng:NextNumber(530, 580), z + 30 + rng:NextNumber(-15, 15), rng:NextNumber(50, 80), rng:NextNumber(50, 70), rng:NextNumber(24, 40))
-			hill(sx * rng:NextNumber(640, 690), z + rng:NextNumber(-20, 20), rng:NextNumber(70, 100), rng:NextNumber(60, 80), rng:NextNumber(35, 55))
+		end
+	end
+	for _, sz in ipairs({ -1, 1 }) do
+		for x = -700, 700, 85 do
+			hill(x + rng:NextNumber(-25, 25), sz * rng:NextNumber(330, 360), rng:NextNumber(38, 55))
+			hill(x + 40 + rng:NextNumber(-25, 25), sz * rng:NextNumber(430, 480), rng:NextNumber(55, 80))
+		end
+	end
+	for _, sx in ipairs({ -1, 1 }) do
+		for z = -320, 320, 80 do
+			hill(sx * rng:NextNumber(450, 490), z + rng:NextNumber(-20, 20), rng:NextNumber(40, 58))
+			hill(sx * rng:NextNumber(570, 620), z + 40 + rng:NextNumber(-20, 20), rng:NextNumber(55, 80))
 		end
 	end
 end
@@ -424,7 +437,7 @@ local function buildWorld(map)
 	end
 	-- median: grass strip with trees, shrubs and lamps
 	box(map, "Median", Vector3.new(LEN, 0.7, 6), CFrame.new(0, 0.35, 0), Color3.fromRGB(205, 205, 210), Enum.Material.Concrete)
-	deco(map, "MedianGrass", Vector3.new(LEN - 1, 0.1, 5), CFrame.new(0, 0.75, 0), Color3.fromRGB(96, 170, 68), Enum.Material.Grass)
+	deco(map, "MedianGrass", Vector3.new(LEN - 1, 0.1, 5), CFrame.new(0, 0.75, 0), Color3.fromRGB(92, 118, 60), Enum.Material.Grass)
 	for x = -LEN / 2 + 30, LEN / 2 - 30, 70 do
 		lowPolyTree(map, Vector3.new(x, 0.7, 0), 0.8)
 	end
@@ -432,6 +445,23 @@ local function buildWorld(map)
 	for _, x in ipairs(NORTH_X) do
 		for s = -5, 5, 2 do
 			deco(map, "Crosswalk", Vector3.new(1.2, 0.05, 32), CFrame.new(x + s, 0.43, 0), Color3.fromRGB(245, 245, 245))
+		end
+	end
+	-- the town around the plots: real store buildings in the gaps between plots and at the ends
+	local TOWN = {
+		{ "ShopA", -75, 1 }, { "ShopC", 135, 1 }, { "GasStation", -320, 1 }, { "HouseB", 335, 1 },
+		{ "ShopC", -75, -1 }, { "ShopA", 135, -1 }, { "HouseB", -320, -1 }, { "GasStation", 335, -1 },
+	}
+	for _, b in ipairs(TOWN) do
+		local name, x, sz = b[1], b[2], b[3]
+		local width = (math.abs(x) > 300) and 64 or 56
+		local cf = CFrame.new(x, 0, sz * (PLOT_FRONT + 40)) * CFrame.Angles(0, (sz > 0 and math.pi or 0) + (TOWN_FRONT[name] or 0), 0)
+		Props.Place(name, map, cf, { Width = width, Solid = true })
+	end
+	-- a fire hydrant here and there on the sidewalk (not too many)
+	for _, sz in ipairs({ -1, 1 }) do
+		for _, x in ipairs({ -110, 100 }) do
+			Props.Place("FireHydrant", map, CFrame.new(x, 0.6, sz * (ROAD_HALF + 2)), { Height = 2.4 })
 		end
 	end
 	-- trees between the plots and on the edges
@@ -483,6 +513,11 @@ local function buildPlot(index, parent)
 
 	-- a plain path from the sidewalk to the showroom
 	deco(m, "Walk", Vector3.new(12, 0.2, ZB), at(0, 0.1, ZB / 2), CONCRETE, Enum.Material.Pavement)
+	-- the front lawn: clipped hedges along the plot edges, trees along the path, shrubs by the building
+	local HEDGE = Color3.fromRGB(54, 82, 44)
+	for _, side in ipairs({ -1, 1 }) do
+		box(m, "Hedge", Vector3.new(2.2, 3, ZB - 8), at(side * (LOT_HALF - 1), 1.5, 4 + (ZB - 8) / 2), HEDGE, Enum.Material.LeafyGrass)
+	end
 
 	--=========================== SHOWROOM (rebuilt per level) ===========================
 	local showroomModel = nil
@@ -544,10 +579,10 @@ local function buildPlot(index, parent)
 		end
 		-- every showroom level has its own style: street garage -> workshop -> dealership -> luxury -> future
 		local THEMES = {
-			{ Name = "street", WallMat = Enum.Material.Brick, FloorMat = Enum.Material.Concrete, RoofMat = Enum.Material.Metal, Wall = Color3.fromRGB(150, 92, 74), Floor = Color3.fromRGB(92, 94, 100), Trim = Color3.fromRGB(46, 48, 56), Ceiling = Color3.fromRGB(150, 150, 154), Light = Color3.fromRGB(255, 236, 210), Front = Color3.fromRGB(150, 92, 74) },
-			{ Name = "workshop", WallMat = Enum.Material.Concrete, FloorMat = Enum.Material.Concrete, RoofMat = Enum.Material.Metal, Wall = Color3.fromRGB(196, 198, 202), Floor = Color3.fromRGB(110, 120, 134), Trim = Color3.fromRGB(40, 90, 170), Ceiling = Color3.fromRGB(200, 202, 208), Light = LAMP, Front = Color3.fromRGB(196, 198, 202) },
-			{ Name = "dealer", FloorMat = Enum.Material.Marble, RoofMat = Enum.Material.Metal, Wall = PLASTER, Floor = TILE, Trim = NAVY, Ceiling = Color3.fromRGB(226, 226, 230), Light = LAMP, Front = PLASTER },
-			{ Name = "luxury", WallMat = Enum.Material.WoodPlanks, FloorMat = Enum.Material.Marble, RoofMat = Enum.Material.Metal, Wall = Color3.fromRGB(120, 80, 56), Floor = Color3.fromRGB(44, 42, 48), Trim = Color3.fromRGB(222, 180, 90), Ceiling = Color3.fromRGB(236, 226, 210), Light = Color3.fromRGB(255, 226, 170), Front = Color3.fromRGB(70, 52, 44) },
+			{ Name = "street", WallMat = Enum.Material.Brick, FloorMat = Enum.Material.Concrete, RoofMat = Enum.Material.Concrete, Wall = Color3.fromRGB(150, 92, 74), Floor = Color3.fromRGB(92, 94, 100), Trim = Color3.fromRGB(46, 48, 56), Ceiling = Color3.fromRGB(150, 150, 154), Light = Color3.fromRGB(255, 236, 210), Front = Color3.fromRGB(150, 92, 74) },
+			{ Name = "workshop", WallMat = Enum.Material.Concrete, FloorMat = Enum.Material.Concrete, RoofMat = Enum.Material.Concrete, Wall = Color3.fromRGB(196, 198, 202), Floor = Color3.fromRGB(110, 120, 134), Trim = Color3.fromRGB(40, 90, 170), Ceiling = Color3.fromRGB(200, 202, 208), Light = LAMP, Front = Color3.fromRGB(196, 198, 202) },
+			{ Name = "dealer", FloorMat = Enum.Material.Marble, RoofMat = Enum.Material.Concrete, Wall = PLASTER, Floor = TILE, Trim = NAVY, Ceiling = Color3.fromRGB(226, 226, 230), Light = LAMP, Front = PLASTER },
+			{ Name = "luxury", WallMat = Enum.Material.WoodPlanks, FloorMat = Enum.Material.Marble, RoofMat = Enum.Material.Concrete, Wall = Color3.fromRGB(120, 80, 56), Floor = Color3.fromRGB(44, 42, 48), Trim = Color3.fromRGB(222, 180, 90), Ceiling = Color3.fromRGB(236, 226, 210), Light = Color3.fromRGB(255, 226, 170), Front = Color3.fromRGB(70, 52, 44) },
 			{ Name = "future", Wall = Color3.fromRGB(214, 220, 232), Floor = Color3.fromRGB(70, 78, 94), Trim = Color3.fromRGB(40, 220, 255), Ceiling = Color3.fromRGB(240, 244, 250), Light = Color3.fromRGB(190, 245, 255), Front = Color3.fromRGB(232, 236, 244) },
 		}
 		local theme = THEMES[level]
@@ -785,6 +820,19 @@ local function buildPlot(index, parent)
 			end
 		end
 
+		-- the front lawn in front of this level's building: trees along the path, shrubs at the corners
+		local lawn = Random.new(index * 31 + level)
+		for z = 10, Z0 - 12, 22 do
+			for _, side in ipairs({ -1, 1 }) do
+				Props.Place(lawn:NextNumber() < 0.75 and "RealTree2" or "RealPine", sm, at(side * 12, 0, z) * CFrame.Angles(0, lawn:NextNumber(0, 6.28), 0), { Height = lawn:NextNumber(17, 22), Ground = true })
+			end
+		end
+		for _, side in ipairs({ -1, 1 }) do
+			for k = 0, 1 do
+				Props.Place("RealBush", sm, s(side * (W / 2 - 2 - k * 3.2), 0, -3 - k * 1.5) * CFrame.Angles(0, lawn:NextNumber(0, 6.28), 0), { Height = lawn:NextNumber(2.6, 3.4), Ground = true })
+			end
+		end
+
 		-- outside: real store pieces that grow with the business (street garage -> dealership)
 		local function outside(name, x, y, z, faceYaw, opts)
 			local turn = PROP_FRONT[name] or 0
@@ -882,6 +930,15 @@ local function buildPlot(index, parent)
 	for _, sx in ipairs({ -1, 1 }) do
 		fenceRun(v(sx * LOT_HALF, 0, LOT_Z0), v(sx * LOT_HALF, 0, LOT_Z1))
 		fenceRun(v(sx * LOT_HALF, 0, LOT_Z1), v(sx * 14, 0, LOT_Z1))
+	end
+	-- painted parking bays under the container slots, and lamp posts on the lot corners
+	for _, z in ipairs({ 150, 162, 174, 186 }) do
+		for x = -30, 30, 10 do
+			deco(m, "BayLine", Vector3.new(0.25, 0.04, 10.5), at(x, 0.42, z), Color3.fromRGB(232, 232, 228))
+		end
+	end
+	for _, c in ipairs({ { -LOT_HALF + 3, LOT_Z0 + 18 }, { LOT_HALF - 3, LOT_Z0 + 18 }, { -LOT_HALF + 3, LOT_Z1 - 6 }, { LOT_HALF - 3, LOT_Z1 - 6 } }) do
+		Props.Place("StreetLamp", m, at(c[1], 0.4, c[2]) * CFrame.Angles(0, c[1] < 0 and -math.pi / 2 or math.pi / 2, 0), { Height = 13, Solid = true })
 	end
 	-- container slots: a tidy grid in front of the truck
 	local yardSlots = {}
@@ -986,7 +1043,7 @@ local function buildPlot(index, parent)
 		box(m, "TireWall", Vector3.new(0.5, tH, tD), t(side * tW / 2, FLOOR_Y + tH / 2, 0), BRICK, Enum.Material.Brick)
 	end
 	box(m, "TireBack", Vector3.new(tW, tH, 0.5), t(0, FLOOR_Y + tH / 2, tD / 2), BRICK, Enum.Material.Brick)
-	box(m, "TireRoof", Vector3.new(tW + 0.6, 0.35, tD + 0.6), t(0, FLOOR_Y + tH + 0.18, 0), Color3.fromRGB(70, 74, 84), Enum.Material.Metal)
+	box(m, "TireRoof", Vector3.new(tW + 0.6, 0.35, tD + 0.6), t(0, FLOOR_Y + tH + 0.18, 0), Color3.fromRGB(78, 80, 86), Enum.Material.Concrete)
 	-- the open front reads as a garage: a rolled-up shutter box and steel door frame
 	deco(m, "ShutterBox", Vector3.new(tW - 1, 0.9, 0.9), t(0, FLOOR_Y + tH - 0.45, -tD / 2 + 0.6), Color3.fromRGB(150, 156, 166), Enum.Material.Metal)
 	for _, side in ipairs({ -1, 1 }) do
@@ -1153,13 +1210,13 @@ local function buildPlot(index, parent)
 	local function pad(name, x, z, y, kind, facing)
 		y = y or FLOOR_Y
 		local base = at(x, y, z) * CFrame.Angles(0, facing or 0, 0)
-		box(m, name .. "Plinth", Vector3.new(6.6, 0.5, 6.6), base * CFrame.new(0, 0.25, 0), Color3.fromRGB(176, 184, 196), Enum.Material.Concrete, { CanCollide = false })
-		local p = box(m, name, Vector3.new(5.6, 0.18, 5.6), base * CFrame.new(0, 0.55, 0), Color3.fromRGB(90, 215, 130), Enum.Material.Neon, { CanCollide = false, Transparency = 0.55 })
-		local glow = Instance.new("PointLight")
-		glow.Color = Color3.fromRGB(150, 255, 190)
-		glow.Range = 9
-		glow.Brightness = 0.4
-		glow.Parent = p
+		-- a low concrete plinth with a dark inset plate and a thin painted border: reads like a real
+		-- floor marking instead of a glowing slab
+		box(m, name .. "Plinth", Vector3.new(6.4, 0.3, 6.4), base * CFrame.new(0, 0.15, 0), Color3.fromRGB(170, 172, 176), Enum.Material.Concrete, { CanCollide = false })
+		local p = box(m, name, Vector3.new(5.4, 0.06, 5.4), base * CFrame.new(0, 0.33, 0), Color3.fromRGB(46, 50, 58), Enum.Material.SmoothPlastic, { CanCollide = false })
+		for _, e in ipairs({ { 0, 2.55, 5.4, 0.3 }, { 0, -2.55, 5.4, 0.3 }, { 2.55, 0, 0.3, 5.4 }, { -2.55, 0, 0.3, 5.4 } }) do
+			deco(m, name .. "Edge", Vector3.new(e[3], 0.07, e[4]), base * CFrame.new(e[1], 0.34, e[2]), Color3.fromRGB(80, 200, 120))
+		end
 		local ic = icon(kind, base * CFrame.new(0, 4.4, 0))
 		-- the name above the icon and the level under it
 		local anchor = deco(m, name .. "Anchor", Vector3.new(0.2, 0.2, 0.2), base * CFrame.new(0, 4.4, 0), Color3.new(1, 1, 1), nil, { Transparency = 1 })
@@ -1168,7 +1225,7 @@ local function buildPlot(index, parent)
 		local lv = label(anchor, "Level 1", Color3.fromRGB(255, 225, 120), -2.2, 120, 30)
 		lv.Parent.Size = UDim2.new(3.3, 0, 0.7, 0)
 		-- price plate on the floor, angled up toward the player
-		local plate = box(m, name .. "Price", Vector3.new(5.2, 0.35, 1.8), base * CFrame.new(0, 0.35, -4.9) * CFrame.Angles(math.rad(-14), 0, 0), Color3.fromRGB(60, 200, 80), nil, { CanCollide = false })
+		local plate = box(m, name .. "Price", Vector3.new(4.6, 0.12, 1.4), base * CFrame.new(0, 0.22, -4.3) * CFrame.Angles(math.rad(-8), 0, 0), Color3.fromRGB(60, 200, 80), nil, { CanCollide = false })
 		local priceGui = Instance.new("SurfaceGui")
 		priceGui.Face = Enum.NormalId.Top
 		priceGui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
@@ -1177,7 +1234,7 @@ local function buildPlot(index, parent)
 		local priceText = Instance.new("TextLabel")
 		priceText.BackgroundTransparency = 1
 		priceText.Size = UDim2.new(1, 0, 1, 0)
-		priceText.Font = Enum.Font.FredokaOne
+		priceText.Font = Enum.Font.GothamBold
 		priceText.TextScaled = true
 		priceText.TextColor3 = Color3.new(1, 1, 1)
 		priceText.Rotation = 180

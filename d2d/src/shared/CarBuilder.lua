@@ -213,6 +213,14 @@ local function buildFromAsset(car, source, opts)
 			local name = "Trim"
 			if path:find("wheel") or path:find("tire") or path:find("tyre") or path:find("%f[%a]rim") then
 				name = "Wheel"
+				-- racing-kit wheels: a cylinder part with an old CylinderMesh renders sideways inside
+				-- the body; drop the mesh so the part's own cylinder shows, and make it a rubber tire
+				local cm = d:FindFirstChildOfClass("CylinderMesh")
+				if cm and d:IsA("Part") and d.Shape == Enum.PartType.Cylinder then
+					cm:Destroy()
+					d.Color = Color3.fromRGB(32, 32, 34)
+					d.Material = Enum.Material.Rubber
+				end
 			elseif path:find("hood") or path:find("bonnet") then
 				name = "Hood"
 			elseif path:find("body") then
