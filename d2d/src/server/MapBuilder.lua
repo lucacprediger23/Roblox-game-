@@ -6,6 +6,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Lighting = game:GetService("Lighting")
 local CollectionService = game:GetService("CollectionService")
+local TweenService = game:GetService("TweenService")
 local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
 local Props = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Props"))
 local Icons = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Icons"))
@@ -166,19 +167,19 @@ end
 -- A window: glass with a navy frame and mullions. `cf` is the window center, facing -Z.
 local function window(parent, cf, width, height, cols, rows, glassTransparency, glassColor)
 	deco(parent, "Glass", Vector3.new(width, height, 0.2), cf, glassColor or GLASS, Enum.Material.Glass, { Transparency = glassTransparency or 0.4, Reflectance = 0.2 })
-	local t = 0.45
-	deco(parent, "Frame", Vector3.new(width + t, t, 0.5), cf * CFrame.new(0, height / 2, 0), NAVY)
-	deco(parent, "Frame", Vector3.new(width + t, t, 0.5), cf * CFrame.new(0, -height / 2, 0), NAVY)
-	deco(parent, "Frame", Vector3.new(t, height + t, 0.5), cf * CFrame.new(-width / 2, 0, 0), NAVY)
-	deco(parent, "Frame", Vector3.new(t, height + t, 0.5), cf * CFrame.new(width / 2, 0, 0), NAVY)
+	-- slim aluminium storefront frames (thin profiles read as a real, modern building)
+	local t = 0.2
+	local FRAME = Color3.fromRGB(58, 62, 70)
+	deco(parent, "Frame", Vector3.new(width + t, t, 0.3), cf * CFrame.new(0, height / 2, 0), FRAME, Enum.Material.Metal)
+	deco(parent, "Frame", Vector3.new(width + t, t, 0.3), cf * CFrame.new(0, -height / 2, 0), FRAME, Enum.Material.Metal)
+	deco(parent, "Frame", Vector3.new(t, height + t, 0.3), cf * CFrame.new(-width / 2, 0, 0), FRAME, Enum.Material.Metal)
+	deco(parent, "Frame", Vector3.new(t, height + t, 0.3), cf * CFrame.new(width / 2, 0, 0), FRAME, Enum.Material.Metal)
 	for c = 1, cols - 1 do
-		deco(parent, "Mullion", Vector3.new(0.22, height, 0.35), cf * CFrame.new(-width / 2 + c * width / cols, 0, 0), NAVY)
+		deco(parent, "Mullion", Vector3.new(0.12, height, 0.24), cf * CFrame.new(-width / 2 + c * width / cols, 0, 0), FRAME, Enum.Material.Metal)
 	end
 	for r = 1, rows - 1 do
-		deco(parent, "Mullion", Vector3.new(width, 0.22, 0.35), cf * CFrame.new(0, -height / 2 + r * height / rows, 0), NAVY)
+		deco(parent, "Mullion", Vector3.new(width, 0.12, 0.24), cf * CFrame.new(0, -height / 2 + r * height / rows, 0), FRAME, Enum.Material.Metal)
 	end
-	-- stone sill under the window
-	deco(parent, "Sill", Vector3.new(width + 1, 0.35, 1.1), cf * CFrame.new(0, -height / 2 - 0.4, -0.3), PLASTER_SHADE)
 end
 
 local function lowPolyTree(parent, pos, scale)
@@ -342,13 +343,14 @@ local function buildTerrain(map)
 	-- smooth flat ground and clean terraced cliffs built from parts (terrain textures look grainy)
 	local terrain = workspace.Terrain
 	terrain:Clear()
-	local GRASS = Color3.fromRGB(104, 178, 74)
-	box(map, "Ground", Vector3.new(1800, 2, 1400), CFrame.new(0, -1, 0), GRASS)
+	-- natural, slightly muted greens with a real grass surface (not a flat toy-green plate)
+	local GRASS = Color3.fromRGB(88, 124, 62)
+	box(map, "Ground", Vector3.new(1800, 2, 1400), CFrame.new(0, -1, 0), GRASS, Enum.Material.Grass)
 	-- rolling green hills with tree lines around the town, so the sky stays open to the horizon
-	local HILLS = { Color3.fromRGB(98, 172, 70), Color3.fromRGB(110, 182, 78), Color3.fromRGB(88, 160, 66), Color3.fromRGB(120, 188, 86) }
-	local TREES = { Color3.fromRGB(56, 128, 58), Color3.fromRGB(66, 140, 62), Color3.fromRGB(48, 116, 54), Color3.fromRGB(78, 150, 66) }
+	local HILLS = { Color3.fromRGB(84, 118, 60), Color3.fromRGB(94, 126, 64), Color3.fromRGB(78, 110, 56), Color3.fromRGB(100, 130, 68) }
+	local TREES = { Color3.fromRGB(46, 78, 42), Color3.fromRGB(54, 88, 46), Color3.fromRGB(40, 70, 40), Color3.fromRGB(62, 94, 50) }
 	local function blob(name, size, cf, color)
-		local p = deco(map, name, size, cf, color)
+		local p = deco(map, name, size, cf, color, Enum.Material.Grass)
 		local mesh = Instance.new("SpecialMesh")
 		mesh.MeshType = Enum.MeshType.Sphere
 		mesh.Parent = p
@@ -498,6 +500,25 @@ local function buildPlot(index, parent)
 		applySign()
 	end
 
+	-- the roll-up door of the one-car garage: slats roll up into the top when it opens
+	plot.DoorOpen = false
+	function plot.SetDoor(open, animate)
+		plot.DoorOpen = open
+		for i, sl in ipairs(plot.DoorSlats or {}) do
+			local p = sl.Part
+			if p.Parent then
+				local goal = open and { CFrame = sl.Open, Transparency = 1 } or { CFrame = sl.Closed, Transparency = 0 }
+				p.CanCollide = not open
+				if animate then
+					TweenService:Create(p, TweenInfo.new(0.5 + i * 0.05, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut), goal):Play()
+				else
+					p.CFrame = goal.CFrame
+					p.Transparency = goal.Transparency
+				end
+			end
+		end
+	end
+
 	function plot.BuildShowroom(level)
 		level = math.clamp(level or 1, 1, Config.MaxShowroomLevel)
 		if showroomModel then
@@ -508,10 +529,14 @@ local function buildPlot(index, parent)
 		sm.Name = "Showroom"
 		sm.Parent = m
 		showroomModel = sm
-		local perSide = 2 * level
-		local W = 42 + 8 * (level - 1)
-		local D = 24 + 10 * perSide
-		local H = level == 1 and 13 or (16 + 2 * (level - 2))
+		-- level 1 is a small one-car garage; then the cars line both walls
+		local spotCount = Config.GetSpots(level)
+		local single = spotCount == 1
+		local perSide = math.ceil(spotCount / 2)
+		local W = single and 28 or (42 + 8 * (level - 1))
+		local D = single and 30 or (24 + 10 * perSide)
+		local H = level == 1 and 11 or (14 + 2 * (level - 2))
+		local WT = 0.6 -- wall thickness: thin walls, not bulky blocks
 		local garage = level == 1
 		local Z0 = ZB - D
 		local function s(x, y, z)
@@ -542,53 +567,77 @@ local function buildPlot(index, parent)
 		local wallMat = theme.WallMat
 		box(sm, "Floor", Vector3.new(W, FLOOR_Y, D), s(0, FLOOR_Y / 2, D / 2), theme.Floor, theme.FloorMat, { Reflectance = theme.Name == "luxury" and 0.08 or 0 })
 		for _, side in ipairs({ -1, 1 }) do
-			box(sm, "Wall", Vector3.new(1.2, H, D), s(side * W / 2, FLOOR_Y + H / 2, D / 2), wallColor, wallMat)
+			box(sm, "Wall", Vector3.new(WT, H, D), s(side * W / 2, FLOOR_Y + H / 2, D / 2), wallColor, wallMat)
 		end
-		box(sm, "Roof", Vector3.new(W + 1.6, 1, D + 1.6), s(0, FLOOR_Y + H + 0.5, D / 2), Color3.fromRGB(84, 88, 98), theme.RoofMat)
-		-- a parapet edge so the roof reads as a real flat-roofed building
+		box(sm, "Roof", Vector3.new(W + WT, 0.4, D + WT), s(0, FLOOR_Y + H + 0.2, D / 2), Color3.fromRGB(84, 88, 98), theme.RoofMat)
+		-- a thin metal coping along the roof edge
 		for _, side in ipairs({ -1, 1 }) do
-			deco(sm, "Parapet", Vector3.new(0.8, 1.4, D + 1.6), s(side * (W / 2 + 0.4), FLOOR_Y + H + 1.2, D / 2), trim)
+			deco(sm, "Coping", Vector3.new(0.3, 0.5, D + WT), s(side * (W / 2 + 0.15), FLOOR_Y + H + 0.45, D / 2), trim, Enum.Material.Metal)
 		end
-		deco(sm, "Parapet", Vector3.new(W + 1.6, 1.4, 0.8), s(0, FLOOR_Y + H + 1.2, D + 0.4), trim)
+		deco(sm, "Coping", Vector3.new(W + WT, 0.5, 0.3), s(0, FLOOR_Y + H + 0.45, D + 0.15), trim, Enum.Material.Metal)
 		deco(sm, "Ceiling", Vector3.new(W - 1.2, 0.4, D - 1.2), s(0, FLOOR_Y + H - 0.2, D / 2), theme.Ceiling)
 
 		-- back wall with a wide open doorway into the lot
-		local backDoor = 18
+		local backDoor = single and 12 or 18
+		local backH = math.min(10, H - 1.5)
 		local bw = (W - backDoor) / 2
 		for _, side in ipairs({ -1, 1 }) do
-			box(sm, "BackWall", Vector3.new(bw, H, 1.2), s(side * (backDoor / 2 + bw / 2), FLOOR_Y + H / 2, D), wallColor, wallMat)
+			box(sm, "BackWall", Vector3.new(bw, H, WT), s(side * (backDoor / 2 + bw / 2), FLOOR_Y + H / 2, D), wallColor, wallMat)
 		end
-		box(sm, "BackHeader", Vector3.new(backDoor, H - 11, 1.2), s(0, FLOOR_Y + 11 + (H - 11) / 2, D), wallColor, wallMat)
-		local lotSign = box(sm, "LotSign", Vector3.new(14, 1.6, 0.4), s(0, FLOOR_Y + 11.9, D - 0.9), trim)
+		box(sm, "BackHeader", Vector3.new(backDoor, H - backH, WT), s(0, FLOOR_Y + backH + (H - backH) / 2, D), wallColor, wallMat)
+		local lotSign = box(sm, "LotSign", Vector3.new(math.min(backDoor - 2, 12), 1.1, 0.15), s(0, FLOOR_Y + backH + 0.75, D - WT / 2 - 0.1), trim)
 		surfaceText(lotSign, Enum.NormalId.Front, "CONTAINER LOT", Color3.new(1, 1, 1), 24)
 
 		-- front: a wide door with the sign above it
-		local doorW = garage and 20 or 16
-		local doorH = garage and 10 or 11
+		local doorW = garage and 16 or 16
+		local doorH = garage and 8.5 or 10
 		local sideW = (W - doorW) / 2
 		for _, side in ipairs({ -1, 1 }) do
 			if garage then
-				box(sm, "Front", Vector3.new(sideW, H, 1.2), s(side * (doorW / 2 + sideW / 2), FLOOR_Y + H / 2, 0), wallColor, wallMat)
+				box(sm, "Front", Vector3.new(sideW, H, WT), s(side * (doorW / 2 + sideW / 2), FLOOR_Y + H / 2, 0), wallColor, wallMat)
 			else
-				box(sm, "FrontPier", Vector3.new(1.6, H, 1.6), s(side * (W / 2 - 0.2), FLOOR_Y + H / 2, 0), theme.Front)
-				box(sm, "DoorPier", Vector3.new(1.6, H, 1.6), s(side * (doorW / 2 + 0.8), FLOOR_Y + H / 2, 0), theme.Front)
-				window(sm, s(side * (doorW / 2 + sideW / 2), FLOOR_Y + 0.5 + (H - 4) / 2, 0), sideW - 3, H - 4, 2, 1, 0.6)
+				box(sm, "FrontPier", Vector3.new(0.7, H, 0.7), s(side * (W / 2 - 0.05), FLOOR_Y + H / 2, 0), theme.Front)
+				box(sm, "DoorPier", Vector3.new(0.5, doorH, 0.5), s(side * (doorW / 2 + 0.25), FLOOR_Y + doorH / 2, 0), theme.Front)
+				window(sm, s(side * (doorW / 2 + sideW / 2), FLOOR_Y + doorH / 2, 0), sideW - 1.4, doorH, 3, 1, 0.55)
 			end
 		end
-		box(sm, "Header", Vector3.new(doorW, H - doorH, 1.2), s(0, FLOOR_Y + doorH + (H - doorH) / 2, 0), theme.Front)
-		if not garage then
-			box(sm, "SignBand", Vector3.new(W + 1, 3, 1.4), s(0, FLOOR_Y + H - 1.5, 0), theme.Front)
-		end
-		local signBoard = box(sm, "SignBoard", Vector3.new(math.min(W - 8, 34), 2.6, 0.4), s(0, FLOOR_Y + (garage and doorH + 1.5 or H - 1.5), -0.9), trim)
+		box(sm, "Header", Vector3.new(W - (garage and 0 or 1.4), H - doorH, WT), s(0, FLOOR_Y + doorH + (H - doorH) / 2, 0), theme.Front, garage and wallMat or nil)
+		-- the sign: slim letters board on the header, not a bulky band
+		local signBoard = box(sm, "SignBoard", Vector3.new(math.min(W - 6, 30), math.min(1.8, H - doorH - 0.6), 0.15), s(0, FLOOR_Y + doorH + (H - doorH) / 2, -WT / 2 - 0.08), trim)
 		table.insert(signLabels, surfaceText(signBoard, Enum.NormalId.Front, signText, GOLD, 26))
+
+		-- one-car garage: a corrugated roll-up door that opens when the player claims the garage
+		plot.DoorSlats = {}
+		plot.DoorPrompt = nil
+		if garage then
+			local slatH = 0.85
+			local n = math.ceil(doorH / slatH)
+			for i = 1, n do
+				local y = FLOOR_Y + (i - 0.5) * slatH
+				local slat = box(sm, "DoorSlat", Vector3.new(doorW, slatH - 0.06, 0.18), s(0, y, -0.05), Color3.fromRGB(196, 200, 206), Enum.Material.Metal)
+				table.insert(plot.DoorSlats, { Part = slat, Closed = slat.CFrame, Open = s(0, FLOOR_Y + doorH - 0.3, -0.05) })
+			end
+			plot.DoorPrompt = deco(sm, "DoorPrompt", Vector3.new(2, 2, 0.2), s(0, FLOOR_Y + 3, -0.6), Color3.new(1, 1, 1), nil, { Transparency = 1 })
+			plot.SetDoor(plot.DoorOpen == true, false)
+		end
 
 		-- a few soft ceiling lights
 		local k = 0
 		for z = 10, D - 8, 16 do
 			k = k + 1
-			local l = deco(sm, "CeilingLight", Vector3.new(6, 0.12, 2), s(0, FLOOR_Y + H - 0.45, z), theme.Light, Enum.Material.Neon)
-			-- interiors need their own light (the sun can't reach in): every lamp lights the room
-			light(l, 32, (theme.Name == "street" or theme.Name == "workshop") and 0.55 or 0.9, theme.Light)
+			-- interiors need their own light (the sun can't reach in): soft ceiling panels that light the
+			-- floor and the cars evenly, with real shadows under the cars - like a real dealership
+			for _, x in ipairs(W > 34 and { -W / 4, W / 4 } or { 0 }) do
+				local l = deco(sm, "CeilingLight", Vector3.new(6, 0.12, 2), s(x, FLOOR_Y + H - 0.45, z), theme.Light, Enum.Material.Neon)
+				local sl = Instance.new("SurfaceLight")
+				sl.Face = Enum.NormalId.Bottom
+				sl.Angle = 120
+				sl.Range = H + 6
+				sl.Brightness = (theme.Name == "street" or theme.Name == "workshop") and 1.1 or 1.5
+				sl.Color = theme.Light
+				sl.Shadows = true
+				sl.Parent = l
+			end
 		end
 
 		-- style details for each level
@@ -606,13 +655,15 @@ local function buildPlot(index, parent)
 			for i, side in ipairs({ -1, 1 }) do
 				for k2, z in ipairs({ D * 0.3, D * 0.7 }) do
 					local id = GRAFFITI[(i + k2) % #GRAFFITI + 1]
-					decal(id, Vector3.new(0.1, 6, 10.5), s(side * (W / 2 - 0.7), FLOOR_Y + 5.5, z), side < 0 and Enum.NormalId.Right or Enum.NormalId.Left)
+					decal(id, Vector3.new(0.1, 5, 8.5), s(side * (W / 2 - 0.4), FLOOR_Y + 5, z), side < 0 and Enum.NormalId.Right or Enum.NormalId.Left)
 				end
 			end
 			local sw = (W - doorW) / 2
-			decal(GRAFFITI[1], Vector3.new(sw - 2, 5.5, 0.1), s(-(doorW / 2 + sw / 2), FLOOR_Y + 5, -0.7), Enum.NormalId.Front)
-			decal(GRAFFITI[3], Vector3.new(math.min(sw - 2, 6), 6, 0.1), s(doorW / 2 + sw / 2, FLOOR_Y + 5, -0.7), Enum.NormalId.Front)
-			decal(GRAFFITI[2], Vector3.new(14, 7.5, 0.1), s(-W / 2 - 0.7, FLOOR_Y + 5, D * 0.5) * CFrame.Angles(0, math.rad(90), 0), Enum.NormalId.Front)
+			if sw >= 5 then
+				decal(GRAFFITI[1], Vector3.new(sw - 1.2, 4.5, 0.1), s(-(doorW / 2 + sw / 2), FLOOR_Y + 4.5, -0.4), Enum.NormalId.Front)
+				decal(GRAFFITI[3], Vector3.new(sw - 1.2, 4.5, 0.1), s(doorW / 2 + sw / 2, FLOOR_Y + 4.5, -0.4), Enum.NormalId.Front)
+			end
+			decal(GRAFFITI[2], Vector3.new(12, 6, 0.1), s(-W / 2 - 0.4, FLOOR_Y + 4.5, D * 0.5) * CFrame.Angles(0, math.rad(90), 0), Enum.NormalId.Front)
 		elseif theme.Name == "workshop" then
 			-- yellow safety lines and a blue stripe along the walls
 			for _, side in ipairs({ -1, 1 }) do
@@ -649,7 +700,14 @@ local function buildPlot(index, parent)
 		local backZ = D - 0.8 -- just inside the back wall
 		local cornerX = W / 2 - 1 -- just inside the side walls
 		local FACE_FRONT, FACE_RIGHT, FACE_LEFT = 0, -math.pi / 2, math.pi / 2
-		if theme.Name == "street" or theme.Name == "workshop" then
+		if single then
+			-- one-car garage: workbench and tool cabinet on the left wall, tyres and compressor on the right
+			furnish("Workbench", -(W / 2 - 1.8), D * 0.45, FACE_RIGHT, { Width = 7 })
+			furnish("ToolCabinet", -(W / 2 - 1.5), D - 4.5, FACE_RIGHT, { Height = 4.2 })
+			furnish("TireRack", W / 2 - 1.6, D * 0.42, FACE_LEFT, { Width = 6 })
+			furnish("Compressor", W / 2 - 1.8, D - 4.5, FACE_LEFT, { Height = 3.2 })
+			furnish("OilDrum", W / 2 - 1.6, 3.5, 0.4, { Height = 3 })
+		elseif theme.Name == "street" or theme.Name == "workshop" then
 			-- left corner: workbench on the back wall, tool cabinet on the side wall
 			furnish("Workbench", -(backDoor / 2 + 5.5), backZ - 1.6, FACE_FRONT, { Width = 7.5 })
 			furnish("ToolCabinet", -(cornerX - 1.6), backZ - 6.5, FACE_RIGHT, { Height = 4.4 })
@@ -679,7 +737,7 @@ local function buildPlot(index, parent)
 		local FACE_STREET = math.pi -- the front of a prop toward the road
 		if level >= 2 then
 			for _, side in ipairs({ -1, 1 }) do
-				outside("RoofAC", side * W / 4, FLOOR_Y + H + 1, D * 0.62, 0, { Height = 3.2 })
+				outside("RoofAC", side * W / 4, FLOOR_Y + H + 0.4, D * 0.62, 0, { Height = 3 })
 			end
 		end
 		if theme.Name == "street" then
@@ -688,7 +746,7 @@ local function buildPlot(index, parent)
 			outside("TrafficBarrier", -(W / 2 + 3.5), 0, 6, math.pi / 2, { Width = 7 })
 		elseif theme.Name == "workshop" then
 			for _, side in ipairs({ -1, 1 }) do
-				outside("Awning", side * (doorW / 2 + sideW / 2), FLOOR_Y + H - 8.5, -1.4, FACE_STREET, { Width = sideW - 4 })
+				outside("Awning", side * (doorW / 2 + sideW / 2), FLOOR_Y + doorH - 2.6, -1.2, FACE_STREET, { Width = sideW - 3 })
 				outside("Bollard", side * (doorW / 2 + 1.5), 0, -3.5, 0, { Height = 3.2 })
 			end
 		else
@@ -703,7 +761,11 @@ local function buildPlot(index, parent)
 
 		-- display spots along the left and right walls, angled toward the aisle (no floor platforms)
 		local spots = {}
-		for i = 1, perSide do
+		if single then
+			local cf = s(0, FLOOR_Y + 0.02, D / 2 + 1)
+			table.insert(spots, { CFrame = cf, Front = s(0, FLOOR_Y, D / 2 - 8.5) })
+		end
+		for i = 1, single and 0 or perSide do
 			for _, side in ipairs({ -1, 1 }) do
 				-- nose to the aisle, nearly square to the wall, so parked cars never touch their neighbours
 				local x = side * (W / 2 - 9)
@@ -713,6 +775,17 @@ local function buildPlot(index, parent)
 				local cf = s(x, FLOOR_Y + 0.02, z) * CFrame.Angles(0, yaw, 0)
 				table.insert(spots, { CFrame = cf, Front = s(side * 4, FLOOR_Y, z - 2) })
 			end
+		end
+		while #spots > spotCount do
+			table.remove(spots)
+		end
+		-- a glowing outline for every spot; only shown (on the client) while you hold a car
+		for i, spot in ipairs(spots) do
+			local marker = deco(sm, "SpotMarker", Vector3.new(7.4, 0.1, 14.5), spot.CFrame * CFrame.new(0, 0.07, 0), Color3.fromRGB(90, 220, 255), Enum.Material.Neon, { Transparency = 1 })
+			marker:SetAttribute("SpotIndex", i)
+			marker:SetAttribute("PlotIndex", index)
+			CollectionService:AddTag(marker, "SpotMarker")
+			spot.Marker = marker
 		end
 		plot.Spots = spots
 		plot.DoorOutside = s(0, FLOOR_Y + 2.5, -10).Position
@@ -846,7 +919,7 @@ local function buildPlot(index, parent)
 
 	--=========================== TIRE SHOP (right side of the lot, open toward the middle) ===========================
 	local TX, TZ = 47, 176
-	local tW, tD, tH = 26, 22, 12
+	local tW, tD, tH = 26, 22, 11
 	local tireBase = at(TX, 0, TZ) * CFrame.Angles(0, math.pi / 2, 0)
 	local function t(x, y, z)
 		return tireBase * CFrame.new(x, y, z)
@@ -854,17 +927,17 @@ local function buildPlot(index, parent)
 	local BRICK = Color3.fromRGB(162, 84, 66)
 	box(m, "TireFloor", Vector3.new(tW, FLOOR_Y, tD), t(0, FLOOR_Y / 2, 0), Color3.fromRGB(140, 142, 148), Enum.Material.Concrete)
 	for _, side in ipairs({ -1, 1 }) do
-		box(m, "TireWall", Vector3.new(1, tH, tD), t(side * tW / 2, FLOOR_Y + tH / 2, 0), BRICK, Enum.Material.Brick)
+		box(m, "TireWall", Vector3.new(0.5, tH, tD), t(side * tW / 2, FLOOR_Y + tH / 2, 0), BRICK, Enum.Material.Brick)
 	end
-	box(m, "TireBack", Vector3.new(tW, tH, 1), t(0, FLOOR_Y + tH / 2, tD / 2), BRICK, Enum.Material.Brick)
-	box(m, "TireRoof", Vector3.new(tW + 2, 0.8, tD + 2), t(0, FLOOR_Y + tH + 0.4, 0), Color3.fromRGB(70, 74, 84), Enum.Material.CorrodedMetal)
+	box(m, "TireBack", Vector3.new(tW, tH, 0.5), t(0, FLOOR_Y + tH / 2, tD / 2), BRICK, Enum.Material.Brick)
+	box(m, "TireRoof", Vector3.new(tW + 0.6, 0.35, tD + 0.6), t(0, FLOOR_Y + tH + 0.18, 0), Color3.fromRGB(70, 74, 84), Enum.Material.CorrodedMetal)
 	-- the open front reads as a garage: a rolled-up shutter box and steel door frame
-	deco(m, "ShutterBox", Vector3.new(tW - 1, 1.6, 1.6), t(0, FLOOR_Y + tH - 0.8, -tD / 2 + 0.4), Color3.fromRGB(150, 156, 166), Enum.Material.Metal)
+	deco(m, "ShutterBox", Vector3.new(tW - 1, 0.9, 0.9), t(0, FLOOR_Y + tH - 0.45, -tD / 2 + 0.6), Color3.fromRGB(150, 156, 166), Enum.Material.Metal)
 	for _, side in ipairs({ -1, 1 }) do
 		deco(m, "DoorFrame", Vector3.new(0.8, tH, 0.8), t(side * (tW / 2 - 0.4), FLOOR_Y + tH / 2, -tD / 2), Color3.fromRGB(60, 64, 72), Enum.Material.Metal)
 	end
-	local shopSign = box(m, "TireSign", Vector3.new(14, 2.6, 0.4), t(0, FLOOR_Y + tH - 1.2, -tD / 2 - 0.3), NAVY)
-	surfaceText(shopSign, Enum.NormalId.Front, "TIRE SHOP", GOLD, 26)
+	local shopSign = box(m, "TireSign", Vector3.new(10, 1.5, 0.15), t(0, FLOOR_Y + tH - 0.9, -tD / 2 - 0.1), NAVY)
+	surfaceText(shopSign, Enum.NormalId.Front, "SERVICE", GOLD, 26)
 	local lightPart = deco(m, "ShopLight", Vector3.new(8, 0.3, 1), t(0, FLOOR_Y + tH - 0.5, 0), LAMP, Enum.Material.Neon)
 	light(lightPart, 24, 0.5)
 	local lift = box(m, "TireLift", Vector3.new(12, 0.12, 18), t(0, FLOOR_Y + 0.06, 0), Color3.fromRGB(120, 124, 132), nil, { CanCollide = false })
@@ -878,7 +951,7 @@ local function buildPlot(index, parent)
 	Props.Place("TireRack", m, t(-7, FLOOR_Y, tD / 2 - 1.6) * CFrame.Angles(0, PROP_FRONT.TireRack or 0, 0), { Width = 7 })
 	Props.Place("TireStack", m, t(tW / 2 - 2.4, FLOOR_Y, tD / 2 - 2.4), { Height = 4 })
 	Props.Place("ToolCabinet", m, t(7, FLOOR_Y, tD / 2 - 1.4) * CFrame.Angles(0, PROP_FRONT.ToolCabinet or 0, 0), { Height = 4.2 })
-	local liftLabel = label(lift, "TIRE SHOP", Color3.fromRGB(255, 215, 100), 10, 240)
+	local liftLabel = label(lift, "SERVICE", Color3.fromRGB(255, 215, 100), 10, 240)
 	liftLabel.Parent.Enabled = false
 
 	--=========================== UPGRADE STATIONS (a row just behind the showroom) ===========================
@@ -997,7 +1070,7 @@ local function buildPlot(index, parent)
 		Showroom = pad("Showroom Size", -46, 138, 0.4, "Showroom"),
 		Truck = pad("Truck Tier", -32, 138, 0.4, "Truck"),
 		Wash = pad("Car Wash", 32, 138, 0.4, "Wash"),
-		Engine = pad("Tire Luck", 46, 138, 0.4, "Engine"),
+		Engine = pad("Service Tools", 46, 138, 0.4, "Engine"),
 	}
 
 	plot.WashCFrame = washCF

@@ -33,6 +33,9 @@ local function default()
 		DeliveriesDone = 0,
 		LastOnline = 0,
 		IncomeRate = 0,
+		Inventory = {}, -- { {Id=, Engine=} } finished cars carried in the toolbar
+		GarageClaimed = false, -- opened their garage door for the first time
+		TutorialDone = false,
 	}
 end
 
@@ -60,18 +63,41 @@ local function sanitize(data)
 	p.LastOnline = type(data.LastOnline) == "number" and data.LastOnline or 0
 	p.IncomeRate = type(data.IncomeRate) == "number" and math.max(0, data.IncomeRate) or 0
 	local maxSpots = Config.GetSpots(p.ShowroomLevel)
+	local overflow = {}
 	if type(data.Display) == "table" then
 		local used = {}
 		for _, d in ipairs(data.Display) do
 			if type(d) == "table" and Config.CarsById[d.Id] and type(d.Spot) == "number" then
 				local spot = math.floor(d.Spot)
+				local entry = { Id = d.Id, Engine = num(d.Engine, 1, #Config.Tunes, 1), Spot = spot, Views = num(d.Views, 0, 1e12, 0) }
 				if spot >= 1 and spot <= maxSpots and not used[spot] then
 					used[spot] = true
-					table.insert(p.Display, { Id = d.Id, Engine = num(d.Engine, 1, #Config.Engines, 1), Spot = spot })
+					table.insert(p.Display, entry)
+				else
+					-- more cars than spots (the garage got smaller): keep them in the toolbar
+					table.insert(overflow, { Id = d.Id, Engine = entry.Engine })
 				end
 			end
 		end
 	end
+	if type(data.Inventory) == "table" then
+		for _, c in ipairs(data.Inventory) do
+			if type(c) == "table" and Config.CarsById[c.Id] then
+				table.insert(overflow, 1, { Id = c.Id, Engine = num(c.Engine, 1, #Config.Tunes, 1) })
+			end
+		end
+	end
+	if type(data.PendingLift) == "table" and Config.CarsById[data.PendingLift.Id] then
+		table.insert(overflow, 1, { Id = data.PendingLift.Id, Engine = num(data.PendingLift.Engine, 1, #Config.Tunes, 1) })
+	end
+	for _, c in ipairs(overflow) do
+		if #p.Inventory < Config.InventorySize then
+			table.insert(p.Inventory, c)
+		end
+	end
+	local veteran = next(p.Display) ~= nil or (type(data.Discovered) == "table" and next(data.Discovered) ~= nil)
+	p.GarageClaimed = data.GarageClaimed == true or veteran
+	p.TutorialDone = data.TutorialDone == true or veteran
 	for _, key in ipairs({ "Discovered", "Claimed" }) do
 		if type(data[key]) == "table" then
 			for id, v in pairs(data[key]) do

@@ -50,6 +50,26 @@ LightingPresets.Presets = {
 		SunRays = { Intensity = 0.03, Spread = 0.4 },
 		Clouds = { Cover = 0.55, Density = 0.65 },
 	},
+	-- Natural, professionally balanced daylight: neutral grade, real sky light (Future lighting),
+	-- soft but defined shadows, no blown-out whites and no crushed blacks
+	Studio = {
+		Sky = "Default",
+		ClockTime = 14.6,
+		Latitude = 38,
+		Brightness = 2.2,
+		Ambient = Color3.fromRGB(78, 80, 88), -- fill in shade and indoors (lamps do the rest)
+		OutdoorAmbient = Color3.fromRGB(112, 116, 126),
+		Exposure = -0.15,
+		ShadowSoftness = 0.3,
+		Diffuse = 1, -- sky light bounces into shadows, so they read blue-grey instead of black
+		Specular = 0.65,
+		Atmosphere = { Density = 0.3, Offset = 0.25, Color = Color3.fromRGB(199, 210, 224), Decay = Color3.fromRGB(110, 128, 152), Glare = 0.1, Haze = 1.2 },
+		Bloom = { Intensity = 0.18, Size = 24, Threshold = 2.2 },
+		Color = { Saturation = 0.03, Contrast = 0.06, Brightness = 0, Tint = Color3.fromRGB(255, 252, 248) },
+		SunRays = { Intensity = 0.015, Spread = 0.6 },
+		Clouds = { Cover = 0.5, Density = 0.55 },
+		NoDof = true,
+	},
 	-- Warm late-afternoon light with long soft shadows
 	GoldenHour = {
 		Sky = "Default",
@@ -70,7 +90,7 @@ LightingPresets.Presets = {
 	},
 }
 
-LightingPresets.Default = "VividSim"
+LightingPresets.Default = "Studio"
 
 local function fresh(className)
 	for _, c in ipairs(Lighting:GetChildren()) do
@@ -118,6 +138,7 @@ function LightingPresets.Apply(name, skyOverride)
 	rays.Intensity, rays.Spread = p.SunRays.Intensity, p.SunRays.Spread
 	local dof = fresh("DepthOfFieldEffect")
 	dof.FarIntensity, dof.FocusDistance, dof.InFocusRadius, dof.NearIntensity = 0.12, 60, 140, 0
+	dof.Enabled = not p.NoDof
 
 	local clouds = workspace.Terrain:FindFirstChildOfClass("Clouds") or Instance.new("Clouds")
 	clouds.Cover = p.Clouds.Cover

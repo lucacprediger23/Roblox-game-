@@ -25,22 +25,45 @@ Config.SlotRarity = { 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 7 }
 Config.ContainerMultiplier = 10 -- income x10 per container level (matches the x10 container prices)
 
 ---------------------------------------------------------------------
--- Tires (rolled for free at the Tire Shop; a new roll replaces the old set)
--- The code calls them "engines" internally; players only ever see "tires".
+-- Service: a tune-up mini-game in the service bay. Three timing rounds: stop the needle in the
+-- green zone (gold centre = perfect). Perfect = 2 points, good = 1. The score picks the tune,
+-- and the tune multiplies what every customer pays to look at the car.
+-- (Saved data calls it "Engine" for compatibility with older saves.)
 ---------------------------------------------------------------------
-Config.Engines = {
-	{ Name = "Worn Tires", Weight = 30, Mult = 1, Color = Color3.fromRGB(150, 150, 155) },
-	{ Name = "Street Tires", Weight = 25, Mult = 1.2, Color = Color3.fromRGB(95, 170, 255) },
-	{ Name = "Sport Rims", Weight = 21, Mult = 1.5, Color = Color3.fromRGB(230, 70, 60) },
-	{ Name = "Performance Rims", Weight = 16.4, Mult = 2, Color = Color3.fromRGB(70, 210, 120) },
-	{ Name = "Racing Slicks", Weight = 7, Mult = 3, Color = Color3.fromRGB(175, 95, 255) },
-	{ Name = "Gold Rims", Weight = 0.5, Mult = 6, Color = Color3.fromRGB(255, 200, 50) },
-	{ Name = "Diamond Rims", Weight = 0.1, Mult = 15, Color = Color3.fromRGB(140, 240, 255) },
+Config.Tunes = {
+	{ Name = "Quick Service", MinScore = 0, Mult = 1, Color = Color3.fromRGB(170, 175, 185) },
+	{ Name = "Tune-Up", MinScore = 2, Mult = 1.5, Color = Color3.fromRGB(95, 170, 255) },
+	{ Name = "Performance Tune", MinScore = 4, Mult = 2.5, Color = Color3.fromRGB(70, 210, 120) },
+	{ Name = "Perfect Tune", MinScore = 6, Mult = 4, Color = Color3.fromRGB(255, 200, 50) },
+	{ Name = "Turbo Tune", MinScore = 99, Mult = 6, Color = Color3.fromRGB(255, 110, 70) }, -- Perfect Tune + 1 turbo token
 }
-Config.LuckyRollMinEngine = 4 -- Lucky Roll only rolls Performance Rims or better
-Config.EngineLuckPerLevel = 0.1 -- +10% weight for Sport Rims and above per Tire Luck level
+Config.Engines = Config.Tunes -- old name, still used by a few helpers
+Config.TuneRounds = 3
+-- needle speed (sweeps per second) for each round, and zone sizes (fraction of the gauge, half-width)
+Config.TuneSpeeds = { 0.55, 0.75, 0.95 }
+Config.TuneGood = 0.11
+Config.TunePerfect = 0.03
+-- Service Tools upgrade: each level slows the needle 4% and widens the zones 6%
 Config.MaxEngineLuck = 10
-function Config.GetEngineLuckCost(level) -- cost to go from `level` to `level + 1`
+function Config.GetTuneZones(toolsLevel)
+	local k = 1 + 0.06 * (toolsLevel or 0)
+	return Config.TuneGood * k, Config.TunePerfect * k, 1 - 0.04 * (toolsLevel or 0)
+end
+function Config.GetTuneForScore(score)
+	local best = 1
+	for i, t in ipairs(Config.Tunes) do
+		if score >= t.MinScore then
+			best = i
+		end
+	end
+	return best
+end
+-- needle position (0..1) at time t after the round started: sweeps left -> right -> left
+function Config.NeedleAt(t, speed)
+	local x = (math.max(0, t) * speed) % 2
+	return x <= 1 and x or 2 - x
+end
+function Config.GetEngineLuckCost(level) -- cost of the next Service Tools level
 	return math.floor(2000 * 4 ^ level)
 end
 
@@ -52,8 +75,10 @@ end
 ---------------------------------------------------------------------
 Config.MaxShowroomLevel = 5
 Config.ShowroomNames = { "Garage", "Small Showroom", "Showroom", "Big Showroom", "Flagship Dealership" }
+-- level 1 is a one-car garage
+Config.SpotsPerLevel = { 1, 4, 8, 14, 20 }
 function Config.GetSpots(level)
-	return 4 * level
+	return Config.SpotsPerLevel[level] or 1
 end
 function Config.GetShowroomCost(level) -- cost to reach `level`
 	return ({ [2] = 2500, [3] = 500000, [4] = 250e6, [5] = 200e9 })[level] or math.huge
@@ -97,6 +122,11 @@ end
 Config.ScrubInterval = 0.08
 
 Config.SellSeconds = 100 -- a car sells for 100 seconds of its income
+-- Customers: money only comes when a customer looks at a displayed car
+Config.ViewSeconds = 12 -- one view pays 12 seconds' worth of the car's income value
+Config.CustomerEvery = 5 -- a new customer can walk in every 5 seconds
+Config.InventorySize = 10 -- cars you can carry in the toolbar
+Config.StarterCar = "c1_1"
 Config.CompletionBonus = 0.05 -- +5% income per completed container
 Config.TokensPerCompletion = 5
 Config.OfflineRate = 0.25
@@ -220,35 +250,6 @@ function Config.RollCar(containerLevel, rng)
 	end
 	local slot = Config.WeightedIndex(weights, rng)
 	return "c" .. containerLevel .. "_" .. slot
-end
-
--- Engine weights with Engine Luck applied (normal roll) or Lucky Roll
-function Config.GetEngineWeights(luckLevel, lucky)
-	local weights = {}
-	for i, engine in ipairs(Config.Engines) do
-		local w = engine.Weight
-		if i >= 3 then
-			w = w * (1 + Config.EngineLuckPerLevel * luckLevel)
-		end
-		if lucky and i < Config.LuckyRollMinEngine then
-			w = 0
-		end
-		weights[i] = w
-	end
-	return weights
-end
-
-function Config.GetEngineChances(luckLevel, lucky)
-	local weights = Config.GetEngineWeights(luckLevel, lucky)
-	local total = 0
-	for _, w in ipairs(weights) do
-		total = total + w
-	end
-	local chances = {}
-	for i, w in ipairs(weights) do
-		chances[i] = total > 0 and (w / total * 100) or 0
-	end
-	return chances
 end
 
 function Config.GetCarIncome(carId, engineIndex)
