@@ -8,6 +8,7 @@ local Lighting = game:GetService("Lighting")
 local CollectionService = game:GetService("CollectionService")
 local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
 local Props = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Props"))
+local Icons = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Icons"))
 
 local MapBuilder = {}
 
@@ -42,6 +43,13 @@ local function part(props, parent)
 		if k ~= "Shape" then
 			p[k] = v
 		end
+	end
+	-- clean, smooth look everywhere (no grainy tiled textures), like Clean a Painting
+	if p.Material ~= Enum.Material.Glass and p.Material ~= Enum.Material.Neon then
+		if p.Material == Enum.Material.Metal or p.Material == Enum.Material.DiamondPlate or p.Material == Enum.Material.CorrodedMetal then
+			p.Reflectance = math.max(p.Reflectance, 0.06)
+		end
+		p.Material = Enum.Material.SmoothPlastic
 	end
 	p.Parent = parent
 	return p
@@ -273,45 +281,57 @@ end
 -- Light and sky
 ---------------------------------------------------------------------
 local function buildLighting()
-	-- natural afternoon light with crisp shadows
+	-- bright, soft, clean daylight (Clean a Painting style): high ambient, soft shadows, gentle bloom
 	Lighting.GlobalShadows = true
-	Lighting.ClockTime = 14.2
-	Lighting.GeographicLatitude = 38
-	Lighting.Brightness = 3
-	Lighting.Ambient = Color3.fromRGB(70, 72, 82)
-	Lighting.OutdoorAmbient = Color3.fromRGB(140, 142, 152)
+	Lighting.ClockTime = 13.4
+	Lighting.GeographicLatitude = 30
+	Lighting.Brightness = 2.6
+	Lighting.Ambient = Color3.fromRGB(118, 122, 134)
+	Lighting.OutdoorAmbient = Color3.fromRGB(168, 172, 184)
 	Lighting.EnvironmentDiffuseScale = 1
-	Lighting.EnvironmentSpecularScale = 1
-	Lighting.ExposureCompensation = 0.1
-	Lighting.ShadowSoftness = 0.12
+	Lighting.EnvironmentSpecularScale = 0.7
+	Lighting.ExposureCompensation = 0.2
+	Lighting.ShadowSoftness = 0.4
 	for _, c in ipairs(Lighting:GetChildren()) do
-		if c:IsA("PostEffect") or c:IsA("Atmosphere") then
+		if c:IsA("PostEffect") or c:IsA("Atmosphere") or c:IsA("Sky") then
 			c:Destroy()
 		end
 	end
+	local sky = Instance.new("Sky")
+	sky.SunAngularSize = 14
+	sky.MoonAngularSize = 8
+	sky.StarCount = 0
+	sky.Parent = Lighting
 	local a = Instance.new("Atmosphere")
-	a.Density = 0.2
-	a.Offset = 0.12
-	a.Color = Color3.fromRGB(199, 212, 228)
-	a.Decay = Color3.fromRGB(106, 120, 145)
-	a.Glare = 0.15
-	a.Haze = 0.4
+	a.Density = 0.26
+	a.Offset = 0.22
+	a.Color = Color3.fromRGB(205, 222, 240)
+	a.Decay = Color3.fromRGB(150, 175, 210)
+	a.Glare = 0
+	a.Haze = 0.7
 	a.Parent = Lighting
 	local bloom = Instance.new("BloomEffect")
-	bloom.Intensity = 0.2
-	bloom.Size = 18
-	bloom.Threshold = 2.8
+	bloom.Intensity = 0.32
+	bloom.Size = 26
+	bloom.Threshold = 1.7
 	bloom.Parent = Lighting
 	local cc = Instance.new("ColorCorrectionEffect")
-	cc.Saturation = 0.08
-	cc.Contrast = 0.1
-	cc.Brightness = 0
-	cc.TintColor = Color3.fromRGB(255, 252, 246)
+	cc.Saturation = 0.12
+	cc.Contrast = 0.04
+	cc.Brightness = 0.02
+	cc.TintColor = Color3.fromRGB(255, 253, 248)
 	cc.Parent = Lighting
 	local rays = Instance.new("SunRaysEffect")
-	rays.Intensity = 0.03
-	rays.Spread = 0.4
+	rays.Intensity = 0.02
+	rays.Spread = 0.5
 	rays.Parent = Lighting
+	-- softens the far distance so it never looks jagged
+	local dof = Instance.new("DepthOfFieldEffect")
+	dof.FarIntensity = 0.12
+	dof.FocusDistance = 60
+	dof.InFocusRadius = 140
+	dof.NearIntensity = 0
+	dof.Parent = Lighting
 end
 
 ---------------------------------------------------------------------
@@ -338,20 +358,16 @@ end
 ---------------------------------------------------------------------
 -- Terrain: grass ground, terraced blue cliffs around the town
 ---------------------------------------------------------------------
-local function buildTerrain()
+local function buildTerrain(map)
+	-- smooth flat ground and clean terraced cliffs built from parts (terrain textures look grainy)
 	local terrain = workspace.Terrain
 	terrain:Clear()
-	terrain:SetMaterialColor(Enum.Material.Grass, Color3.fromRGB(96, 170, 68))
-	terrain:SetMaterialColor(Enum.Material.LeafyGrass, Color3.fromRGB(88, 160, 62))
-	terrain:SetMaterialColor(Enum.Material.Rock, Color3.fromRGB(88, 106, 150))
-	terrain:SetMaterialColor(Enum.Material.Slate, Color3.fromRGB(84, 100, 142))
-	pcall(function()
-		terrain.Decoration = true
-	end)
-	terrain:FillBlock(CFrame.new(0, -6, 0), Vector3.new(1400, 8, 1000), Enum.Material.Grass)
+	local GRASS = Color3.fromRGB(104, 178, 74)
+	local CLIFF = Color3.fromRGB(104, 124, 168)
+	box(map, "Ground", Vector3.new(1400, 2, 1000), CFrame.new(0, -1, 0), GRASS)
 	local function step(center, size)
-		terrain:FillBlock(CFrame.new(center), size, Enum.Material.Rock)
-		terrain:FillBlock(CFrame.new(center + Vector3.new(0, size.Y / 2 + 2, 0)), Vector3.new(size.X, 4, size.Z), Enum.Material.Grass)
+		deco(map, "Cliff", size, CFrame.new(center), CLIFF)
+		deco(map, "CliffTop", Vector3.new(size.X, 1, size.Z), CFrame.new(center + Vector3.new(0, size.Y / 2 + 0.5, 0)), GRASS)
 	end
 	for _, sz in ipairs({ -1, 1 }) do
 		step(Vector3.new(0, 10, sz * 232), Vector3.new(1000, 20, 30))
@@ -365,8 +381,9 @@ local function buildTerrain()
 	end
 	if not terrain:FindFirstChildOfClass("Clouds") then
 		local clouds = Instance.new("Clouds")
-		clouds.Cover = 0.5
-		clouds.Density = 0.55
+		clouds.Cover = 0.45
+		clouds.Density = 0.5
+		clouds.Color = Color3.new(1, 1, 1)
 		clouds.Parent = terrain
 	end
 end
@@ -379,7 +396,7 @@ local function buildWorld(map)
 	if baseplate then
 		baseplate:Destroy()
 	end
-	buildTerrain()
+	buildTerrain(map)
 	local LEN = 760
 	-- two carriageways with a planted median
 	for _, sz in ipairs({ -1, 1 }) do
@@ -735,6 +752,7 @@ local function buildPlot(index, parent)
 	end
 	-- the delivery truck waits on the service road behind the gate
 	truck(m, at(42, 0, PLOT_DEPTH + 10) * CFrame.Angles(0, math.rad(90), 0), Color3.fromRGB(236, 239, 245))
+	plot.TruckDrop = at(42, 11, PLOT_DEPTH + 8)
 
 	--=========================== WASH SPOT (grows with the wash tool level) ===========================
 	local WX, WZ = 26, 118
@@ -842,6 +860,25 @@ local function buildPlot(index, parent)
 	local function icon(kind, at0)
 		local mdl = Instance.new("Model")
 		mdl.Name = "StationIcon"
+		-- the painted icon artwork floating over the pad
+		local imageId = Icons.Images[({ Showroom = "Showroom", Truck = "Truck", Wash = "Sponge", Engine = "Tire" })[kind] or ""]
+		if imageId and imageId ~= "" then
+			local anchor = deco(mdl, "IconAnchor", Vector3.new(0.2, 0.2, 0.2), at0, Color3.new(1, 1, 1), nil, { Transparency = 1 })
+			local bb = Instance.new("BillboardGui")
+			bb.Size = UDim2.new(4.6, 0, 4.6, 0)
+			bb.LightInfluence = 0
+			bb.MaxDistance = 140
+			local img = Instance.new("ImageLabel")
+			img.BackgroundTransparency = 1
+			img.Size = UDim2.new(1, 0, 1, 0)
+			img.Image = "rbxassetid://" .. imageId
+			img.Parent = bb
+			bb.Parent = anchor
+			mdl.PrimaryPart = anchor
+			mdl.Parent = m
+			CollectionService:AddTag(mdl, "StationIcon")
+			return mdl
+		end
 		local function ip(size, off, color, mat, shape)
 			local q = deco(mdl, "IconPart", size, at0 * off, color, mat or Enum.Material.SmoothPlastic)
 			if shape then
@@ -897,12 +934,12 @@ local function buildPlot(index, parent)
 	local function pad(name, x, z, y, kind, facing)
 		y = y or FLOOR_Y
 		local base = at(x, y, z) * CFrame.Angles(0, facing or 0, 0)
-		box(m, name .. "Plinth", Vector3.new(6.6, 0.5, 6.6), base * CFrame.new(0, 0.25, 0), Color3.fromRGB(215, 218, 226), Enum.Material.Concrete, { CanCollide = false })
-		local p = box(m, name, Vector3.new(5.6, 0.18, 5.6), base * CFrame.new(0, 0.55, 0), Color3.fromRGB(150, 255, 190), Enum.Material.Neon, { CanCollide = false, Transparency = 0.35 })
+		box(m, name .. "Plinth", Vector3.new(6.6, 0.5, 6.6), base * CFrame.new(0, 0.25, 0), Color3.fromRGB(176, 184, 196), Enum.Material.Concrete, { CanCollide = false })
+		local p = box(m, name, Vector3.new(5.6, 0.18, 5.6), base * CFrame.new(0, 0.55, 0), Color3.fromRGB(90, 215, 130), Enum.Material.Neon, { CanCollide = false, Transparency = 0.55 })
 		local glow = Instance.new("PointLight")
 		glow.Color = Color3.fromRGB(150, 255, 190)
 		glow.Range = 9
-		glow.Brightness = 0.8
+		glow.Brightness = 0.4
 		glow.Parent = p
 		local ic = icon(kind, base * CFrame.new(0, 4.4, 0))
 		-- the name above the icon and the level under it

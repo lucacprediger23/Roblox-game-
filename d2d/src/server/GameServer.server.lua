@@ -4,6 +4,7 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
+local Debris = game:GetService("Debris")
 local CollectionService = game:GetService("CollectionService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
@@ -453,6 +454,72 @@ local function openContainer(player, plot, slot, entry)
 	end
 end
 
+-- a quick dust/sparkle burst at a point
+local function puff(pos, color, count)
+	local a = Instance.new("Part")
+	a.Anchored, a.CanCollide, a.CanQuery, a.CanTouch, a.Transparency = true, false, false, false, 1
+	a.Size = Vector3.new(1, 1, 1)
+	a.Position = pos
+	local e = Instance.new("ParticleEmitter")
+	e.Texture = "rbxasset://textures/particles/smoke_main.dds"
+	e.Color = ColorSequence.new(color)
+	e.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1.2), NumberSequenceKeypoint.new(1, 4.5) })
+	e.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.35), NumberSequenceKeypoint.new(1, 1) })
+	e.Lifetime = NumberRange.new(0.5, 0.9)
+	e.Speed = NumberRange.new(6, 12)
+	e.SpreadAngle = Vector2.new(180, 180)
+	e.Drag = 4
+	e.LightInfluence = 0.3
+	e.Enabled = false
+	e.Parent = a
+	a.Parent = workspace
+	e:Emit(count or 12)
+	Debris:AddItem(a, 1.5)
+end
+
+-- an unopened container that expired: it squashes, fades and vanishes in a puff
+local function vanish(model)
+	if not model or not model.Parent then
+		return
+	end
+	for _, d in ipairs(model:GetDescendants()) do
+		if d:IsA("ProximityPrompt") or d:IsA("BillboardGui") then
+			d:Destroy()
+		end
+	end
+	local base = model:GetPivot()
+	local v = Instance.new("NumberValue")
+	v.Value = 0
+	v.Changed:Connect(function(t)
+		if model.Parent then
+			-- a little hop, then shrink to nothing
+			local hop = math.sin(math.min(t, 0.4) / 0.4 * math.pi) * 1.6
+			model:ScaleTo(math.max(0.05, 1 - math.max(0, t - 0.3) / 0.7))
+			model:PivotTo(base * CFrame.new(0, hop, 0) * CFrame.Angles(0, t * 2.5, 0))
+		end
+	end)
+	local tw = TweenService:Create(v, TweenInfo.new(0.75, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { Value = 1 })
+	tw:Play()
+	tw.Completed:Connect(function()
+		puff(base.Position + Vector3.new(0, 2, 0), Color3.fromRGB(255, 255, 255), 16)
+		v:Destroy()
+		model:Destroy()
+	end)
+end
+
+local function expireContainers(plot)
+	local yard = state[plot.Index].Yard
+	local n = 0
+	for slot, entry in pairs(yard) do
+		if entry.Kind == "Container" and not entry.Opening then
+			yard[slot] = nil
+			vanish(entry.Model)
+			n = n + 1
+		end
+	end
+	return n
+end
+
 local function spawnContainer(plot, slot, level, drop)
 	local owner = plotOwner[plot.Index]
 	local entry = { Kind = "Container", Level = level }
@@ -475,17 +542,31 @@ local function spawnContainer(plot, slot, level, drop)
 	entry.Model = model
 	state[plot.Index].Yard[slot] = entry
 	if drop then
-		local value = Instance.new("CFrameValue")
-		value.Value = model:GetPivot()
-		value.Changed:Connect(function(cf)
-			if model.Parent then
-				model:PivotTo(cf)
+		-- pops out of the truck and flies in an arc into its yard slot
+		local from = plot.TruckDrop or (target + Vector3.new(0, 40, 0))
+		local p0, p2 = from.Position, target.Position
+		local p1 = (p0 + p2) / 2 + Vector3.new(0, 26 + (p0 - p2).Magnitude * 0.18, 0)
+		local spin = rng:NextNumber(-1, 1) * math.pi * 2
+		model:PivotTo(from)
+		model:ScaleTo(0.4)
+		local alpha = Instance.new("NumberValue")
+		alpha.Changed:Connect(function(t)
+			if not model.Parent then
+				return
 			end
+			local a = (1 - t) * (1 - t) * p0 + 2 * (1 - t) * t * p1 + t * t * p2
+			model:ScaleTo(0.4 + 0.6 * math.min(1, t * 1.6))
+			model:PivotTo(CFrame.new(a) * (target - target.Position) * CFrame.Angles(0, spin * (1 - t), 0))
 		end)
-		local tween = TweenService:Create(value, TweenInfo.new(1.2, Enum.EasingStyle.Bounce, Enum.EasingDirection.Out), { Value = target })
+		local tween = TweenService:Create(alpha, TweenInfo.new(1.15, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), { Value = 1 })
 		tween:Play()
 		tween.Completed:Connect(function()
-			value:Destroy()
+			alpha:Destroy()
+			if model.Parent then
+				model:ScaleTo(1)
+				model:PivotTo(target)
+				puff(target.Position, Color3.fromRGB(235, 225, 205), 14)
+			end
 		end)
 	end
 end
@@ -501,7 +582,8 @@ spawnYardCar = function(plot, slot, carId)
 	-- a dusty look until it's washed
 	for _, p in ipairs(model:GetDescendants()) do
 		if p:IsA("BasePart") and p.Name ~= "Root" then
-			p.Color = p.Color:Lerp(Config.Containers[Config.CarsById[carId].Container].Dirt, 0.6)
+			local dust = Color3.fromRGB(196, 178, 150):Lerp(Config.Containers[Config.CarsById[carId].Container].Dirt, 0.25)
+			p.Color = p.Color:Lerp(dust, 0.5)
 		end
 	end
 	addLabel(model.PrimaryPart, carTitle(carId), "dirty · wash me", rarityOf(carId).Color, 6, 18)
@@ -527,6 +609,19 @@ local function setWashProgress(plot, value)
 	if owner then
 		owner:SetAttribute("WashProgress", value)
 	end
+	-- the paint shines back through as the dust comes off
+	local wash = state[plot.Index] and state[plot.Index].Wash
+	if value and wash and wash.Paint then
+		local k = 0.45 * math.max(0, 1 - value * 1.15)
+		for part, color in pairs(wash.Paint) do
+			if part.Parent then
+				part.Color = color:Lerp(wash.DustColor, k)
+			end
+		end
+		for _, f in ipairs(wash.Film or {}) do
+			f.Transparency = math.min(1, 0.3 + 0.8 * value)
+		end
+	end
 	if value then
 		plot.WashLabel.Text = "WASHING  " .. math.floor(value * 100) .. "%"
 	else
@@ -544,6 +639,14 @@ local function finishWash(plot)
 		b.Part:Destroy()
 	end
 	wash.Blobs = {}
+	for part, color in pairs(wash.Paint or {}) do
+		if part.Parent then
+			part.Color = color
+		end
+	end
+	for _, f in ipairs(wash.Film or {}) do
+		f:Destroy()
+	end
 	setWashProgress(plot, nil)
 	plot.WashLabel.Text = "SPARKLING CLEAN!"
 	local owner = plotOwner[plot.Index]
@@ -576,6 +679,41 @@ local function startWash(plot, carId)
 	model.Parent = carsFolder
 	local health = dirtHealth(car.Container)
 	local dirtColor = Config.Containers[car.Container].Dirt
+	-- dust is a pale, sandy grey (not dark mud) tinted a little by the container
+	local dustColor = Color3.fromRGB(196, 178, 150):Lerp(dirtColor, 0.25)
+	-- the paint itself starts dull and dusty and comes back as you scrub
+	local paint = {}
+	local film = {}
+	for _, d in ipairs(model:GetDescendants()) do
+		if d:IsA("BasePart") and d.Name ~= "Root" and d.Transparency < 0.9 then
+			paint[d] = d.Color
+			d.Color = d.Color:Lerp(dustColor, 0.45)
+		end
+	end
+	-- a soft, even film of dust hugging the whole car (a slightly larger see-through copy of each part)
+	for part in pairs(paint) do
+		if part.Transparency < 0.3 and part.Size.Magnitude > 0.8 then
+			local f = part:Clone()
+			f:ClearAllChildren()
+			f.Name = "DustFilm"
+			if f:IsA("MeshPart") then
+				f.TextureID = ""
+			end
+			f.Size = part.Size * 1.025 + Vector3.new(0.04, 0.04, 0.04)
+			f.CFrame = part.CFrame
+			f.Color = dustColor
+			f.Material = Enum.Material.SmoothPlastic
+			f.Reflectance = 0
+			f.Transparency = 0.3
+			f.Anchored = true
+			f.CanCollide = false
+			f.CanQuery = false
+			f.CanTouch = false
+			f.CastShadow = false
+			f.Parent = model
+			table.insert(film, f)
+		end
+	end
 	local boxCF, size = model:GetBoundingBox()
 	local hx, hy, hz = size.X / 2, size.Y / 2, size.Z / 2
 	local blobs = {}
@@ -603,24 +741,25 @@ local function startWash(plot, carId)
 			return
 		end
 		taken[key] = true
-		-- a flat mud splat lying on the paint
-		local s = rng:NextNumber(1.3, 2.1)
+		-- scrub target lying flat on the paint
+		local sz = rng:NextNumber(1.7, 2.2)
 		local p = Instance.new("Part")
 		p.Name = "Dirt"
 		p.Shape = Enum.PartType.Cylinder
-		p.Size = Vector3.new(0.18, s, s)
-		p.CFrame = CFrame.lookAt(pos + hit.Normal * 0.06, pos + hit.Normal * 2) * CFrame.Angles(0, math.rad(90), 0) * CFrame.Angles(rng:NextNumber(0, 6.28), 0, 0)
+		p.Size = Vector3.new(0.04, sz, sz)
+		p.CFrame = CFrame.lookAt(pos + hit.Normal * 0.03, pos + hit.Normal * 2) * CFrame.Angles(0, math.rad(90), 0) * CFrame.Angles(rng:NextNumber(0, 6.28), 0, 0)
 		p.Anchored = true
 		p.CanCollide = false
 		p.CanTouch = false
 		p.CastShadow = false
-		p.Material = Enum.Material.Ground
-		p.Color = dirtColor:Lerp(Color3.new(0, 0, 0), rng:NextNumber(0, 0.2))
+		p.Material = Enum.Material.SmoothPlastic
+		p.Color = dustColor
+		p.Transparency = 1 -- invisible scrub target; the visible dust is the film over the paint
 		p.Parent = dirtFolder
-		table.insert(blobs, { Part = p, Health = health, StartSize = s })
+		table.insert(blobs, { Part = p, Health = health, StartSize = sz })
 	end
 	-- shoot rays at the car from above and from all four sides; dirt sticks where they land
-	local spacing = 1.25
+	local spacing = 1.05
 	local reach = 2 * math.max(hx, hy, hz) + 4
 	for x = -hx + 0.6, hx - 0.6, spacing do
 		for z = -hz + 0.6, hz - 0.6, spacing do
@@ -644,6 +783,9 @@ local function startWash(plot, carId)
 		Total = #blobs * health,
 		Remaining = #blobs * health,
 		Health = health,
+		Paint = paint,
+		Film = film,
+		DustColor = dustColor,
 		Done = false,
 	}
 	state[plot.Index].Wash = wash
@@ -691,7 +833,6 @@ sendToWash = function(player, plot, slot, entry)
 		local stand = plot.WashCFrame:PointToWorldSpace(Vector3.new(10.5, 3, -4))
 		char:PivotTo(CFrame.lookAt(stand, Vector3.new(plot.WashCFrame.X, stand.Y, plot.WashCFrame.Z)))
 	end
-	notify(player, "Hold the mouse (or your finger) over the dirt to scrub it off!", Color3.fromRGB(150, 220, 255))
 end
 
 ScrubEvent.OnServerEvent:Connect(function(player, hitPosition)
@@ -724,9 +865,6 @@ ScrubEvent.OnServerEvent:Connect(function(player, hitPosition)
 			if b.Health <= 0 then
 				b.Part:Destroy()
 				table.remove(wash.Blobs, i)
-			else
-				local sz = b.StartSize * (0.5 + 0.5 * b.Health / wash.Health)
-				b.Part.Size = Vector3.new(0.18, sz, sz)
 			end
 		end
 	end
@@ -1015,14 +1153,25 @@ local function rollContainerLevel(profile)
 	return rng:NextInteger(1, Config.GetMaxContainer(profile.ShowroomLevel))
 end
 
+local delivering = {}
 local function deliver(player)
 	local plot = playerPlot[player]
 	local profile = DataService.Get(player)
-	if not plot or not profile then
+	if not plot or not profile or delivering[player] then
 		return
+	end
+	delivering[player] = true
+	-- last delivery's unopened containers expire before the new ones arrive
+	local expired = expireContainers(plot)
+	if expired > 0 then
+		notify(player, expired .. " unopened container" .. (expired > 1 and "s" or "") .. " expired.", Color3.fromRGB(255, 190, 120))
+		task.wait(1)
 	end
 	local delivered = 0
 	for k = 1, Config.GetContainersPerDelivery(profile.TruckLevel) do
+		if playerPlot[player] ~= plot then
+			break
+		end
 		local slot = freeYardSlot(plot)
 		if not slot then
 			break
@@ -1030,27 +1179,29 @@ local function deliver(player)
 		-- every delivery brings at least one free Container 1, so nobody can get stuck with $0
 		spawnContainer(plot, slot, k == 1 and 1 or rollContainerLevel(profile), true)
 		delivered = delivered + 1
+		task.wait(0.14)
 	end
 	if delivered > 0 then
 		profile.DeliveriesDone = profile.DeliveriesDone + 1
-		notify(player, "TRUCK HERE! " .. delivered .. " container" .. (delivered > 1 and "s" or "") .. " dropped in your backyard.", GOLD)
+		notify(player, "New containers delivered!", GOLD)
+		player:SetAttribute("YardFull", false)
+	else
+		player:SetAttribute("YardFull", true)
 	end
-	scheduleNext(player)
+	if player.Parent and DataService.Get(player) then
+		scheduleNext(player)
+	end
+	delivering[player] = nil
 end
 
 task.spawn(function()
 	while true do
 		task.wait(0.5)
 		local t = now()
-		for player, plot in pairs(playerPlot) do
+		for player in pairs(playerPlot) do
 			local nextAt = player:GetAttribute("NextDelivery")
 			if nextAt and t >= nextAt then
-				if freeYardSlot(plot) then
-					player:SetAttribute("YardFull", false)
-					deliver(player)
-				else
-					player:SetAttribute("YardFull", true)
-				end
+				task.spawn(deliver, player)
 			end
 		end
 	end
@@ -1280,6 +1431,12 @@ local function setupCharacter(player, character)
 	local root = character:WaitForChild("HumanoidRootPart", 10)
 	if not root then
 		return
+	end
+	-- the plots are big: walk a bit faster so getting around feels snappy
+	local hum = character:FindFirstChildOfClass("Humanoid")
+	if hum then
+		hum.WalkSpeed = 24
+		hum.JumpPower = 50
 	end
 	task.wait()
 	local plot = playerPlot[player]

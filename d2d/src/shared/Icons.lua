@@ -173,8 +173,18 @@ end
 -- Uploaded artwork (rbxassetid). When an id is set, Make returns an ImageLabel with
 -- the painted icon; otherwise it falls back to the 3D ViewportFrame icon below.
 Icons.Images = {
-	Cash = "", Coin = "", Book = "", Home = "", Tire = "", Truck = "",
-	Crate = "", Sponge = "", Showroom = "", Clover = "", Car = "", Upgrade = "",
+	Cash = "78919621155121",
+	Coin = "104482119506843",
+	Book = "90602620393215",
+	Home = "95661337593656",
+	Tire = "85189834552582",
+	Truck = "123133832236209",
+	Crate = "84678228999940",
+	Sponge = "122459377731549",
+	Showroom = "98223514278917",
+	Clover = "104296473498249",
+	Car = "86067447901970",
+	Upgrade = "137213390617402",
 }
 
 -- Returns an icon GuiObject. props are applied to it.

@@ -1081,8 +1081,18 @@ end
 -- Uploaded artwork (rbxassetid). When an id is set, Make returns an ImageLabel with
 -- the painted icon; otherwise it falls back to the 3D ViewportFrame icon below.
 Icons.Images = {
-	Cash = "", Coin = "", Book = "", Home = "", Tire = "", Truck = "",
-	Crate = "", Sponge = "", Showroom = "", Clover = "", Car = "", Upgrade = "",
+	Cash = "78919621155121",
+	Coin = "104482119506843",
+	Book = "90602620393215",
+	Home = "95661337593656",
+	Tire = "85189834552582",
+	Truck = "123133832236209",
+	Crate = "84678228999940",
+	Sponge = "122459377731549",
+	Showroom = "98223514278917",
+	Clover = "104296473498249",
+	Car = "86067447901970",
+	Upgrade = "137213390617402",
 }
 
 -- Returns an icon GuiObject. props are applied to it.
@@ -105149,6 +105159,7 @@ return DataService
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
+local Debris = game:GetService("Debris")
 local CollectionService = game:GetService("CollectionService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
@@ -105598,6 +105609,72 @@ local function openContainer(player, plot, slot, entry)
 	end
 end
 
+-- a quick dust/sparkle burst at a point
+local function puff(pos, color, count)
+	local a = Instance.new("Part")
+	a.Anchored, a.CanCollide, a.CanQuery, a.CanTouch, a.Transparency = true, false, false, false, 1
+	a.Size = Vector3.new(1, 1, 1)
+	a.Position = pos
+	local e = Instance.new("ParticleEmitter")
+	e.Texture = "rbxasset://textures/particles/smoke_main.dds"
+	e.Color = ColorSequence.new(color)
+	e.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1.2), NumberSequenceKeypoint.new(1, 4.5) })
+	e.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.35), NumberSequenceKeypoint.new(1, 1) })
+	e.Lifetime = NumberRange.new(0.5, 0.9)
+	e.Speed = NumberRange.new(6, 12)
+	e.SpreadAngle = Vector2.new(180, 180)
+	e.Drag = 4
+	e.LightInfluence = 0.3
+	e.Enabled = false
+	e.Parent = a
+	a.Parent = workspace
+	e:Emit(count or 12)
+	Debris:AddItem(a, 1.5)
+end
+
+-- an unopened container that expired: it squashes, fades and vanishes in a puff
+local function vanish(model)
+	if not model or not model.Parent then
+		return
+	end
+	for _, d in ipairs(model:GetDescendants()) do
+		if d:IsA("ProximityPrompt") or d:IsA("BillboardGui") then
+			d:Destroy()
+		end
+	end
+	local base = model:GetPivot()
+	local v = Instance.new("NumberValue")
+	v.Value = 0
+	v.Changed:Connect(function(t)
+		if model.Parent then
+			-- a little hop, then shrink to nothing
+			local hop = math.sin(math.min(t, 0.4) / 0.4 * math.pi) * 1.6
+			model:ScaleTo(math.max(0.05, 1 - math.max(0, t - 0.3) / 0.7))
+			model:PivotTo(base * CFrame.new(0, hop, 0) * CFrame.Angles(0, t * 2.5, 0))
+		end
+	end)
+	local tw = TweenService:Create(v, TweenInfo.new(0.75, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { Value = 1 })
+	tw:Play()
+	tw.Completed:Connect(function()
+		puff(base.Position + Vector3.new(0, 2, 0), Color3.fromRGB(255, 255, 255), 16)
+		v:Destroy()
+		model:Destroy()
+	end)
+end
+
+local function expireContainers(plot)
+	local yard = state[plot.Index].Yard
+	local n = 0
+	for slot, entry in pairs(yard) do
+		if entry.Kind == "Container" and not entry.Opening then
+			yard[slot] = nil
+			vanish(entry.Model)
+			n = n + 1
+		end
+	end
+	return n
+end
+
 local function spawnContainer(plot, slot, level, drop)
 	local owner = plotOwner[plot.Index]
 	local entry = { Kind = "Container", Level = level }
@@ -105620,17 +105697,31 @@ local function spawnContainer(plot, slot, level, drop)
 	entry.Model = model
 	state[plot.Index].Yard[slot] = entry
 	if drop then
-		local value = Instance.new("CFrameValue")
-		value.Value = model:GetPivot()
-		value.Changed:Connect(function(cf)
-			if model.Parent then
-				model:PivotTo(cf)
+		-- pops out of the truck and flies in an arc into its yard slot
+		local from = plot.TruckDrop or (target + Vector3.new(0, 40, 0))
+		local p0, p2 = from.Position, target.Position
+		local p1 = (p0 + p2) / 2 + Vector3.new(0, 26 + (p0 - p2).Magnitude * 0.18, 0)
+		local spin = rng:NextNumber(-1, 1) * math.pi * 2
+		model:PivotTo(from)
+		model:ScaleTo(0.4)
+		local alpha = Instance.new("NumberValue")
+		alpha.Changed:Connect(function(t)
+			if not model.Parent then
+				return
 			end
+			local a = (1 - t) * (1 - t) * p0 + 2 * (1 - t) * t * p1 + t * t * p2
+			model:ScaleTo(0.4 + 0.6 * math.min(1, t * 1.6))
+			model:PivotTo(CFrame.new(a) * (target - target.Position) * CFrame.Angles(0, spin * (1 - t), 0))
 		end)
-		local tween = TweenService:Create(value, TweenInfo.new(1.2, Enum.EasingStyle.Bounce, Enum.EasingDirection.Out), { Value = target })
+		local tween = TweenService:Create(alpha, TweenInfo.new(1.15, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), { Value = 1 })
 		tween:Play()
 		tween.Completed:Connect(function()
-			value:Destroy()
+			alpha:Destroy()
+			if model.Parent then
+				model:ScaleTo(1)
+				model:PivotTo(target)
+				puff(target.Position, Color3.fromRGB(235, 225, 205), 14)
+			end
 		end)
 	end
 end
@@ -105646,7 +105737,8 @@ spawnYardCar = function(plot, slot, carId)
 	-- a dusty look until it's washed
 	for _, p in ipairs(model:GetDescendants()) do
 		if p:IsA("BasePart") and p.Name ~= "Root" then
-			p.Color = p.Color:Lerp(Config.Containers[Config.CarsById[carId].Container].Dirt, 0.6)
+			local dust = Color3.fromRGB(196, 178, 150):Lerp(Config.Containers[Config.CarsById[carId].Container].Dirt, 0.25)
+			p.Color = p.Color:Lerp(dust, 0.5)
 		end
 	end
 	addLabel(model.PrimaryPart, carTitle(carId), "dirty · wash me", rarityOf(carId).Color, 6, 18)
@@ -105672,6 +105764,19 @@ local function setWashProgress(plot, value)
 	if owner then
 		owner:SetAttribute("WashProgress", value)
 	end
+	-- the paint shines back through as the dust comes off
+	local wash = state[plot.Index] and state[plot.Index].Wash
+	if value and wash and wash.Paint then
+		local k = 0.45 * math.max(0, 1 - value * 1.15)
+		for part, color in pairs(wash.Paint) do
+			if part.Parent then
+				part.Color = color:Lerp(wash.DustColor, k)
+			end
+		end
+		for _, f in ipairs(wash.Film or {}) do
+			f.Transparency = math.min(1, 0.3 + 0.8 * value)
+		end
+	end
 	if value then
 		plot.WashLabel.Text = "WASHING  " .. math.floor(value * 100) .. "%"
 	else
@@ -105689,6 +105794,14 @@ local function finishWash(plot)
 		b.Part:Destroy()
 	end
 	wash.Blobs = {}
+	for part, color in pairs(wash.Paint or {}) do
+		if part.Parent then
+			part.Color = color
+		end
+	end
+	for _, f in ipairs(wash.Film or {}) do
+		f:Destroy()
+	end
 	setWashProgress(plot, nil)
 	plot.WashLabel.Text = "SPARKLING CLEAN!"
 	local owner = plotOwner[plot.Index]
@@ -105721,6 +105834,41 @@ local function startWash(plot, carId)
 	model.Parent = carsFolder
 	local health = dirtHealth(car.Container)
 	local dirtColor = Config.Containers[car.Container].Dirt
+	-- dust is a pale, sandy grey (not dark mud) tinted a little by the container
+	local dustColor = Color3.fromRGB(196, 178, 150):Lerp(dirtColor, 0.25)
+	-- the paint itself starts dull and dusty and comes back as you scrub
+	local paint = {}
+	local film = {}
+	for _, d in ipairs(model:GetDescendants()) do
+		if d:IsA("BasePart") and d.Name ~= "Root" and d.Transparency < 0.9 then
+			paint[d] = d.Color
+			d.Color = d.Color:Lerp(dustColor, 0.45)
+		end
+	end
+	-- a soft, even film of dust hugging the whole car (a slightly larger see-through copy of each part)
+	for part in pairs(paint) do
+		if part.Transparency < 0.3 and part.Size.Magnitude > 0.8 then
+			local f = part:Clone()
+			f:ClearAllChildren()
+			f.Name = "DustFilm"
+			if f:IsA("MeshPart") then
+				f.TextureID = ""
+			end
+			f.Size = part.Size * 1.025 + Vector3.new(0.04, 0.04, 0.04)
+			f.CFrame = part.CFrame
+			f.Color = dustColor
+			f.Material = Enum.Material.SmoothPlastic
+			f.Reflectance = 0
+			f.Transparency = 0.3
+			f.Anchored = true
+			f.CanCollide = false
+			f.CanQuery = false
+			f.CanTouch = false
+			f.CastShadow = false
+			f.Parent = model
+			table.insert(film, f)
+		end
+	end
 	local boxCF, size = model:GetBoundingBox()
 	local hx, hy, hz = size.X / 2, size.Y / 2, size.Z / 2
 	local blobs = {}
@@ -105748,24 +105896,25 @@ local function startWash(plot, carId)
 			return
 		end
 		taken[key] = true
-		-- a flat mud splat lying on the paint
-		local s = rng:NextNumber(1.3, 2.1)
+		-- scrub target lying flat on the paint
+		local sz = rng:NextNumber(1.7, 2.2)
 		local p = Instance.new("Part")
 		p.Name = "Dirt"
 		p.Shape = Enum.PartType.Cylinder
-		p.Size = Vector3.new(0.18, s, s)
-		p.CFrame = CFrame.lookAt(pos + hit.Normal * 0.06, pos + hit.Normal * 2) * CFrame.Angles(0, math.rad(90), 0) * CFrame.Angles(rng:NextNumber(0, 6.28), 0, 0)
+		p.Size = Vector3.new(0.04, sz, sz)
+		p.CFrame = CFrame.lookAt(pos + hit.Normal * 0.03, pos + hit.Normal * 2) * CFrame.Angles(0, math.rad(90), 0) * CFrame.Angles(rng:NextNumber(0, 6.28), 0, 0)
 		p.Anchored = true
 		p.CanCollide = false
 		p.CanTouch = false
 		p.CastShadow = false
-		p.Material = Enum.Material.Ground
-		p.Color = dirtColor:Lerp(Color3.new(0, 0, 0), rng:NextNumber(0, 0.2))
+		p.Material = Enum.Material.SmoothPlastic
+		p.Color = dustColor
+		p.Transparency = 1 -- invisible scrub target; the visible dust is the film over the paint
 		p.Parent = dirtFolder
-		table.insert(blobs, { Part = p, Health = health, StartSize = s })
+		table.insert(blobs, { Part = p, Health = health, StartSize = sz })
 	end
 	-- shoot rays at the car from above and from all four sides; dirt sticks where they land
-	local spacing = 1.25
+	local spacing = 1.05
 	local reach = 2 * math.max(hx, hy, hz) + 4
 	for x = -hx + 0.6, hx - 0.6, spacing do
 		for z = -hz + 0.6, hz - 0.6, spacing do
@@ -105789,6 +105938,9 @@ local function startWash(plot, carId)
 		Total = #blobs * health,
 		Remaining = #blobs * health,
 		Health = health,
+		Paint = paint,
+		Film = film,
+		DustColor = dustColor,
 		Done = false,
 	}
 	state[plot.Index].Wash = wash
@@ -105836,7 +105988,6 @@ sendToWash = function(player, plot, slot, entry)
 		local stand = plot.WashCFrame:PointToWorldSpace(Vector3.new(10.5, 3, -4))
 		char:PivotTo(CFrame.lookAt(stand, Vector3.new(plot.WashCFrame.X, stand.Y, plot.WashCFrame.Z)))
 	end
-	notify(player, "Hold the mouse (or your finger) over the dirt to scrub it off!", Color3.fromRGB(150, 220, 255))
 end
 
 ScrubEvent.OnServerEvent:Connect(function(player, hitPosition)
@@ -105869,9 +106020,6 @@ ScrubEvent.OnServerEvent:Connect(function(player, hitPosition)
 			if b.Health <= 0 then
 				b.Part:Destroy()
 				table.remove(wash.Blobs, i)
-			else
-				local sz = b.StartSize * (0.5 + 0.5 * b.Health / wash.Health)
-				b.Part.Size = Vector3.new(0.18, sz, sz)
 			end
 		end
 	end
@@ -106160,14 +106308,25 @@ local function rollContainerLevel(profile)
 	return rng:NextInteger(1, Config.GetMaxContainer(profile.ShowroomLevel))
 end
 
+local delivering = {}
 local function deliver(player)
 	local plot = playerPlot[player]
 	local profile = DataService.Get(player)
-	if not plot or not profile then
+	if not plot or not profile or delivering[player] then
 		return
+	end
+	delivering[player] = true
+	-- last delivery's unopened containers expire before the new ones arrive
+	local expired = expireContainers(plot)
+	if expired > 0 then
+		notify(player, expired .. " unopened container" .. (expired > 1 and "s" or "") .. " expired.", Color3.fromRGB(255, 190, 120))
+		task.wait(1)
 	end
 	local delivered = 0
 	for k = 1, Config.GetContainersPerDelivery(profile.TruckLevel) do
+		if playerPlot[player] ~= plot then
+			break
+		end
 		local slot = freeYardSlot(plot)
 		if not slot then
 			break
@@ -106175,27 +106334,29 @@ local function deliver(player)
 		-- every delivery brings at least one free Container 1, so nobody can get stuck with $0
 		spawnContainer(plot, slot, k == 1 and 1 or rollContainerLevel(profile), true)
 		delivered = delivered + 1
+		task.wait(0.14)
 	end
 	if delivered > 0 then
 		profile.DeliveriesDone = profile.DeliveriesDone + 1
-		notify(player, "TRUCK HERE! " .. delivered .. " container" .. (delivered > 1 and "s" or "") .. " dropped in your backyard.", GOLD)
+		notify(player, "New containers delivered!", GOLD)
+		player:SetAttribute("YardFull", false)
+	else
+		player:SetAttribute("YardFull", true)
 	end
-	scheduleNext(player)
+	if player.Parent and DataService.Get(player) then
+		scheduleNext(player)
+	end
+	delivering[player] = nil
 end
 
 task.spawn(function()
 	while true do
 		task.wait(0.5)
 		local t = now()
-		for player, plot in pairs(playerPlot) do
+		for player in pairs(playerPlot) do
 			local nextAt = player:GetAttribute("NextDelivery")
 			if nextAt and t >= nextAt then
-				if freeYardSlot(plot) then
-					player:SetAttribute("YardFull", false)
-					deliver(player)
-				else
-					player:SetAttribute("YardFull", true)
-				end
+				task.spawn(deliver, player)
 			end
 		end
 	end
@@ -106426,6 +106587,12 @@ local function setupCharacter(player, character)
 	if not root then
 		return
 	end
+	-- the plots are big: walk a bit faster so getting around feels snappy
+	local hum = character:FindFirstChildOfClass("Humanoid")
+	if hum then
+		hum.WalkSpeed = 24
+		hum.JumpPower = 50
+	end
 	task.wait()
 	local plot = playerPlot[player]
 	if plot then
@@ -106632,6 +106799,7 @@ local Lighting = game:GetService("Lighting")
 local CollectionService = game:GetService("CollectionService")
 local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
 local Props = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Props"))
+local Icons = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Icons"))
 
 local MapBuilder = {}
 
@@ -106666,6 +106834,13 @@ local function part(props, parent)
 		if k ~= "Shape" then
 			p[k] = v
 		end
+	end
+	-- clean, smooth look everywhere (no grainy tiled textures), like Clean a Painting
+	if p.Material ~= Enum.Material.Glass and p.Material ~= Enum.Material.Neon then
+		if p.Material == Enum.Material.Metal or p.Material == Enum.Material.DiamondPlate or p.Material == Enum.Material.CorrodedMetal then
+			p.Reflectance = math.max(p.Reflectance, 0.06)
+		end
+		p.Material = Enum.Material.SmoothPlastic
 	end
 	p.Parent = parent
 	return p
@@ -106897,45 +107072,57 @@ end
 -- Light and sky
 ---------------------------------------------------------------------
 local function buildLighting()
-	-- natural afternoon light with crisp shadows
+	-- bright, soft, clean daylight (Clean a Painting style): high ambient, soft shadows, gentle bloom
 	Lighting.GlobalShadows = true
-	Lighting.ClockTime = 14.2
-	Lighting.GeographicLatitude = 38
-	Lighting.Brightness = 3
-	Lighting.Ambient = Color3.fromRGB(70, 72, 82)
-	Lighting.OutdoorAmbient = Color3.fromRGB(140, 142, 152)
+	Lighting.ClockTime = 13.4
+	Lighting.GeographicLatitude = 30
+	Lighting.Brightness = 2.6
+	Lighting.Ambient = Color3.fromRGB(118, 122, 134)
+	Lighting.OutdoorAmbient = Color3.fromRGB(168, 172, 184)
 	Lighting.EnvironmentDiffuseScale = 1
-	Lighting.EnvironmentSpecularScale = 1
-	Lighting.ExposureCompensation = 0.1
-	Lighting.ShadowSoftness = 0.12
+	Lighting.EnvironmentSpecularScale = 0.7
+	Lighting.ExposureCompensation = 0.2
+	Lighting.ShadowSoftness = 0.4
 	for _, c in ipairs(Lighting:GetChildren()) do
-		if c:IsA("PostEffect") or c:IsA("Atmosphere") then
+		if c:IsA("PostEffect") or c:IsA("Atmosphere") or c:IsA("Sky") then
 			c:Destroy()
 		end
 	end
+	local sky = Instance.new("Sky")
+	sky.SunAngularSize = 14
+	sky.MoonAngularSize = 8
+	sky.StarCount = 0
+	sky.Parent = Lighting
 	local a = Instance.new("Atmosphere")
-	a.Density = 0.2
-	a.Offset = 0.12
-	a.Color = Color3.fromRGB(199, 212, 228)
-	a.Decay = Color3.fromRGB(106, 120, 145)
-	a.Glare = 0.15
-	a.Haze = 0.4
+	a.Density = 0.26
+	a.Offset = 0.22
+	a.Color = Color3.fromRGB(205, 222, 240)
+	a.Decay = Color3.fromRGB(150, 175, 210)
+	a.Glare = 0
+	a.Haze = 0.7
 	a.Parent = Lighting
 	local bloom = Instance.new("BloomEffect")
-	bloom.Intensity = 0.2
-	bloom.Size = 18
-	bloom.Threshold = 2.8
+	bloom.Intensity = 0.32
+	bloom.Size = 26
+	bloom.Threshold = 1.7
 	bloom.Parent = Lighting
 	local cc = Instance.new("ColorCorrectionEffect")
-	cc.Saturation = 0.08
-	cc.Contrast = 0.1
-	cc.Brightness = 0
-	cc.TintColor = Color3.fromRGB(255, 252, 246)
+	cc.Saturation = 0.12
+	cc.Contrast = 0.04
+	cc.Brightness = 0.02
+	cc.TintColor = Color3.fromRGB(255, 253, 248)
 	cc.Parent = Lighting
 	local rays = Instance.new("SunRaysEffect")
-	rays.Intensity = 0.03
-	rays.Spread = 0.4
+	rays.Intensity = 0.02
+	rays.Spread = 0.5
 	rays.Parent = Lighting
+	-- softens the far distance so it never looks jagged
+	local dof = Instance.new("DepthOfFieldEffect")
+	dof.FarIntensity = 0.12
+	dof.FocusDistance = 60
+	dof.InFocusRadius = 140
+	dof.NearIntensity = 0
+	dof.Parent = Lighting
 end
 
 ---------------------------------------------------------------------
@@ -106962,20 +107149,16 @@ end
 ---------------------------------------------------------------------
 -- Terrain: grass ground, terraced blue cliffs around the town
 ---------------------------------------------------------------------
-local function buildTerrain()
+local function buildTerrain(map)
+	-- smooth flat ground and clean terraced cliffs built from parts (terrain textures look grainy)
 	local terrain = workspace.Terrain
 	terrain:Clear()
-	terrain:SetMaterialColor(Enum.Material.Grass, Color3.fromRGB(96, 170, 68))
-	terrain:SetMaterialColor(Enum.Material.LeafyGrass, Color3.fromRGB(88, 160, 62))
-	terrain:SetMaterialColor(Enum.Material.Rock, Color3.fromRGB(88, 106, 150))
-	terrain:SetMaterialColor(Enum.Material.Slate, Color3.fromRGB(84, 100, 142))
-	pcall(function()
-		terrain.Decoration = true
-	end)
-	terrain:FillBlock(CFrame.new(0, -6, 0), Vector3.new(1400, 8, 1000), Enum.Material.Grass)
+	local GRASS = Color3.fromRGB(104, 178, 74)
+	local CLIFF = Color3.fromRGB(104, 124, 168)
+	box(map, "Ground", Vector3.new(1400, 2, 1000), CFrame.new(0, -1, 0), GRASS)
 	local function step(center, size)
-		terrain:FillBlock(CFrame.new(center), size, Enum.Material.Rock)
-		terrain:FillBlock(CFrame.new(center + Vector3.new(0, size.Y / 2 + 2, 0)), Vector3.new(size.X, 4, size.Z), Enum.Material.Grass)
+		deco(map, "Cliff", size, CFrame.new(center), CLIFF)
+		deco(map, "CliffTop", Vector3.new(size.X, 1, size.Z), CFrame.new(center + Vector3.new(0, size.Y / 2 + 0.5, 0)), GRASS)
 	end
 	for _, sz in ipairs({ -1, 1 }) do
 		step(Vector3.new(0, 10, sz * 232), Vector3.new(1000, 20, 30))
@@ -106989,8 +107172,9 @@ local function buildTerrain()
 	end
 	if not terrain:FindFirstChildOfClass("Clouds") then
 		local clouds = Instance.new("Clouds")
-		clouds.Cover = 0.5
-		clouds.Density = 0.55
+		clouds.Cover = 0.45
+		clouds.Density = 0.5
+		clouds.Color = Color3.new(1, 1, 1)
 		clouds.Parent = terrain
 	end
 end
@@ -107003,7 +107187,7 @@ local function buildWorld(map)
 	if baseplate then
 		baseplate:Destroy()
 	end
-	buildTerrain()
+	buildTerrain(map)
 	local LEN = 760
 	-- two carriageways with a planted median
 	for _, sz in ipairs({ -1, 1 }) do
@@ -107359,6 +107543,7 @@ local function buildPlot(index, parent)
 	end
 	-- the delivery truck waits on the service road behind the gate
 	truck(m, at(42, 0, PLOT_DEPTH + 10) * CFrame.Angles(0, math.rad(90), 0), Color3.fromRGB(236, 239, 245))
+	plot.TruckDrop = at(42, 11, PLOT_DEPTH + 8)
 
 	--=========================== WASH SPOT (grows with the wash tool level) ===========================
 	local WX, WZ = 26, 118
@@ -107466,6 +107651,25 @@ local function buildPlot(index, parent)
 	local function icon(kind, at0)
 		local mdl = Instance.new("Model")
 		mdl.Name = "StationIcon"
+		-- the painted icon artwork floating over the pad
+		local imageId = Icons.Images[({ Showroom = "Showroom", Truck = "Truck", Wash = "Sponge", Engine = "Tire" })[kind] or ""]
+		if imageId and imageId ~= "" then
+			local anchor = deco(mdl, "IconAnchor", Vector3.new(0.2, 0.2, 0.2), at0, Color3.new(1, 1, 1), nil, { Transparency = 1 })
+			local bb = Instance.new("BillboardGui")
+			bb.Size = UDim2.new(4.6, 0, 4.6, 0)
+			bb.LightInfluence = 0
+			bb.MaxDistance = 140
+			local img = Instance.new("ImageLabel")
+			img.BackgroundTransparency = 1
+			img.Size = UDim2.new(1, 0, 1, 0)
+			img.Image = "rbxassetid://" .. imageId
+			img.Parent = bb
+			bb.Parent = anchor
+			mdl.PrimaryPart = anchor
+			mdl.Parent = m
+			CollectionService:AddTag(mdl, "StationIcon")
+			return mdl
+		end
 		local function ip(size, off, color, mat, shape)
 			local q = deco(mdl, "IconPart", size, at0 * off, color, mat or Enum.Material.SmoothPlastic)
 			if shape then
@@ -107521,12 +107725,12 @@ local function buildPlot(index, parent)
 	local function pad(name, x, z, y, kind, facing)
 		y = y or FLOOR_Y
 		local base = at(x, y, z) * CFrame.Angles(0, facing or 0, 0)
-		box(m, name .. "Plinth", Vector3.new(6.6, 0.5, 6.6), base * CFrame.new(0, 0.25, 0), Color3.fromRGB(215, 218, 226), Enum.Material.Concrete, { CanCollide = false })
-		local p = box(m, name, Vector3.new(5.6, 0.18, 5.6), base * CFrame.new(0, 0.55, 0), Color3.fromRGB(150, 255, 190), Enum.Material.Neon, { CanCollide = false, Transparency = 0.35 })
+		box(m, name .. "Plinth", Vector3.new(6.6, 0.5, 6.6), base * CFrame.new(0, 0.25, 0), Color3.fromRGB(176, 184, 196), Enum.Material.Concrete, { CanCollide = false })
+		local p = box(m, name, Vector3.new(5.6, 0.18, 5.6), base * CFrame.new(0, 0.55, 0), Color3.fromRGB(90, 215, 130), Enum.Material.Neon, { CanCollide = false, Transparency = 0.55 })
 		local glow = Instance.new("PointLight")
 		glow.Color = Color3.fromRGB(150, 255, 190)
 		glow.Range = 9
-		glow.Brightness = 0.8
+		glow.Brightness = 0.4
 		glow.Parent = p
 		local ic = icon(kind, base * CFrame.new(0, 4.4, 0))
 		-- the name above the icon and the level under it
