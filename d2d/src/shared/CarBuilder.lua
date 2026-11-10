@@ -556,12 +556,13 @@ function CarBuilder.BuildContainer(level)
 	model.Name = "Container" .. level
 	local root = newPart(model, "Root", Vector3.new(1, 1, 1), CFrame.new(0, 0.5, 0), Color3.new(0, 0, 0), { Transparency = 1 })
 	model.PrimaryPart = root
-	local wooden = level <= 2
+	local wooden = level <= 3
 	local S = 6.4 -- crate size
 	local B = 0.75 -- beam thickness
 	local h = S / 2
-	local frameColor = wooden and Color3.fromRGB(150, 98, 58) or info.Color
-	local panelColor = wooden and Color3.fromRGB(116, 74, 44) or info.Color:Lerp(Color3.new(0, 0, 0), 0.25)
+	-- every level has its own colour (wood tones for 1-3, painted metal after that)
+	local frameColor = info.Color
+	local panelColor = info.Color:Lerp(Color3.new(0, 0, 0), 0.22)
 	local material = wooden and Enum.Material.WoodPlanks or Enum.Material.DiamondPlate
 	local box = newPart(model, "Box", Vector3.new(S, S, S), CFrame.new(0, h, 0), frameColor, { Transparency = 1, CanCollide = true })
 	box.Name = "Box"
@@ -594,8 +595,9 @@ function CarBuilder.BuildContainer(level)
 	newPart(model, "Panel", Vector3.new(inner, inner, 0.2), top * CFrame.new(0, 0, 0.12), panelColor, { Material = material })
 	beam(Vector3.new(B * 0.9, diag, B * 0.7), top * CFrame.new(0, 0, -0.05) * CFrame.Angles(0, 0, math.rad(45)))
 	-- a faint glow inside for the higher levels so they feel special
-	if level >= 7 then
-		local core = newPart(model, "Glow", Vector3.new(inner * 0.8, inner * 0.8, inner * 0.8), CFrame.new(0, h, 0), info.Color:Lerp(Color3.new(1, 1, 1), 0.4), { Material = Enum.Material.Neon, Transparency = 0.55 })
+	if level >= 8 then
+		local glowColor = level == 10 and Color3.fromRGB(90, 230, 255) or info.Color:Lerp(Color3.new(1, 1, 1), 0.4)
+		local core = newPart(model, "Glow", Vector3.new(inner * 0.8, inner * 0.8, inner * 0.8), CFrame.new(0, h, 0), glowColor, { Material = Enum.Material.Neon, Transparency = 0.55 })
 		local light = Instance.new("PointLight")
 		light.Color = info.Color
 		light.Range = 12

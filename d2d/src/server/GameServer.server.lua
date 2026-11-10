@@ -221,7 +221,9 @@ local function refreshSpotPads(plot, profile)
 	local open = profile and maxSpots(profile) or 0
 	for i, spot in ipairs(plot.Spots) do
 		local unlocked = i <= open
-		spot.Pad.Transparency = unlocked and 0 or 1
+		if spot.Pad then
+			spot.Pad.Transparency = unlocked and 0 or 1
+		end
 		for _, trim in ipairs(spot.Trims or {}) do
 			trim.Transparency = unlocked and 0 or 0.75
 		end
@@ -870,7 +872,7 @@ ScrubEvent.OnServerEvent:Connect(function(player, hitPosition)
 	end
 	local progress = 1 - wash.Remaining / math.max(1, wash.Total)
 	setWashProgress(plot, progress)
-	if #wash.Blobs == 0 or progress >= 0.94 then
+	if #wash.Blobs == 0 or progress >= 0.85 then
 		finishWash(plot)
 	end
 end)
@@ -1161,6 +1163,10 @@ local function deliver(player)
 		return
 	end
 	delivering[player] = true
+	-- never let a broke player with no cars get stuck: top them up to open one container 1
+	if profile.Cash < Config.GetContainerPrice(1) and next(state[plot.Index].Spots) == nil then
+		setCash(player, Config.GetContainerPrice(1))
+	end
 	-- last delivery's unopened containers expire before the new ones arrive
 	local expired = expireContainers(plot)
 	if expired > 0 then

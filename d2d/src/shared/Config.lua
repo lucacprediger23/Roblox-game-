@@ -22,7 +22,7 @@ Config.Rarities = {
 -- position in a container (1..12) -> rarity index
 Config.SlotRarity = { 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 7 }
 
-Config.ContainerMultiplier = 4 -- income x4 per container level
+Config.ContainerMultiplier = 10 -- income x10 per container level (matches the x10 container prices)
 
 ---------------------------------------------------------------------
 -- Tires (rolled for free at the Tire Shop; a new roll replaces the old set)
@@ -56,7 +56,7 @@ function Config.GetSpots(level)
 	return 4 * level
 end
 function Config.GetShowroomCost(level) -- cost to reach `level`
-	return ({ [2] = 2500, [3] = 250000, [4] = 40e6, [5] = 8e9 })[level] or math.huge
+	return ({ [2] = 2500, [3] = 500000, [4] = 250e6, [5] = 200e9 })[level] or math.huge
 end
 function Config.GetMaxContainer(showroomLevel)
 	return math.min(2 * showroomLevel, 10)
@@ -70,16 +70,14 @@ function Config.GetContainersPerDelivery(truckLevel)
 	return 3 + truckLevel
 end
 function Config.GetTruckCost(level) -- cost to reach truck `level`
-	return math.floor(150 * 3 ^ (level - 2))
+	return math.floor(150 * 5 ^ (level - 2))
 end
 
--- price to open a container; container 1 is free
+-- price to open a container: $20 for container 1, x10 per level, $20B for container 10
 function Config.GetContainerPrice(level)
-	if level <= 1 then
-		return 0
-	end
-	return math.floor(80 * 4.6 ^ (level - 1))
+	return 20 * 10 ^ (level - 1)
 end
+Config.StartingCash = 100
 
 Config.DeliveryInterval = 180 -- seconds between deliveries
 Config.FirstDeliveries = { 0, 60, 60 } -- a new player's first deliveries come faster
@@ -87,11 +85,11 @@ Config.YardCapacity = 24
 
 Config.WashTools = {
 	{ Name = "Bucket and Sponge", Radius = 1.6, Power = 1, Cost = 0 },
-	{ Name = "Garden Hose", Radius = 2.2, Power = 1, Cost = 800 },
-	{ Name = "Pressure Washer", Radius = 2.8, Power = 2, Cost = 40000 },
-	{ Name = "Foam Cannon", Radius = 3.4, Power = 3, Cost = 5e6 },
-	{ Name = "Wash Bay", Radius = 4.2, Power = 5, Cost = 900e6 },
-	{ Name = "Automatic Car Wash", Radius = 6, Power = 8, Cost = 150e9, Auto = true },
+	{ Name = "Garden Hose", Radius = 2.2, Power = 1, Cost = 1500 },
+	{ Name = "Pressure Washer", Radius = 2.8, Power = 2, Cost = 300000 },
+	{ Name = "Foam Cannon", Radius = 3.4, Power = 3, Cost = 100e6 },
+	{ Name = "Wash Bay", Radius = 4.2, Power = 5, Cost = 50e9 },
+	{ Name = "Automatic Car Wash", Radius = 6, Power = 8, Cost = 20e12, Auto = true },
 }
 function Config.GetMaxTool(showroomLevel)
 	return math.min(showroomLevel + 1, #Config.WashTools)
@@ -110,52 +108,52 @@ Config.OfflineMaxSeconds = 8 * 3600
 -- bus, classic, muscle, coupe, racer, super, hyper, limo, open
 ---------------------------------------------------------------------
 Config.Containers = {
-	{ Name = "Scrapyard Finds", Color = Color3.fromRGB(150, 110, 75), Dirt = Color3.fromRGB(120, 95, 70), Cars = {
+	{ Name = "Scrapyard Finds", Color = Color3.fromRGB(232, 184, 116), Dirt = Color3.fromRGB(120, 95, 70), Cars = {
 		{ "Puddle Pip", "mini" }, { "Rattler Rustbucket", "sedan" }, { "Haulman Postie", "van" }, { "Puddle Pip Cabrio", "mini" },
 		{ "Rattler Wagon '82", "wagon" }, { "Haulman Tow-Tug", "truck" }, { "Rattler Hotshot", "hatch" }, { "Puddle Bubble", "mini" },
 		{ "Haulman Ice Cream Van", "van" }, { "Rattler Taxi Classic", "sedan" }, { "Puddle Pip Gold Rally", "mini" }, { "Rattler Junkyard King", "muscle" },
 	} },
-	{ Name = "City Streets", Color = Color3.fromRGB(60, 150, 210), Dirt = Color3.fromRGB(90, 90, 95), Cars = {
+	{ Name = "City Streets", Color = Color3.fromRGB(226, 124, 52), Dirt = Color3.fromRGB(90, 90, 95), Cars = {
 		{ "Metrolux Commuter", "sedan" }, { "Sorano Kei", "mini" }, { "Metrolux Hatch GT", "hatch" }, { "Sorano Haru", "coupe" },
 		{ "Metrolux Cab", "sedan" }, { "Sorano Pocket Rocket", "hatch" }, { "Sorano Drift-R", "coupe" }, { "Metrolux Police Cruiser", "sedan" },
 		{ "Sorano Kei Turbo Widebody", "mini" }, { "Metrolux Limo Stretch", "limo" }, { "Sorano Neon Night", "coupe" }, { "Metrolux Executive Armored", "limo" },
 	} },
-	{ Name = "Family and Adventure", Color = Color3.fromRGB(110, 170, 90), Dirt = Color3.fromRGB(110, 80, 50), Cars = {
+	{ Name = "Family and Adventure", Color = Color3.fromRGB(136, 82, 54), Dirt = Color3.fromRGB(110, 80, 50), Cars = {
 		{ "Bramble Trail", "suv" }, { "Haulman Family Van", "van" }, { "Bramble Pickup", "truck" }, { "Haulman Camper Mini", "van" },
 		{ "Bramble Badger 4x4", "suv" }, { "Haulman Surf Bus", "bus" }, { "Bramble Rock Crawler", "suv" }, { "Haulman Mega Camper", "bus" },
 		{ "Bramble Desert Raider", "truck" }, { "Bramble Six-Wheeler", "truck" }, { "Bramble Wildlands Black", "suv" }, { "Haulman Rolling Mansion", "bus" },
 	} },
-	{ Name = "Golden Age Classics", Color = Color3.fromRGB(230, 200, 120), Dirt = Color3.fromRGB(150, 140, 125), Cars = {
+	{ Name = "Golden Age Classics", Color = Color3.fromRGB(188, 194, 206), Dirt = Color3.fromRGB(150, 140, 125), Cars = {
 		{ "Bellwether Sedan '55", "classic" }, { "Bellwether Coupe '58", "classic" }, { "Bellwether Convertible '57", "open" }, { "Bellwether Diner Wagon", "wagon" },
 		{ "Bellwether Tailfin '59", "classic" }, { "Bellwether Roadster", "open" }, { "Bellwether Moonglow", "classic" }, { "Bellwether Woodie Surf", "wagon" },
 		{ "Bellwether Jet Age Concept", "super" }, { "Bellwether Pink Cadence", "open" }, { "Bellwether Royal Parade", "limo" }, { "Bellwether Golden Gleam", "classic" },
 	} },
-	{ Name = "Muscle Mayhem", Color = Color3.fromRGB(200, 70, 50), Dirt = Color3.fromRGB(60, 55, 50), Cars = {
+	{ Name = "Muscle Mayhem", Color = Color3.fromRGB(60, 120, 225), Dirt = Color3.fromRGB(60, 55, 50), Cars = {
 		{ "Thunderjaw Brawler", "muscle" }, { "Rattler Sprint 70", "muscle" }, { "Thunderjaw Fastback 69", "muscle" }, { "Rattler Bandit", "muscle" },
 		{ "Thunderjaw Hammerhead", "muscle" }, { "Rattler Pursuit", "sedan" }, { "Thunderjaw Supercharger", "muscle" }, { "Rattler Midnight Run", "muscle" },
 		{ "Thunderjaw Drag King", "racer" }, { "Thunderjaw Twin-Blower", "muscle" }, { "Thunderjaw Inferno", "muscle" }, { "Thunderjaw Big Daddy Gold", "muscle" },
 	} },
-	{ Name = "Tuner Nights", Color = Color3.fromRGB(120, 110, 235), Dirt = Color3.fromRGB(45, 45, 50), Cars = {
+	{ Name = "Tuner Nights", Color = Color3.fromRGB(64, 182, 96), Dirt = Color3.fromRGB(45, 45, 50), Cars = {
 		{ "Hikari Tsubame", "hatch" }, { "Sorano Shiro", "sedan" }, { "Hikari Kaze GT", "coupe" }, { "Sorano Spinner", "coupe" },
 		{ "Hikari Touge", "coupe" }, { "Sorano Wing", "sedan" }, { "Hikari Kaze GT-Z", "coupe" }, { "Sorano Midnight Bay", "coupe" },
 		{ "Hikari Raijin", "coupe" }, { "Sorano Spinner Twin-Rotor", "racer" }, { "Hikari Daimyo", "super" }, { "Sorano Neo-Tokyo", "super" },
 	} },
-	{ Name = "Euro Sport", Color = Color3.fromRGB(60, 160, 140), Dirt = Color3.fromRGB(200, 200, 205), Cars = {
+	{ Name = "Euro Sport", Color = Color3.fromRGB(150, 82, 225), Dirt = Color3.fromRGB(200, 200, 205), Cars = {
 		{ "Strassen Kompakt", "hatch" }, { "Lucenti Piccola", "mini" }, { "Strassen Coupe 3", "coupe" }, { "Lucenti Aria", "open" },
 		{ "Strassen Bahnsturm", "coupe" }, { "Lucenti GT Classico", "classic" }, { "Strassen Flachbau", "racer" }, { "Lucenti Gran Turismo V8", "coupe" },
 		{ "Strassen Ringmeister", "racer" }, { "Lucenti Rosso Fuoco", "super" }, { "Strassen Schwarzwald Black", "super" }, { "Lucenti Principessa", "coupe" },
 	} },
-	{ Name = "Race Legends", Color = Color3.fromRGB(200, 205, 222), Dirt = Color3.fromRGB(100, 75, 50), Cars = {
+	{ Name = "Race Legends", Color = Color3.fromRGB(218, 56, 56), Dirt = Color3.fromRGB(100, 75, 50), Cars = {
 		{ "Vellora Club Racer", "racer" }, { "Strassen Touring Cup", "sedan" }, { "Vellora Rally Stage", "hatch" }, { "Strassen Endurance '72", "racer" },
 		{ "Vellora Le Grand", "racer" }, { "Strassen Group-B Monster", "hatch" }, { "Vellora Open-Wheel 90", "racer" }, { "Strassen Hillclimb Beast", "racer" },
 		{ "Vellora Prototype X", "hyper" }, { "Strassen Endurance Hybrid", "racer" }, { "Vellora Championship Winner", "racer" }, { "Vellora Golden Trophy", "racer" },
 	} },
-	{ Name = "Supercars", Color = Color3.fromRGB(255, 120, 30), Dirt = Color3.fromRGB(210, 180, 120), Cars = {
+	{ Name = "Supercars", Color = Color3.fromRGB(242, 192, 50), Dirt = Color3.fromRGB(210, 180, 120), Cars = {
 		{ "Vellora Furia", "super" }, { "Lucenti Veloce", "coupe" }, { "Vellora Furia Spider", "super" }, { "Lucenti Tempesta", "super" },
 		{ "Vellora Falco", "super" }, { "Lucenti Ombra", "super" }, { "Vellora Saetta", "super" }, { "Lucenti Vortice", "super" },
 		{ "Vellora Falco Ultimo", "super" }, { "Lucenti Fulmine", "super" }, { "Vellora Carbonio", "super" }, { "Vellora Imperatore", "super" },
 	} },
-	{ Name = "Hypercars and Future", Color = Color3.fromRGB(196, 62, 200), Dirt = Color3.fromRGB(150, 120, 200), Cars = {
+	{ Name = "Hypercars and Future", Color = Color3.fromRGB(44, 46, 60), Dirt = Color3.fromRGB(150, 120, 200), Cars = {
 		{ "Quasar Watt", "hatch" }, { "Quasar Pulse", "sedan" }, { "Quasar Ionic GT", "coupe" }, { "Gilded Aero", "coupe" },
 		{ "Quasar Photon", "hyper" }, { "Gilded Oasis", "hyper" }, { "Quasar Singularity", "hyper" }, { "Gilded Regent", "limo" },
 		{ "Quasar Hover Prototype", "hyper" }, { "Gilded Midas", "hyper" }, { "Quasar Diamond Edge", "hyper" }, { "Gilded Fortune One", "hyper" },

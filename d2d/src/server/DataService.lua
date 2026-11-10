@@ -19,7 +19,7 @@ local profiles = {}
 
 local function default()
 	return {
-		Cash = 0,
+		Cash = Config.StartingCash or 100,
 		Tokens = 0,
 		ShowroomLevel = 1,
 		TruckLevel = 1,
