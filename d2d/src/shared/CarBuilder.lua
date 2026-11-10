@@ -294,6 +294,55 @@ local function buildFromAsset(car, source, opts)
 	return model
 end
 
+-- Tires: a colored rim disc on the outside of every wheel; better tiers shine and glow
+local function applyTires(model, tier)
+	if not tier or tier <= 1 then
+		return
+	end
+	local info = Config.Engines[tier]
+	if not info then
+		return
+	end
+	for _, w in ipairs(model:GetChildren()) do
+		if w:IsA("BasePart") and w.Name == "Wheel" then
+			local cf, h = w.CFrame, w.Size / 2
+			local r, u, l = cf.RightVector, cf.UpVector, cf.LookVector
+			local ext = Vector3.new(
+				math.abs(r.X) * h.X + math.abs(u.X) * h.Y + math.abs(l.X) * h.Z,
+				math.abs(r.Y) * h.X + math.abs(u.Y) * h.Y + math.abs(l.Y) * h.Z,
+				math.abs(r.Z) * h.X + math.abs(u.Z) * h.Y + math.abs(l.Z) * h.Z
+			)
+			local side = w.Position.X >= 0 and 1 or -1
+			local d = math.min(ext.Y, ext.Z) * 2 * 0.62
+			local rim = Instance.new("Part")
+			rim.Name = "Rim"
+			rim.Shape = Enum.PartType.Cylinder
+			rim.Anchored = true
+			rim.CanCollide = false
+			rim.CanQuery = false
+			rim.CanTouch = false
+			rim.Size = Vector3.new(0.12, d, d)
+			rim.CFrame = CFrame.new(w.Position + Vector3.new(side * (ext.X + 0.04), 0, 0))
+			rim.Color = info.Color
+			rim.Material = tier >= 6 and Enum.Material.Neon or Enum.Material.Metal
+			rim.Reflectance = tier >= 4 and 0.35 or 0.1
+			rim.Parent = model
+			local hub = rim:Clone()
+			hub.Name = "Hub"
+			hub.Size = Vector3.new(0.16, d * 0.32, d * 0.32)
+			hub.Color = Color3.fromRGB(40, 40, 46)
+			hub.Material = Enum.Material.Metal
+			hub.CFrame = rim.CFrame + Vector3.new(side * 0.04, 0, 0)
+			hub.Parent = model
+			if tier >= 6 then
+				local sp = Instance.new("Sparkles")
+				sp.SparkleColor = info.Color
+				sp.Parent = rim
+			end
+		end
+	end
+end
+
 function CarBuilder.BuildCar(carId, opts)
 	opts = opts or {}
 	local car = Config.CarsById[carId]
@@ -301,6 +350,9 @@ function CarBuilder.BuildCar(carId, opts)
 	if asset then
 		local ok, result = pcall(buildFromAsset, car, asset, opts)
 		if ok and result then
+			if not opts.Silhouette then
+				applyTires(result, opts.Tires)
+			end
 			return result
 		end
 		warn("[D2D] could not use model for " .. carId .. ": " .. tostring(result))

@@ -53,13 +53,13 @@ local function sanitize(data)
 	end
 	p.Tokens = num(data.Tokens, 0, 1e6, 0)
 	p.ShowroomLevel = num(data.ShowroomLevel, 1, Config.MaxShowroomLevel, 1)
-	p.TruckLevel = num(data.TruckLevel, 1, Config.MaxTruckLevel, 1)
-	p.ToolLevel = num(data.ToolLevel, 1, #Config.WashTools, 1)
+	p.TruckLevel = num(data.TruckLevel, 1, Config.GetMaxTruck(p.ShowroomLevel), 1)
+	p.ToolLevel = num(data.ToolLevel, 1, Config.GetMaxTool(p.ShowroomLevel), 1)
 	p.EngineLuck = num(data.EngineLuck, 0, Config.MaxEngineLuck, 0)
 	p.DeliveriesDone = num(data.DeliveriesDone, 0, 1e9, 0)
 	p.LastOnline = type(data.LastOnline) == "number" and data.LastOnline or 0
 	p.IncomeRate = type(data.IncomeRate) == "number" and math.max(0, data.IncomeRate) or 0
-	local maxSpots = p.ShowroomLevel * Config.SpotsPerLevel
+	local maxSpots = Config.GetSpots(p.ShowroomLevel)
 	if type(data.Display) == "table" then
 		local used = {}
 		for _, d in ipairs(data.Display) do

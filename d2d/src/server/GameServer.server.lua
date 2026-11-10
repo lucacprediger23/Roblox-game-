@@ -1,5 +1,5 @@
 -- D2D (Dust to Dealership) - main server script.
--- Truck delivers containers -> open -> wash to 100% -> roll an engine -> display -> NPC customers pay.
+-- Truck delivers containers -> open -> wash to 100% -> roll tires -> display -> NPC customers pay.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -200,7 +200,7 @@ end
 -- Showroom spots
 ---------------------------------------------------------------------
 local function maxSpots(profile)
-	return profile.ShowroomLevel * Config.SpotsPerLevel
+	return Config.GetSpots(profile.ShowroomLevel)
 end
 
 local function refreshSpotPads(plot, profile)
@@ -215,13 +215,14 @@ local function refreshSpotPads(plot, profile)
 end
 
 local sellSpot -- forward declaration
+local applyShowroom -- forward declaration
 
 local function showSpot(plot, spotIndex, entry)
 	local owner = plotOwner[plot.Index]
 	if entry.Model then
 		entry.Model:Destroy()
 	end
-	local model = CarBuilder.BuildCar(entry.Id, { Engine = entry.Engine })
+	local model = CarBuilder.BuildCar(entry.Id, { Tires = entry.Engine })
 	model:PivotTo(plot.Spots[spotIndex].CFrame)
 	addLabel(model.PrimaryPart, carTitle(entry.Id), carSubtitle(entry.Id, entry.Engine), rarityOf(entry.Id).Color, 7)
 	local value = Config.GetCarIncome(entry.Id, entry.Engine) * Config.SellSeconds
@@ -230,6 +231,18 @@ local function showSpot(plot, spotIndex, entry)
 	end)
 	model.Parent = carsFolder
 	entry.Model = model
+end
+
+-- (re)builds the showroom for the owner's level and puts the displayed cars back on their spots
+applyShowroom = function(plot, player, profile)
+	plot.BuildShowroom(profile.ShowroomLevel)
+	plot.SetSign(string.upper(player.DisplayName) .. "'S " .. string.upper(Config.ShowroomNames[profile.ShowroomLevel]))
+	for i, entry in pairs(state[plot.Index].Spots) do
+		if plot.Spots[i] then
+			showSpot(plot, i, entry)
+		end
+	end
+	refreshSpotPads(plot, profile)
 end
 
 local function freeSpot(plot, profile)
@@ -401,6 +414,15 @@ local function openContainer(player, plot, slot, entry)
 	if plotOwner[plot.Index] ~= player or state[plot.Index].Yard[slot] ~= entry or entry.Opening then
 		return
 	end
+	local price = Config.GetContainerPrice(entry.Level)
+	local profile = DataService.Get(player)
+	if price > 0 then
+		if not profile or profile.Cash < price then
+			notify(player, "You need $" .. Config.FormatNumber(price) .. " to open this container.", RED)
+			return
+		end
+		setCash(player, profile.Cash - price)
+	end
 	entry.Opening = true
 	local model = entry.Model
 	crackOpen(model, Config.Containers[entry.Level].Color)
@@ -428,10 +450,13 @@ local function spawnContainer(plot, slot, level, drop)
 	model:SetAttribute("Kind", "Container")
 	model:SetAttribute("Level", level)
 	model:PivotTo(drop and (target + Vector3.new(0, 40, 0)) or target)
-	local _, _, sub = addLabel(model.PrimaryPart, "CONTAINER " .. level, "FREE", Config.Containers[level].Color:Lerp(Color3.new(1, 1, 1), 0.45), 9.5)
+	local price = Config.GetContainerPrice(level)
+	local priceText = price > 0 and ("$" .. Config.FormatNumber(price)) or "FREE"
+	model:SetAttribute("Price", price)
+	local _, _, sub = addLabel(model.PrimaryPart, "CONTAINER " .. level, priceText, Config.Containers[level].Color:Lerp(Color3.new(1, 1, 1), 0.45), 9.5)
 	sub.TextColor3 = Color3.fromRGB(90, 230, 110)
 	sub.Font = Enum.Font.FredokaOne
-	addPrompt(model:FindFirstChild("Box"), "Open", "Container " .. level, 0.6, owner, function(player)
+	addPrompt(model:FindFirstChild("Box"), "Open · " .. priceText, "Container " .. level, 0.6, owner, function(player)
 		openContainer(player, plot, slot, entry)
 	end)
 	model.Parent = carsFolder
@@ -493,7 +518,7 @@ local function setWashProgress(plot, value)
 	if value then
 		plot.WashLabel.Text = "WASHING  " .. math.floor(value * 100) .. "%"
 	else
-		plot.WashLabel.Text = "WASH BAY"
+		plot.WashLabel.Text = "WASH SPOT"
 	end
 end
 
@@ -511,7 +536,7 @@ local function finishWash(plot)
 	plot.WashLabel.Text = "SPARKLING CLEAN!"
 	local owner = plotOwner[plot.Index]
 	if owner then
-		notify(owner, "Sparkling clean! " .. carTitle(wash.Id) .. " is ready for an engine.", GREEN)
+		notify(owner, "Sparkling clean! " .. carTitle(wash.Id) .. " is ready for new tires.", GREEN)
 	end
 	local sparkles = Instance.new("Sparkles")
 	sparkles.Parent = wash.Model:FindFirstChild("Body")
@@ -520,10 +545,10 @@ local function finishWash(plot)
 			moveToLift(plot)
 		end)
 	else
-		addPrompt(wash.Model:FindFirstChild("Body"), "Move to Engine Lift", carTitle(wash.Id), 0, owner, function(player)
+		addPrompt(wash.Model:FindFirstChild("Body"), "Move to Tire Shop", carTitle(wash.Id), 0, owner, function(player)
 			if plotOwner[plot.Index] == player then
 				if state[plot.Index].Lift then
-					notify(player, "The engine lift is busy. Finish that car first!", RED)
+					notify(player, "The tire shop is busy. Finish that car first!", RED)
 				else
 					moveToLift(plot)
 				end
@@ -651,7 +676,7 @@ sendToWash = function(player, plot, slot, entry)
 	-- bring the player to the wash bay so they can start scrubbing right away
 	local char = player.Character
 	if char then
-		local stand = plot.WashCFrame.Position + Vector3.new(10.5, 3, 0)
+		local stand = plot.WashCFrame:PointToWorldSpace(Vector3.new(10.5, 3, -4))
 		char:PivotTo(CFrame.lookAt(stand, Vector3.new(plot.WashCFrame.X, stand.Y, plot.WashCFrame.Z)))
 	end
 	notify(player, "Hold the mouse (or your finger) over the dirt to scrub it off!", Color3.fromRGB(150, 220, 255))
@@ -680,7 +705,7 @@ ScrubEvent.OnServerEvent:Connect(function(player, hitPosition)
 	local tool = Config.WashTools[profile.ToolLevel]
 	for i = #wash.Blobs, 1, -1 do
 		local b = wash.Blobs[i]
-		if (b.Part.Position - hitPosition).Magnitude <= tool.Radius + b.Part.Size.X / 2 then
+		if (b.Part.Position - hitPosition).Magnitude <= tool.Radius + b.Part.Size.Y / 2 then
 			local dmg = math.min(tool.Power, b.Health)
 			b.Health = b.Health - dmg
 			wash.Remaining = wash.Remaining - dmg
@@ -712,10 +737,10 @@ local function rebuildLift(plot)
 		lift.Model:Destroy()
 	end
 	local owner = plotOwner[plot.Index]
-	local model = CarBuilder.BuildCar(lift.Id, { Engine = lift.Engine })
+	local model = CarBuilder.BuildCar(lift.Id, { Tires = lift.Engine })
 	model:PivotTo(plot.LiftCFrame)
 	addLabel(model.PrimaryPart, carTitle(lift.Id), carSubtitle(lift.Id, lift.Engine), rarityOf(lift.Id).Color, 8)
-	addPrompt(model:FindFirstChild("Body"), "Choose Engine", carTitle(lift.Id), 0, owner, function(player)
+	addPrompt(model:FindFirstChild("Body"), "Change Tires", carTitle(lift.Id), 0, owner, function(player)
 		if plotOwner[plot.Index] == player and state[plot.Index].Lift == lift then
 			OpenEngineEvent:FireClient(player, lift.Id, lift.Engine)
 		end
@@ -731,10 +756,10 @@ moveToLift = function(plot)
 	end
 	wash.Model:Destroy()
 	state[plot.Index].Wash = nil
-	plot.WashLabel.Text = "WASH BAY"
+	plot.WashLabel.Text = "WASH SPOT"
 	state[plot.Index].Lift = { Id = wash.Id, Engine = nil }
 	rebuildLift(plot)
-	plot.LiftLabel.Text = "ENGINE LIFT"
+	plot.LiftLabel.Text = "TIRE SHOP"
 	local owner = plotOwner[plot.Index]
 	if owner then
 		OpenEngineEvent:FireClient(owner, wash.Id, nil)
@@ -751,7 +776,7 @@ EngineAction.OnServerInvoke = function(player, action)
 	local profile = DataService.Get(player)
 	local lift = plot and state[plot.Index].Lift
 	if not profile or not lift then
-		return { Ok = false, Message = "There's no car on the engine lift." }
+		return { Ok = false, Message = "There's no car in the tire shop." }
 	end
 	if action == "Roll" or action == "Lucky" then
 		if action == "Lucky" then
@@ -770,7 +795,7 @@ EngineAction.OnServerInvoke = function(player, action)
 		return { Ok = true, Engine = lift.Engine, Income = Config.GetCarIncome(lift.Id, lift.Engine) }
 	elseif action == "Done" then
 		if not lift.Engine then
-			return { Ok = false, Message = "Roll an engine first!" }
+			return { Ok = false, Message = "Roll a set of tires first!" }
 		end
 		local spot = freeSpot(plot, profile)
 		if not spot then
@@ -831,24 +856,25 @@ local function refreshPads(plot)
 		end
 		return
 	end
-	if profile.ShowroomLevel >= Config.MaxShowroomLevel then
-		setPad(pads.Showroom, "Level " .. profile.ShowroomLevel, 0, "max")
+	local L = profile.ShowroomLevel
+	if L >= Config.MaxShowroomLevel then
+		setPad(pads.Showroom, Config.ShowroomNames[L], 0, "max")
 	else
-		setPad(pads.Showroom, "Level " .. profile.ShowroomLevel .. " (" .. maxSpots(profile) .. " spots)", Config.GetShowroomCost(profile.ShowroomLevel + 1))
+		setPad(pads.Showroom, Config.ShowroomNames[L] .. " -> " .. Config.ShowroomNames[L + 1], Config.GetShowroomCost(L + 1))
 	end
+	local per = Config.GetContainersPerDelivery(profile.TruckLevel)
 	if profile.TruckLevel >= Config.MaxTruckLevel then
-		setPad(pads.Truck, "Level " .. profile.TruckLevel, 0, "max")
+		setPad(pads.Truck, "Level " .. profile.TruckLevel .. " · " .. per .. " per delivery", 0, "max")
+	elseif profile.TruckLevel + 1 > Config.GetMaxTruck(L) then
+		setPad(pads.Truck, "Level " .. profile.TruckLevel .. " · " .. per .. " per delivery", "UPGRADE SHOWROOM", "locked")
 	else
-		local nextLevel = profile.TruckLevel + 1
-		if nextLevel > Config.MaxTruckForShowroom[profile.ShowroomLevel] then
-			setPad(pads.Truck, "Level " .. profile.TruckLevel, "BIGGER SHOWROOM", "locked")
-		else
-			setPad(pads.Truck, "Level " .. profile.TruckLevel .. " (" .. profile.TruckLevel .. " per delivery)", Config.TruckCosts[nextLevel])
-		end
+		setPad(pads.Truck, "Level " .. profile.TruckLevel .. " · " .. per .. " per delivery", Config.GetTruckCost(profile.TruckLevel + 1))
 	end
 	local tool = Config.WashTools[profile.ToolLevel]
 	if profile.ToolLevel >= #Config.WashTools then
 		setPad(pads.Wash, tool.Name, 0, "max")
+	elseif profile.ToolLevel + 1 > Config.GetMaxTool(L) then
+		setPad(pads.Wash, tool.Name, "UPGRADE SHOWROOM", "locked")
 	else
 		setPad(pads.Wash, tool.Name .. " -> " .. Config.WashTools[profile.ToolLevel + 1].Name, Config.WashTools[profile.ToolLevel + 1].Cost)
 	end
@@ -891,7 +917,8 @@ for _, plot in ipairs(map.Plots) do
 		end
 		tryBuy(player, Config.GetShowroomCost(profile.ShowroomLevel + 1), function(p)
 			p.ShowroomLevel = p.ShowroomLevel + 1
-			notify(player, "Showroom level " .. p.ShowroomLevel .. "! " .. maxSpots(p) .. " display spots, container " .. p.ShowroomLevel .. " unlocked.", GREEN)
+			applyShowroom(plot, player, p)
+			notify(player, "Your " .. Config.ShowroomNames[p.ShowroomLevel] .. " is open! " .. maxSpots(p) .. " display spots, containers up to " .. Config.GetMaxContainer(p.ShowroomLevel) .. ".", GREEN)
 		end)
 	end)
 	padPrompt("Truck", function(player, profile)
@@ -899,31 +926,35 @@ for _, plot in ipairs(map.Plots) do
 		if nextLevel > Config.MaxTruckLevel then
 			return notify(player, "Your truck is maxed!", GOLD)
 		end
-		if nextLevel > Config.MaxTruckForShowroom[profile.ShowroomLevel] then
+		if nextLevel > Config.GetMaxTruck(profile.ShowroomLevel) then
 			return notify(player, "Upgrade your showroom first to unlock a bigger truck.", RED)
 		end
-		tryBuy(player, Config.TruckCosts[nextLevel], function(p)
+		tryBuy(player, Config.GetTruckCost(nextLevel), function(p)
 			p.TruckLevel = nextLevel
-			notify(player, "Truck level " .. nextLevel .. "! " .. nextLevel .. " containers per delivery.", GREEN)
+			notify(player, "Truck level " .. nextLevel .. "! " .. Config.GetContainersPerDelivery(nextLevel) .. " containers per delivery.", GREEN)
 		end)
 	end)
 	padPrompt("Wash", function(player, profile)
 		if profile.ToolLevel >= #Config.WashTools then
-			return notify(player, "You have the best wash tool!", GOLD)
+			return notify(player, "Your car wash is maxed!", GOLD)
+		end
+		if profile.ToolLevel + 1 > Config.GetMaxTool(profile.ShowroomLevel) then
+			return notify(player, "Upgrade your showroom first to unlock a better car wash.", RED)
 		end
 		local t = Config.WashTools[profile.ToolLevel + 1]
 		tryBuy(player, t.Cost, function(p)
 			p.ToolLevel = p.ToolLevel + 1
+			plot.SetWashTier(p.ToolLevel)
 			notify(player, "New tool: " .. t.Name .. "!", GREEN)
 		end)
 	end)
 	padPrompt("Engine", function(player, profile)
 		if profile.EngineLuck >= Config.MaxEngineLuck then
-			return notify(player, "Engine Luck is maxed!", GOLD)
+			return notify(player, "Tire Luck is maxed!", GOLD)
 		end
 		tryBuy(player, Config.GetEngineLuckCost(profile.EngineLuck), function(p)
 			p.EngineLuck = p.EngineLuck + 1
-			notify(player, "Engine Luck level " .. p.EngineLuck .. "! Better engines are more likely.", GREEN)
+			notify(player, "Tire Luck level " .. p.EngineLuck .. "! Better tires are more likely.", GREEN)
 		end)
 	end)
 	refreshPads(plot)
@@ -968,14 +999,7 @@ local function scheduleNext(player)
 end
 
 local function rollContainerLevel(profile)
-	local highest = math.min(profile.ShowroomLevel, #Config.Containers)
-	local r = rng:NextNumber()
-	if r < 0.5 or highest == 1 then
-		return highest
-	elseif r < 0.8 then
-		return math.max(1, highest - 1)
-	end
-	return rng:NextInteger(1, highest)
+	return rng:NextInteger(1, Config.GetMaxContainer(profile.ShowroomLevel))
 end
 
 local function deliver(player)
@@ -985,12 +1009,13 @@ local function deliver(player)
 		return
 	end
 	local delivered = 0
-	for _ = 1, profile.TruckLevel do
+	for k = 1, Config.GetContainersPerDelivery(profile.TruckLevel) do
 		local slot = freeYardSlot(plot)
 		if not slot then
 			break
 		end
-		spawnContainer(plot, slot, rollContainerLevel(profile), true)
+		-- every delivery brings at least one free Container 1, so nobody can get stuck with $0
+		spawnContainer(plot, slot, k == 1 and 1 or rollContainerLevel(profile), true)
 		delivered = delivered + 1
 	end
 	if delivered > 0 then
@@ -1277,12 +1302,13 @@ local function onPlayerAdded(player)
 		plotOwner[plot.Index] = player
 		playerPlot[player] = plot
 		player:SetAttribute("PlotIndex", plot.Index)
-		plot.SignLabel.Text = string.upper(player.DisplayName) .. "'S SHOWROOM"
+		player:SetAttribute("WashFocus", plot.WashCFrame)
+		player:SetAttribute("LiftFocus", plot.LiftCFrame)
 		for _, d in ipairs(profile.Display) do
-			local entry = { Id = d.Id, Engine = d.Engine }
-			state[plot.Index].Spots[d.Spot] = entry
-			showSpot(plot, d.Spot, entry)
+			state[plot.Index].Spots[d.Spot] = { Id = d.Id, Engine = d.Engine }
 		end
+		applyShowroom(plot, player, profile)
+		plot.SetWashTier(profile.ToolLevel)
 		for i, y in ipairs(profile.Yard) do
 			if y.Kind == "Container" then
 				spawnContainer(plot, i, y.Level, false)
@@ -1376,9 +1402,11 @@ local function clearPlot(plot)
 		s.Lift.Model:Destroy()
 	end
 	state[plot.Index] = { Spots = {}, Yard = {}, Wash = nil, Lift = nil, NPCs = s.NPCs }
-	plot.SignLabel.Text = "FOR SALE"
-	plot.WashLabel.Text = "WASH BAY"
-	plot.LiftLabel.Text = "ENGINE LIFT"
+	plot.BuildShowroom(1)
+	plot.SetSign("FOR SALE")
+	plot.SetWashTier(1)
+	plot.WashLabel.Text = "WASH SPOT"
+	plot.LiftLabel.Text = "TIRE SHOP"
 end
 
 local function onPlayerRemoving(player)

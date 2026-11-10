@@ -1,4 +1,4 @@
--- D2D client: HUD, delivery timer, wash view (scrubbing), engine view, Index and messages.
+-- D2D client: HUD, delivery timer, wash view (scrubbing), tire view, Index and messages.
 -- UI style: cream panels with brown borders, chunky colored buttons, icon buttons on the left.
 
 local Players = game:GetService("Players")
@@ -14,6 +14,7 @@ local player = Players.LocalPlayer
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared:WaitForChild("Config"))
 local CarBuilder = require(Shared:WaitForChild("CarBuilder"))
+local Icons = require(Shared:WaitForChild("Icons"))
 local remotes = ReplicatedStorage:WaitForChild("Remotes")
 local NotifyEvent = remotes:WaitForChild("Notify")
 local ScrubEvent = remotes:WaitForChild("Scrub")
@@ -141,27 +142,70 @@ local function juicy(b)
 	end)
 end
 
--- chunky colored button with a dark outline, like the big buttons in Clean a Painting
+-- 3D push button like Clean a Painting: a darker "lip" underneath, a glossy face on top that
+-- presses down when clicked, white outlined text. Setting button.Text / TextColor3 later still works.
 local function button(parent, props, color)
+	color = color or BTN.Green
 	local b = Instance.new("TextButton")
-	b.Font = Enum.Font.FredokaOne
-	b.TextColor3 = WHITE
-	b.TextScaled = true
 	b.AutoButtonColor = false
-	b.BackgroundColor3 = color or BTN.Green
-	textStroke(b, 2)
-	for k, v in pairs(props) do
-		b[k] = v
-	end
+	b.BackgroundColor3 = color:Lerp(Color3.new(0, 0, 0), 0.38)
+	b.TextTransparency = 1
+	b.Text = ""
 	corner(b, 14)
 	stroke(b, BLACK, 3)
-	shine(b, 0.22)
-	local pad = Instance.new("UIPadding")
-	pad.PaddingTop = UDim.new(0.18, 0)
-	pad.PaddingBottom = UDim.new(0.18, 0)
-	pad.PaddingLeft = UDim.new(0, 10)
-	pad.PaddingRight = UDim.new(0, 10)
-	pad.Parent = b
+	local face = Instance.new("Frame")
+	face.Name = "Face"
+	face.BorderSizePixel = 0
+	face.Size = UDim2.new(1, 0, 1, -6)
+	face.BackgroundColor3 = WHITE
+	corner(face, 13)
+	local g = Instance.new("UIGradient")
+	g.Rotation = 90
+	g.Color = ColorSequence.new(color:Lerp(WHITE, 0.22), color)
+	g.Parent = face
+	local gloss = Instance.new("Frame")
+	gloss.Name = "Gloss"
+	gloss.BackgroundColor3 = WHITE
+	gloss.BackgroundTransparency = 0.8
+	gloss.BorderSizePixel = 0
+	gloss.Position = UDim2.new(0, 6, 0, 4)
+	gloss.Size = UDim2.new(1, -12, 0.38, 0)
+	corner(gloss, 9)
+	gloss.Parent = face
+	local label = Instance.new("TextLabel")
+	label.Name = "Label"
+	label.BackgroundTransparency = 1
+	label.Position = UDim2.new(0, 10, 0.16, 0)
+	label.Size = UDim2.new(1, -20, 0.68, 0)
+	label.Font = Enum.Font.FredokaOne
+	label.TextScaled = true
+	label.TextColor3 = WHITE
+	textStroke(label, 2.5)
+	label.Parent = face
+	face.Parent = b
+	for k, v in pairs(props) do
+		if k == "Text" then
+			label.Text = v
+		elseif k == "TextColor3" then
+			label.TextColor3 = v
+		else
+			b[k] = v
+		end
+	end
+	b:GetPropertyChangedSignal("Text"):Connect(function()
+		label.Text = b.Text
+	end)
+	b:GetPropertyChangedSignal("TextColor3"):Connect(function()
+		label.TextColor3 = b.TextColor3
+	end)
+	b.MouseButton1Down:Connect(function()
+		face.Position = UDim2.new(0, 0, 0, 4)
+	end)
+	local function release()
+		face.Position = UDim2.new(0, 0, 0, 0)
+	end
+	b.MouseButton1Up:Connect(release)
+	b.MouseLeave:Connect(release)
 	juicy(b)
 	b.Parent = parent
 	return b
@@ -178,22 +222,36 @@ local function keyBadge(b, key)
 	k.TextScaled = true
 	k.TextColor3 = BLACK
 	k.Text = key
+	k.ZIndex = 5
 	corner(k, 8)
 	stroke(k, BLACK, 2)
 	k.Parent = b
 	return k
 end
 
--- cream panel with a brown border
+-- cream "paper" panel: warm gradient, thick brown border and a thin inner highlight line
 local function panel(parent, props)
 	local f = Instance.new("Frame")
-	f.BackgroundColor3 = CREAM
+	f.BackgroundColor3 = WHITE
 	f.BorderSizePixel = 0
 	for k, v in pairs(props) do
 		f[k] = v
 	end
-	corner(f, 18)
+	corner(f, 20)
 	stroke(f, BROWN, 5)
+	local g = Instance.new("UIGradient")
+	g.Rotation = 90
+	g.Color = ColorSequence.new(Color3.fromRGB(255, 249, 236), Color3.fromRGB(250, 233, 200))
+	g.Parent = f
+	local inner = Instance.new("Frame")
+	inner.Name = "InnerLine"
+	inner.BackgroundTransparency = 1
+	inner.Position = UDim2.new(0, 8, 0, 8)
+	inner.Size = UDim2.new(1, -16, 1, -16)
+	corner(inner, 14)
+	local is = stroke(inner, Color3.fromRGB(226, 192, 140), 2)
+	is.Transparency = 0.2
+	inner.Parent = f
 	f.Parent = parent
 	return f
 end
@@ -203,7 +261,19 @@ gui.Name = "D2D"
 gui.ResetOnSpawn = false
 gui.IgnoreGuiInset = true
 gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+pcall(function()
+	gui.ScreenInsets = Enum.ScreenInsets.CoreUISafeInsets
+end)
 gui.Parent = player:WaitForChild("PlayerGui")
+-- scale the whole UI with the screen so it fits phones and big monitors alike (designed at 1080p)
+local uiScale = Instance.new("UIScale")
+uiScale.Parent = gui
+local function fitScale()
+	local vs = workspace.CurrentCamera.ViewportSize
+	uiScale.Scale = math.clamp(math.min(vs.X / 1700, vs.Y / 950), 0.55, 1.15)
+end
+workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(fitScale)
+fitScale()
 
 ---------------------------------------------------------------------
 -- HUD: cash and tokens (top left), delivery timer (top center), icon buttons (left)
@@ -213,29 +283,34 @@ hud.BackgroundTransparency = 1
 hud.Size = UDim2.new(1, 0, 1, 0)
 hud.Parent = gui
 
-local function pill(y, width, icon, color)
+local function pill(y, width, icon, color, strokeColor)
 	local f = Instance.new("Frame")
-	f.Position = UDim2.new(0, 34, 0, y)
-	f.Size = UDim2.new(0, width, 0, 42)
-	f.BackgroundColor3 = CREAM
-	corner(f, 21)
+	f.Position = UDim2.new(0, 46, 0, y)
+	f.Size = UDim2.new(0, width, 0, 50)
+	f.BackgroundColor3 = WHITE
+	corner(f, 14)
 	stroke(f, BROWN, 3)
+	local g = Instance.new("UIGradient")
+	g.Rotation = 90
+	g.Color = ColorSequence.new(Color3.fromRGB(255, 249, 234), Color3.fromRGB(246, 224, 182))
+	g.Parent = f
 	f.Parent = hud
-	local i = Instance.new("TextLabel")
-	i.BackgroundTransparency = 1
-	i.AnchorPoint = Vector2.new(0.5, 0.5)
-	i.Position = UDim2.new(0, 0, 0.5, 0)
-	i.Size = UDim2.new(0, 56, 0, 56)
-	i.Text = icon
-	i.TextScaled = true
-	i.Font = Enum.Font.FredokaOne
-	i.Parent = f
-	local l = inkText(f, { Position = UDim2.new(0, 32, 0, 4), Size = UDim2.new(1, -44, 1, -8), Text = "0", TextColor3 = color, TextXAlignment = Enum.TextXAlignment.Center })
+	Icons.Make(icon, { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0, 2, 0.5, 0), Size = UDim2.new(0, 78, 0, 78), ZIndex = 3 }).Parent = f
+	local l = Instance.new("TextLabel")
+	l.BackgroundTransparency = 1
+	l.Position = UDim2.new(0, 40, 0, 6)
+	l.Size = UDim2.new(1, -52, 1, -12)
+	l.Font = Enum.Font.FredokaOne
+	l.TextScaled = true
+	l.TextColor3 = color
+	l.Text = "0"
+	textStroke(l, 1.5).Color = strokeColor or Color3.fromRGB(255, 250, 235)
+	l.Parent = f
 	return f, l
 end
-local cashPill, cashLabel = pill(62, 220, "💵", GREEN_TEXT)
-local _, tokenLabel = pill(112, 140, "🪙", TEXT_DARK)
-local incomeLabel = text(hud, { Position = UDim2.new(0, 262, 0, 70), Size = UDim2.new(0, 200, 0, 26), Text = "", TextColor3 = Color3.fromRGB(130, 255, 140), TextXAlignment = Enum.TextXAlignment.Left })
+local cashPill, cashLabel = pill(64, 250, "Cash", GREEN_TEXT, Color3.fromRGB(230, 255, 230))
+local _, tokenLabel = pill(124, 160, "Coin", TEXT_DARK)
+local incomeLabel = text(hud, { Position = UDim2.new(0, 306, 0, 78), Size = UDim2.new(0, 200, 0, 26), Text = "", TextColor3 = Color3.fromRGB(130, 255, 140), TextXAlignment = Enum.TextXAlignment.Left })
 
 text(hud, { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 14), Size = UDim2.new(0, 260, 0, 18), Text = "CONTAINER DELIVERY", StrokeThickness = 1.5 })
 local timerLabel = text(hud, { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 34), Size = UDim2.new(0, 200, 0, 36), Text = "--:--", StrokeThickness = 2.5 })
@@ -245,22 +320,23 @@ local function iconButton(y, icon, caption)
 	local b = Instance.new("TextButton")
 	b.BackgroundTransparency = 1
 	b.Text = ""
-	b.Position = UDim2.new(0, 14, 0.5, y)
-	b.Size = UDim2.new(0, 96, 0, 100)
+	b.Position = UDim2.new(0, 12, 0.5, y)
+	b.Size = UDim2.new(0, 104, 0, 112)
 	b.Parent = hud
-	local i = Instance.new("TextLabel")
-	i.BackgroundTransparency = 1
-	i.Size = UDim2.new(1, 0, 0, 76)
-	i.Text = icon
-	i.TextScaled = true
-	i.Font = Enum.Font.FredokaOne
-	i.Parent = b
-	text(b, { Position = UDim2.new(0, -10, 0, 70), Size = UDim2.new(1, 20, 0, 26), Text = caption, StrokeThickness = 2.5 })
+	local vp = Icons.Make(icon, { Size = UDim2.new(1, 0, 0, 88) })
+	vp.Parent = b
+	text(b, { Position = UDim2.new(0, -12, 0, 80), Size = UDim2.new(1, 24, 0, 30), Text = caption, StrokeThickness = 3 })
+	b.MouseEnter:Connect(function()
+		TweenService:Create(vp, TweenInfo.new(0.15), { Rotation = -8 }):Play()
+	end)
+	b.MouseLeave:Connect(function()
+		TweenService:Create(vp, TweenInfo.new(0.15), { Rotation = 0 }):Play()
+	end)
 	juicy(b)
 	return b
 end
-local indexButton = iconButton(-120, "📖", "Index")
-local homeButton = iconButton(-10, "🏠", "Home")
+local indexButton = iconButton(-130, "Book", "Index")
+local homeButton = iconButton(-10, "Home", "Home")
 local indexDot = Instance.new("TextLabel")
 indexDot.Size = UDim2.new(0, 26, 0, 26)
 indexDot.Position = UDim2.new(1, -24, 0, 2)
@@ -281,8 +357,8 @@ end)
 -- cash counter with a floating "+$X"
 local lastCash = 0
 local function floatGain(amount)
-	local l = text(hud, { Position = UDim2.new(0, 262, 0, 40), Size = UDim2.new(0, 220, 0, 32), Text = "+$" .. Config.FormatNumber(amount), TextColor3 = Color3.fromRGB(130, 255, 140), TextXAlignment = Enum.TextXAlignment.Left })
-	local tw = TweenService:Create(l, TweenInfo.new(1.2), { Position = UDim2.new(0, 262, 0, 10), TextTransparency = 1 })
+	local l = text(hud, { Position = UDim2.new(0, 306, 0, 52), Size = UDim2.new(0, 240, 0, 34), Text = "+$" .. Config.FormatNumber(amount), TextColor3 = Color3.fromRGB(130, 255, 140), TextXAlignment = Enum.TextXAlignment.Left })
+	local tw = TweenService:Create(l, TweenInfo.new(1.2), { Position = UDim2.new(0, 306, 0, 18), TextTransparency = 1 })
 	tw:Play()
 	tw.Completed:Connect(function()
 		l:Destroy()
@@ -394,7 +470,7 @@ local function reveal(carId, isNew)
 	f.Position = UDim2.new(0.5, 0, 0.4, 0)
 	f.Size = UDim2.new(0, 680, 0, 250)
 	f.Parent = gui
-	text(f, { Size = UDim2.new(1, 0, 0.3, 0), Text = isNew and "✨ NEW CAR! ✨" or "YOU GOT", TextColor3 = GOLD, StrokeThickness = 3 })
+	text(f, { Size = UDim2.new(1, 0, 0.3, 0), Text = isNew and "NEW CAR!" or "YOU GOT", TextColor3 = GOLD, StrokeThickness = 3 })
 	text(f, { Position = UDim2.new(0, 0, 0.3, 0), Size = UDim2.new(1, 0, 0.3, 0), Text = car.Name, StrokeThickness = 3 })
 	text(f, { Position = UDim2.new(0, 0, 0.62, 0), Size = UDim2.new(1, 0, 0.18, 0), Text = string.upper(rarity.Name), TextColor3 = rarity.Color, StrokeThickness = 3 })
 	text(f, { Position = UDim2.new(0, 0, 0.8, 0), Size = UDim2.new(1, 0, 0.32, 0), Text = Config.GetOddsText(carId), TextColor3 = Color3.fromRGB(130, 255, 120), StrokeThickness = 4 })
@@ -416,14 +492,6 @@ RevealEvent.OnClientEvent:Connect(reveal)
 ---------------------------------------------------------------------
 local camera = workspace.CurrentCamera
 local currentView = nil -- "Wash" | "Engine" | nil
-
-local function plotCenterX()
-	local index = player:GetAttribute("PlotIndex")
-	if not index then
-		return nil
-	end
-	return -((Config.MaxPlots - 1) * 110) / 2 + (index - 1) * 110
-end
 
 -- hide floating world labels while a close-up view is open
 local hiddenLabels = {}
@@ -459,9 +527,7 @@ end
 
 local function setCamera(cf, focus, instant)
 	hideMyCharacter(true)
-	if #hiddenLabels == 0 then
-		hideWorldLabels(true)
-	end
+	hideWorldLabels(true)
 	camera.CameraType = Enum.CameraType.Scriptable
 	local target = CFrame.lookAt(cf, focus)
 	if instant then
@@ -511,26 +577,23 @@ local turnLeft = button(washUi, { AnchorPoint = Vector2.new(0.5, 1), Position = 
 local turnRight = button(washUi, { AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 70, 1, -28), Size = UDim2.new(0, 120, 0, 66), Text = "TURN ▶" }, BTN.Blue)
 local washCancel = button(washUi, { AnchorPoint = Vector2.new(1, 1), Position = UDim2.new(1, -40, 1, -28), Size = UDim2.new(0, 230, 0, 70), Text = "      CANCEL" }, BTN.Red)
 keyBadge(washCancel, "Q")
-local continueWash = button(hud, { AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -30), Size = UDim2.new(0, 280, 0, 68), Text = "🧽 KEEP WASHING", Visible = false }, BTN.Blue)
+local continueWash = button(hud, { AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -136), Size = UDim2.new(0, 280, 0, 68), Text = "KEEP WASHING", Visible = false }, BTN.Blue)
 
 local washAngle = 0
-local function washFocus()
-	local cx = plotCenterX()
-	if not cx then
-		return nil
-	end
-	return Vector3.new(cx - 15, 3, 10)
+local function washFocusCF()
+	return player:GetAttribute("WashFocus")
 end
 local function updateWashCamera(instant)
-	local focus = washFocus()
-	if not focus then
+	local cf = washFocusCF()
+	if not cf then
 		return
 	end
-	local offset = CFrame.Angles(0, math.rad(washAngle), 0) * Vector3.new(11, 7.5, -6)
+	local focus = cf.Position + Vector3.new(0, 2.4, 0)
+	local offset = (cf.Rotation * CFrame.Angles(0, math.rad(washAngle), 0)):VectorToWorldSpace(Vector3.new(11, 7.5, -6))
 	setCamera(focus + offset, focus, instant)
 end
 local function enterWashView()
-	if currentView == "Wash" or not washFocus() then
+	if currentView == "Wash" or not washFocusCF() then
 		return
 	end
 	currentView = "Wash"
@@ -652,6 +715,9 @@ local lastSent = 0
 RunService.RenderStepped:Connect(function()
 	if currentView then
 		hideMyCharacter(true)
+		if os.clock() % 0.5 < 0.02 then
+			hideWorldLabels(true)
+		end
 	end
 	local washing = player:GetAttribute("WashProgress") ~= nil
 	sponge.Visible = washing and currentView == "Wash"
@@ -694,11 +760,11 @@ engineUi.BackgroundTransparency = 1
 engineUi.Size = UDim2.new(1, 0, 1, 0)
 engineUi.Visible = false
 engineUi.Parent = gui
-text(engineUi, { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 20), Size = UDim2.new(0, 420, 0, 36), Text = "Choose your engine", TextColor3 = Color3.fromRGB(170, 220, 255), StrokeThickness = 2.5 })
+text(engineUi, { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 20), Size = UDim2.new(0, 420, 0, 36), Text = "Choose your tires", TextColor3 = Color3.fromRGB(170, 220, 255), StrokeThickness = 2.5 })
 local engineCar = text(engineUi, { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 58), Size = UDim2.new(0, 520, 0, 30), Text = "" })
 local engineValue = text(engineUi, { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 92), Size = UDim2.new(0, 420, 0, 30), Text = "$0/s -> ?", TextColor3 = Color3.fromRGB(140, 255, 150) })
 local engineCurrent = text(engineUi, { AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -128), Size = UDim2.new(0, 520, 0, 40), Text = "", StrokeThickness = 3 })
-text(engineUi, { Position = UDim2.new(0, 40, 0.5, -170), Size = UDim2.new(0, 280, 0, 30), Text = "ENGINE CHANCES", TextColor3 = GOLD })
+text(engineUi, { Position = UDim2.new(0, 40, 0.5, -170), Size = UDim2.new(0, 280, 0, 30), Text = "TIRE CHANCES", TextColor3 = GOLD })
 local chanceRows = {}
 for i, engine in ipairs(Config.Engines) do
 	local y = -130 + (i - 1) * 40
@@ -713,12 +779,13 @@ for i, engine in ipairs(Config.Engines) do
 	local pct = text(engineUi, { Position = UDim2.new(0, 250, 0.5, y + 3), Size = UDim2.new(0, 80, 0, 24), Text = "", TextXAlignment = Enum.TextXAlignment.Right })
 	chanceRows[i] = { Name = name, Pct = pct }
 end
-local rollButton = button(engineUi, { AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, -150, 1, -40), Size = UDim2.new(0, 260, 0, 70), Text = "      ROLL ENGINE" }, BTN.Orange)
+local rollButton = button(engineUi, { AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, -150, 1, -40), Size = UDim2.new(0, 260, 0, 70), Text = "      ROLL TIRES" }, BTN.Orange)
 keyBadge(rollButton, "E")
-local luckyButton = button(engineUi, { AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 150, 1, -40), Size = UDim2.new(0, 260, 0, 70), Text = "🪙 LUCKY ROLL" }, WHITE)
+local luckyButton = button(engineUi, { AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 150, 1, -40), Size = UDim2.new(0, 260, 0, 70), Text = "    LUCKY ROLL" }, WHITE)
 do
 	-- rainbow like the Lucky Roll in Clean a Painting
-	local g = luckyButton:FindFirstChildOfClass("UIGradient")
+	Icons.Make("Clover", { Position = UDim2.new(0, 6, 0, 2), Size = UDim2.new(0, 56, 0, 56), ZIndex = 5 }).Parent = luckyButton
+	local g = luckyButton.Face:FindFirstChildOfClass("UIGradient")
 	g.Rotation = 0
 	g.Color = ColorSequence.new({
 		ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 150, 60)),
@@ -752,7 +819,7 @@ local function refreshEngineScreen()
 		sellButton.Text = "SELL $" .. Config.FormatNumber(Config.GetCarIncome(engineCarId, engineIndex) * Config.SellSeconds)
 	else
 		engineValue.Text = "$" .. Config.FormatNumber(base) .. "/s  ->  ?"
-		engineCurrent.Text = "Roll an engine!"
+		engineCurrent.Text = "Roll a set of tires!"
 		engineCurrent.TextColor3 = WHITE
 		sellButton.Text = "SELL $" .. Config.FormatNumber(base * Config.SellSeconds)
 	end
@@ -761,15 +828,11 @@ local function refreshEngineScreen()
 		row.Pct.Text = string.format("%.2f%%", chances[i])
 		row.Name.TextColor3 = (i == engineIndex) and GOLD or WHITE
 	end
-	luckyInfo.Text = (player:GetAttribute("Tokens") or 0) .. " tokens · Turbo or better"
+	luckyInfo.Text = (player:GetAttribute("Tokens") or 0) .. " tokens · Performance Rims or better"
 end
 
 local function liftFocus()
-	local cx = plotCenterX()
-	if not cx then
-		return nil
-	end
-	return Vector3.new(cx + 15, 4.5, 10)
+	return player:GetAttribute("LiftFocus")
 end
 local function enterEngineView()
 	local focus = liftFocus()
@@ -785,7 +848,8 @@ local function enterEngineView()
 	currentView = "Engine"
 	hud.Visible = false
 	engineUi.Visible = true
-	setCamera(focus + Vector3.new(-5.5, 5, -10.5), focus + Vector3.new(0, -0.6, -2), false)
+	-- side-on view so the wheels and rims are the star
+	setCamera(focus:PointToWorldSpace(Vector3.new(-8.5, 4.2, -14)), focus:PointToWorldSpace(Vector3.new(0, 0.4, -0.5)), false)
 end
 local function exitEngineView()
 	engineUi.Visible = false
@@ -863,14 +927,8 @@ player:GetAttributeChangedSignal("Tokens"):Connect(refreshEngineScreen)
 -- Index (collection book)
 ---------------------------------------------------------------------
 local indexFrame = panel(gui, { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0.5, 10), Size = UDim2.new(0, 900, 0, 560), Visible = false })
-local indexIcon = Instance.new("TextLabel")
-indexIcon.BackgroundTransparency = 1
-indexIcon.Position = UDim2.new(0, 22, 0, 8)
-indexIcon.Size = UDim2.new(0, 64, 0, 64)
-indexIcon.Text = "📖"
-indexIcon.TextScaled = true
-indexIcon.Parent = indexFrame
-inkText(indexFrame, { Position = UDim2.new(0, 94, 0, 18), Size = UDim2.new(0, 200, 0, 44), Text = "INDEX", TextXAlignment = Enum.TextXAlignment.Left })
+Icons.Make("Book", { Position = UDim2.new(0, 14, 0, -6), Size = UDim2.new(0, 84, 0, 84) }).Parent = indexFrame
+text(indexFrame, { Position = UDim2.new(0, 104, 0, 14), Size = UDim2.new(0, 220, 0, 52), Text = "INDEX", TextXAlignment = Enum.TextXAlignment.Left, StrokeThickness = 4 })
 local indexTotal = inkText(indexFrame, { AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -96, 0, 28), Size = UDim2.new(0, 320, 0, 26), Text = "", TextXAlignment = Enum.TextXAlignment.Right })
 local indexClose = button(indexFrame, { AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 18, 0, -18), Size = UDim2.new(0, 64, 0, 64), Text = "X" }, BTN.Red)
 inkText(indexFrame, { Position = UDim2.new(0, 34, 0, 84), Size = UDim2.new(0, 180, 0, 20), Text = "CONTAINERS", TextXAlignment = Enum.TextXAlignment.Left })
@@ -953,7 +1011,7 @@ local function makeCard(carId, discovered, claimed, order)
 	inkText(card, { Position = UDim2.new(0, 6, 0, 104), Size = UDim2.new(1, -12, 0, 22), Text = discovered and car.Name or "???" })
 	inkText(card, { Position = UDim2.new(0, 6, 0, 128), Size = UDim2.new(1, -12, 0, 18), Text = rarity.Name .. " · " .. Config.GetOddsText(carId), TextColor3 = rarity.Color:Lerp(Color3.new(0, 0, 0), 0.25) })
 	if discovered and not claimed then
-		local b = button(card, { AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -8), Size = UDim2.new(1, -16, 0, 38), Text = "🪙 COLLECT" }, BTN.Yellow)
+		local b = button(card, { AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -8), Size = UDim2.new(1, -16, 0, 38), Text = "COLLECT" }, BTN.Yellow)
 		b.MouseButton1Click:Connect(function()
 			b.Active = false
 			if ClaimToken:InvokeServer(carId) then
@@ -1086,11 +1144,16 @@ end)
 ---------------------------------------------------------------------
 -- Hotbar: every container and dirty car in your yard as a card (click to open / wash)
 ---------------------------------------------------------------------
-local hotbar = Instance.new("Frame")
+local hotbar = Instance.new("ScrollingFrame")
 hotbar.BackgroundTransparency = 1
+hotbar.BorderSizePixel = 0
 hotbar.AnchorPoint = Vector2.new(0.5, 1)
-hotbar.Position = UDim2.new(0.5, 0, 1, -10)
-hotbar.Size = UDim2.new(0, 10 * 92, 0, 92)
+hotbar.Position = UDim2.new(0.5, 0, 1, -8)
+hotbar.Size = UDim2.new(0, 10 * 112, 0, 116)
+hotbar.ScrollingDirection = Enum.ScrollingDirection.X
+hotbar.AutomaticCanvasSize = Enum.AutomaticSize.X
+hotbar.CanvasSize = UDim2.new(0, 0, 0, 0)
+hotbar.ScrollBarThickness = 4
 hotbar.Parent = hud
 local hl = Instance.new("UIListLayout")
 hl.FillDirection = Enum.FillDirection.Horizontal
@@ -1103,20 +1166,24 @@ local function cardFor(model)
 	local kind = model:GetAttribute("Kind")
 	local slot = model:GetAttribute("YardSlot")
 	local b = Instance.new("TextButton")
-	b.Size = UDim2.new(0, 84, 0, 84)
+	b.Size = UDim2.new(0, 104, 0, 104)
 	b.AutoButtonColor = false
 	b.Text = ""
 	b.LayoutOrder = slot
 	corner(b, 12)
 	stroke(b, Color3.fromRGB(110, 40, 30), 3)
 	shine(b, 0.15)
-	local title = inkText(b, { Position = UDim2.new(0, 5, 0, 8), Size = UDim2.new(1, -10, 0, 44), TextColor3 = Color3.fromRGB(70, 30, 20), TextWrapped = true })
-	local sub = text(b, { Position = UDim2.new(0, 4, 1, -24), Size = UDim2.new(1, -8, 0, 18), TextColor3 = Color3.fromRGB(130, 255, 130), StrokeThickness = 1.5 })
+	local title = inkText(b, { Position = UDim2.new(0, 6, 0, 12), Size = UDim2.new(1, -12, 0, 52), TextColor3 = Color3.fromRGB(70, 30, 20), TextWrapped = true })
+	local sub = text(b, { Position = UDim2.new(0, 4, 1, -28), Size = UDim2.new(1, -8, 0, 22), TextColor3 = Color3.fromRGB(120, 255, 120), StrokeThickness = 2 })
+	local tc = Instance.new("UITextSizeConstraint")
+	tc.MaxTextSize = 18
+	tc.Parent = title
 	if kind == "Container" then
 		local level = model:GetAttribute("Level")
 		b.BackgroundColor3 = Config.Containers[level].Color:Lerp(Color3.new(1, 1, 1), 0.25)
 		title.Text = "Container " .. level .. " (unopened)"
-		sub.Text = "OPEN"
+		local price = model:GetAttribute("Price") or 0
+		sub.Text = price > 0 and ("$" .. Config.FormatNumber(price)) or "FREE"
 	else
 		local id = model:GetAttribute("CarId")
 		local car = Config.CarsById[id]
@@ -1188,13 +1255,7 @@ end)
 OfflineEvent.OnClientEvent:Connect(function(amount)
 	local f = panel(gui, { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0.48, 0), Size = UDim2.new(0, 640, 0, 360) })
 	inkText(f, { Position = UDim2.new(0, 40, 0, 30), Size = UDim2.new(0, 400, 0, 40), Text = "WHILE YOU WERE AWAY", TextXAlignment = Enum.TextXAlignment.Left })
-	local icon = Instance.new("TextLabel")
-	icon.BackgroundTransparency = 1
-	icon.Position = UDim2.new(0, 60, 0, 100)
-	icon.Size = UDim2.new(0, 120, 0, 120)
-	icon.Text = "💵"
-	icon.TextScaled = true
-	icon.Parent = f
+	Icons.Make("Cash", { Position = UDim2.new(0, 50, 0, 90), Size = UDim2.new(0, 140, 0, 140) }).Parent = f
 	text(f, { Position = UDim2.new(0, 200, 0, 115), Size = UDim2.new(0, 400, 0, 90), Text = "+$" .. Config.FormatNumber(amount), TextColor3 = Color3.fromRGB(40, 170, 60), StrokeThickness = 3, TextXAlignment = Enum.TextXAlignment.Left })
 	local collect = button(f, { AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -30), Size = UDim2.new(0, 520, 0, 72), Text = "COLLECT", TextColor3 = Color3.fromRGB(50, 40, 20) }, Color3.fromRGB(140, 210, 80))
 	local close = button(f, { AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -16, 0, 16), Size = UDim2.new(0, 64, 0, 64), Text = "X" }, BTN.Red)

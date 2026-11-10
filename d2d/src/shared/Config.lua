@@ -25,49 +25,77 @@ Config.SlotRarity = { 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 7 }
 Config.ContainerMultiplier = 4 -- income x4 per container level
 
 ---------------------------------------------------------------------
--- Engines (rolled for free on the engine lift; a new roll replaces the old one)
+-- Tires (rolled for free at the Tire Shop; a new roll replaces the old set)
+-- The code calls them "engines" internally; players only ever see "tires".
 ---------------------------------------------------------------------
 Config.Engines = {
-	{ Name = "Stock 4-Cylinder", Weight = 30, Mult = 1, Color = Color3.fromRGB(130, 130, 135) },
-	{ Name = "Tuned", Weight = 25, Mult = 1.2, Color = Color3.fromRGB(200, 40, 40) },
-	{ Name = "Turbo", Weight = 21, Mult = 1.5, Color = Color3.fromRGB(50, 120, 230) },
-	{ Name = "V8", Weight = 16.4, Mult = 2, Color = Color3.fromRGB(215, 220, 230) },
-	{ Name = "Twin-Turbo V8", Weight = 7, Mult = 3, Color = Color3.fromRGB(40, 40, 45) },
-	{ Name = "V12", Weight = 0.5, Mult = 6, Color = Color3.fromRGB(255, 200, 50) },
-	{ Name = "Rocket Engine", Weight = 0.1, Mult = 15, Color = Color3.fromRGB(255, 110, 30) },
+	{ Name = "Worn Tires", Weight = 30, Mult = 1, Color = Color3.fromRGB(150, 150, 155) },
+	{ Name = "Street Tires", Weight = 25, Mult = 1.2, Color = Color3.fromRGB(95, 170, 255) },
+	{ Name = "Sport Rims", Weight = 21, Mult = 1.5, Color = Color3.fromRGB(230, 70, 60) },
+	{ Name = "Performance Rims", Weight = 16.4, Mult = 2, Color = Color3.fromRGB(70, 210, 120) },
+	{ Name = "Racing Slicks", Weight = 7, Mult = 3, Color = Color3.fromRGB(175, 95, 255) },
+	{ Name = "Gold Rims", Weight = 0.5, Mult = 6, Color = Color3.fromRGB(255, 200, 50) },
+	{ Name = "Diamond Rims", Weight = 0.1, Mult = 15, Color = Color3.fromRGB(140, 240, 255) },
 }
-Config.LuckyRollMinEngine = 4 -- Lucky Roll only rolls V8 or better
-Config.EngineLuckPerLevel = 0.1 -- +10% weight for Turbo and above per Engine Luck level
+Config.LuckyRollMinEngine = 4 -- Lucky Roll only rolls Performance Rims or better
+Config.EngineLuckPerLevel = 0.1 -- +10% weight for Sport Rims and above per Tire Luck level
 Config.MaxEngineLuck = 10
 function Config.GetEngineLuckCost(level) -- cost to go from `level` to `level + 1`
-	return math.floor(5000 * 4 ^ level)
+	return math.floor(2000 * 4 ^ level)
 end
 
 ---------------------------------------------------------------------
--- Showroom, truck, wash tools
+-- Progression. The showroom level is the main gate:
+--   level L: 4L display spots, containers 1..2L, truck up to 3L (= 3+3L containers per delivery),
+--   wash tools up to L+1.
+-- Level 1 is a small garage; it grows into a big showroom.
 ---------------------------------------------------------------------
-Config.MaxShowroomLevel = 10
-Config.SpotsPerLevel = 4
-function Config.GetShowroomCost(level) -- cost to reach `level`
-	return math.floor(300 * 8 ^ (level - 2))
+Config.MaxShowroomLevel = 5
+Config.ShowroomNames = { "Garage", "Small Showroom", "Showroom", "Big Showroom", "Flagship Dealership" }
+function Config.GetSpots(level)
+	return 4 * level
 end
--- highest truck level allowed at each showroom level
-Config.MaxTruckForShowroom = { 1, 1, 2, 2, 3, 3, 4, 4, 5, 5 }
-Config.TruckCosts = { [2] = 1000, [3] = 60000, [4] = 4e6, [5] = 250e6 } -- cost to reach truck level
-Config.MaxTruckLevel = 5
+function Config.GetShowroomCost(level) -- cost to reach `level`
+	return ({ [2] = 2500, [3] = 250000, [4] = 40e6, [5] = 8e9 })[level] or math.huge
+end
+function Config.GetMaxContainer(showroomLevel)
+	return math.min(2 * showroomLevel, 10)
+end
+
+Config.MaxTruckLevel = 15
+function Config.GetMaxTruck(showroomLevel)
+	return 3 * showroomLevel
+end
+function Config.GetContainersPerDelivery(truckLevel)
+	return 3 + truckLevel
+end
+function Config.GetTruckCost(level) -- cost to reach truck `level`
+	return math.floor(150 * 3 ^ (level - 2))
+end
+
+-- price to open a container; container 1 is free
+function Config.GetContainerPrice(level)
+	if level <= 1 then
+		return 0
+	end
+	return math.floor(80 * 4.6 ^ (level - 1))
+end
 
 Config.DeliveryInterval = 180 -- seconds between deliveries
 Config.FirstDeliveries = { 0, 60, 60 } -- a new player's first deliveries come faster
-Config.YardCapacity = 10
+Config.YardCapacity = 24
 
 Config.WashTools = {
-	{ Name = "Scrub Brush", Radius = 1.4, Power = 1, Cost = 0 },
-	{ Name = "Garden Hose", Radius = 2.0, Power = 1, Cost = 1000 },
-	{ Name = "Pressure Washer", Radius = 2.6, Power = 2, Cost = 25000 },
-	{ Name = "Foam Cannon", Radius = 3.4, Power = 3, Cost = 600000 },
-	{ Name = "Steam Jet", Radius = 4.2, Power = 5, Cost = 15e6 },
-	{ Name = "Automatic Car Wash", Radius = 6, Power = 8, Cost = 400e6, Auto = true },
+	{ Name = "Bucket and Sponge", Radius = 1.6, Power = 1, Cost = 0 },
+	{ Name = "Garden Hose", Radius = 2.2, Power = 1, Cost = 800 },
+	{ Name = "Pressure Washer", Radius = 2.8, Power = 2, Cost = 40000 },
+	{ Name = "Foam Cannon", Radius = 3.4, Power = 3, Cost = 5e6 },
+	{ Name = "Wash Bay", Radius = 4.2, Power = 5, Cost = 900e6 },
+	{ Name = "Automatic Car Wash", Radius = 6, Power = 8, Cost = 150e9, Auto = true },
 }
+function Config.GetMaxTool(showroomLevel)
+	return math.min(showroomLevel + 1, #Config.WashTools)
+end
 Config.ScrubInterval = 0.08
 
 Config.SellSeconds = 100 -- a car sells for 100 seconds of its income
