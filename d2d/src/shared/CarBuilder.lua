@@ -502,6 +502,46 @@ function CarBuilder.BuildContainer(level)
 	model.Name = "Container" .. level
 	local root = newPart(model, "Root", Vector3.new(1, 1, 1), CFrame.new(0, 0.5, 0), Color3.new(0, 0, 0), { Transparency = 1 })
 	model.PrimaryPart = root
+	-- a realistic container model from the Creator Store, with a painted band in the level's color
+	local Props = require(ReplicatedStorage.Shared:WaitForChild("Props"))
+	if Props.Has("ShippingContainer") then
+		local mesh = Props.Place("ShippingContainer", model, CFrame.new(), { Length = 14, LongZ = true })
+		if mesh then
+			-- remove any printed logos/text and paint it in the level's color
+			for _, d in ipairs(mesh:GetDescendants()) do
+				if d:IsA("Decal") or d:IsA("Texture") or d:IsA("SurfaceGui") then
+					d:Destroy()
+				elseif d:IsA("SpecialMesh") then
+					d.TextureId = ""
+				elseif d:IsA("BasePart") then
+					stripTexture(d)
+					d.Color = info.Color
+					d.Material = Enum.Material.CorrodedMetal
+				end
+			end
+			local box = newPart(model, "Box", Vector3.new(8, 7, 14), CFrame.new(0, 3.5, 0), info.Color, { Transparency = 1, CanCollide = true })
+			box.Name = "Box"
+			for _, x in ipairs({ -1, 1 }) do
+				local _, size = mesh:GetBoundingBox()
+				local band = newPart(model, "LevelBand", Vector3.new(0.12, 1.4, 13), CFrame.new(x * (size.X / 2 + 0.06), size.Y * 0.62, 0), info.Color, { Material = Enum.Material.SmoothPlastic })
+				local gui = Instance.new("SurfaceGui")
+				gui.Face = x > 0 and Enum.NormalId.Right or Enum.NormalId.Left
+				gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+				gui.PixelsPerStud = 30
+				local t = Instance.new("TextLabel")
+				t.BackgroundTransparency = 1
+				t.Size = UDim2.new(1, 0, 1, 0)
+				t.Font = Enum.Font.GothamBlack
+				t.TextScaled = true
+				t.TextColor3 = Color3.new(1, 1, 1)
+				t.Text = "D2D LOGISTICS  ·  LEVEL " .. level
+				t.Parent = gui
+				gui.Parent = band
+			end
+			model:SetAttribute("ContainerLevel", level)
+			return model
+		end
+	end
 	local box = newPart(model, "Box", Vector3.new(8, 7, 14), CFrame.new(0, 3.5, 0), info.Color, { Material = Enum.Material.DiamondPlate, CanCollide = true })
 	box.Name = "Box"
 	local darker = info.Color:Lerp(Color3.new(0, 0, 0), 0.3)

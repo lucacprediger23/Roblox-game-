@@ -15,18 +15,18 @@ local FLOOR_Y = 1
 local rng = Random.new(2026)
 
 -- palette
-local PLASTER = Color3.fromRGB(236, 233, 224)
+local PLASTER = Color3.fromRGB(226, 223, 214)
 local PLASTER_SHADE = Color3.fromRGB(214, 210, 200)
 local NAVY = Color3.fromRGB(34, 44, 64)
 local STONE = Color3.fromRGB(150, 150, 155)
-local TILE = Color3.fromRGB(188, 193, 202)
-local GROUT = Color3.fromRGB(140, 146, 158)
-local WOOD = Color3.fromRGB(205, 165, 115)
+local TILE = Color3.fromRGB(205, 205, 202)
+local GROUT = Color3.fromRGB(170, 170, 168)
+local WOOD = Color3.fromRGB(232, 200, 150)
 local GLASS = Color3.fromRGB(150, 190, 215)
 local LAMP = Color3.fromRGB(255, 250, 238)
-local ASPHALT = Color3.fromRGB(96, 98, 104)
-local CONCRETE = Color3.fromRGB(196, 196, 200)
-local LEAF = { Color3.fromRGB(86, 150, 62), Color3.fromRGB(104, 168, 70), Color3.fromRGB(74, 134, 58), Color3.fromRGB(120, 176, 78) }
+local ASPHALT = Color3.fromRGB(78, 79, 82)
+local CONCRETE = Color3.fromRGB(176, 174, 170)
+local LEAF = { Color3.fromRGB(70, 110, 52), Color3.fromRGB(82, 122, 58), Color3.fromRGB(62, 98, 46), Color3.fromRGB(90, 128, 62) }
 local GOLD = Color3.fromRGB(255, 205, 80)
 
 local function part(props, parent)
@@ -175,8 +175,8 @@ end
 
 local function lowPolyTree(parent, pos, scale)
 	scale = scale or 1
-	local name = Props.Pick({ "Tree1", "Tree2" }, rng)
-	if name and Props.Place(name, parent, CFrame.new(pos) * CFrame.Angles(0, rng:NextNumber(0, 6.28), 0), { Height = 15 * scale }) then
+	local name = Props.Pick({ "RealTree2" }, rng) or Props.Pick({ "Tree1", "Tree2" }, rng)
+	if name and Props.Place(name, parent, CFrame.new(pos) * CFrame.Angles(0, rng:NextNumber(0, 6.28), 0), { Height = 17 * scale }) then
 		return
 	end
 	local trunkColor = Color3.fromRGB(120, 78, 52)
@@ -201,10 +201,10 @@ end
 
 local function cypress(parent, pos, height)
 	height = height or 6
-	local green = Color3.fromRGB(80, 140, 70)
-	column(parent, "Cypress", height, 2.2, CFrame.new(pos + Vector3.new(0, height / 2 + 0.6, 0)), green, Enum.Material.Grass)
-	ball(parent, "CypressTop", 2.2, CFrame.new(pos + Vector3.new(0, height + 0.6, 0)), green, Enum.Material.Grass)
-	ball(parent, "CypressBottom", 2.2, CFrame.new(pos + Vector3.new(0, 0.6 + 1.1, 0)), green, Enum.Material.Grass)
+	local green = Color3.fromRGB(58, 92, 46)
+	column(parent, "Cypress", height, 2.2, CFrame.new(pos + Vector3.new(0, height / 2 + 0.6, 0)), green, Enum.Material.LeafyGrass)
+	ball(parent, "CypressTop", 2.2, CFrame.new(pos + Vector3.new(0, height + 0.6, 0)), green, Enum.Material.LeafyGrass)
+	ball(parent, "CypressBottom", 2.2, CFrame.new(pos + Vector3.new(0, 0.6 + 1.1, 0)), green, Enum.Material.LeafyGrass)
 end
 
 local function planter(parent, cf, length, withCypress)
@@ -215,8 +215,8 @@ local function planter(parent, cf, length, withCypress)
 		local x = -length / 2 + (i - 0.5) * length / n
 		if withCypress and (i == 1 or i == n) then
 			cypress(parent, (cf * CFrame.new(x, 1, 0)).Position, 5)
-		else
-			ball(parent, "Shrub", 2.4, cf * CFrame.new(x, 2.2, 0), LEAF[rng:NextInteger(1, #LEAF)], Enum.Material.Grass)
+		elseif not Props.Place("RealBush", parent, cf * CFrame.new(x, 1.6, 0) * CFrame.Angles(0, rng:NextNumber(0, 6.28), 0), { Width = 2.6 }) then
+			ball(parent, "Shrub", 2.4, cf * CFrame.new(x, 2.2, 0), LEAF[rng:NextInteger(1, #LEAF)], Enum.Material.LeafyGrass)
 		end
 	end
 end
@@ -272,40 +272,44 @@ end
 -- Light and sky
 ---------------------------------------------------------------------
 local function buildLighting()
-	Lighting.ClockTime = 13.6
-	Lighting.GeographicLatitude = 30
-	Lighting.Brightness = 2.6
-	Lighting.Ambient = Color3.fromRGB(110, 112, 125)
-	Lighting.OutdoorAmbient = Color3.fromRGB(150, 152, 165)
+	-- natural afternoon light with crisp shadows
+	Lighting.GlobalShadows = true
+	Lighting.ClockTime = 14.2
+	Lighting.GeographicLatitude = 38
+	Lighting.Brightness = 3
+	Lighting.Ambient = Color3.fromRGB(70, 72, 82)
+	Lighting.OutdoorAmbient = Color3.fromRGB(118, 122, 134)
 	Lighting.EnvironmentDiffuseScale = 1
-	Lighting.EnvironmentSpecularScale = 0.6
-	Lighting.ExposureCompensation = 0
-	Lighting.ShadowSoftness = 0.2
+	Lighting.EnvironmentSpecularScale = 1
+	Lighting.ExposureCompensation = 0.1
+	Lighting.ShadowSoftness = 0.12
 	for _, c in ipairs(Lighting:GetChildren()) do
 		if c:IsA("PostEffect") or c:IsA("Atmosphere") then
 			c:Destroy()
 		end
 	end
 	local a = Instance.new("Atmosphere")
-	a.Density = 0.22
-	a.Offset = 0.15
-	a.Color = Color3.fromRGB(205, 225, 255)
-	a.Decay = Color3.fromRGB(140, 165, 210)
-	a.Glare = 0.1
-	a.Haze = 0.6
+	a.Density = 0.3
+	a.Offset = 0.12
+	a.Color = Color3.fromRGB(199, 212, 228)
+	a.Decay = Color3.fromRGB(106, 120, 145)
+	a.Glare = 0.15
+	a.Haze = 1.2
 	a.Parent = Lighting
 	local bloom = Instance.new("BloomEffect")
-	bloom.Intensity = 0.25
-	bloom.Size = 20
-	bloom.Threshold = 2.5
+	bloom.Intensity = 0.2
+	bloom.Size = 18
+	bloom.Threshold = 2.8
 	bloom.Parent = Lighting
 	local cc = Instance.new("ColorCorrectionEffect")
-	cc.Saturation = 0.1
-	cc.Contrast = 0.06
+	cc.Saturation = -0.02
+	cc.Contrast = 0.1
+	cc.Brightness = 0
+	cc.TintColor = Color3.fromRGB(255, 252, 246)
 	cc.Parent = Lighting
 	local rays = Instance.new("SunRaysEffect")
-	rays.Intensity = 0.04
-	rays.Spread = 0.5
+	rays.Intensity = 0.03
+	rays.Spread = 0.4
 	rays.Parent = Lighting
 end
 
@@ -315,10 +319,10 @@ end
 local function buildTerrain()
 	local terrain = workspace.Terrain
 	terrain:Clear()
-	terrain:SetMaterialColor(Enum.Material.Grass, Color3.fromRGB(106, 170, 76))
-	terrain:SetMaterialColor(Enum.Material.LeafyGrass, Color3.fromRGB(96, 160, 70))
-	terrain:SetMaterialColor(Enum.Material.Rock, Color3.fromRGB(118, 128, 152))
-	terrain:SetMaterialColor(Enum.Material.Slate, Color3.fromRGB(110, 120, 145))
+	terrain:SetMaterialColor(Enum.Material.Grass, Color3.fromRGB(92, 128, 62))
+	terrain:SetMaterialColor(Enum.Material.LeafyGrass, Color3.fromRGB(84, 118, 56))
+	terrain:SetMaterialColor(Enum.Material.Rock, Color3.fromRGB(122, 120, 114))
+	terrain:SetMaterialColor(Enum.Material.Slate, Color3.fromRGB(105, 104, 100))
 	terrain:SetMaterialColor(Enum.Material.Ground, Color3.fromRGB(120, 100, 75))
 	pcall(function()
 		terrain.Decoration = true -- little grass blades
@@ -398,20 +402,21 @@ local function buildWorld(map)
 		Props.Place("FlowerBed", map, CFrame.new(x + 34, 0.8, -127.8), { Width = 6 })
 	end
 	-- pine forest and rocks on the cliff terraces
-	if Props.Has("Tree3") then
+	local pine = Props.Has("RealPine") and "RealPine" or (Props.Has("Tree3") and "Tree3")
+	if pine then
 		-- pines are detailed models, so only the two terraces nearest the plots get them
 		for _, row in ipairs({ { 158, 18 }, { -172, 18 } }) do
 			for x = -520, 520, 30 do
 				local px = x + rng:NextNumber(-8, 8)
-				Props.Place("Tree3", map, CFrame.new(px, 0, row[1] + rng:NextNumber(-6, 6)) * CFrame.Angles(0, rng:NextNumber(0, 6.28), 0), { Height = row[2] * rng:NextNumber(0.8, 1.25), Ground = true })
+				Props.Place(pine, map, CFrame.new(px, 0, row[1] + rng:NextNumber(-6, 6)) * CFrame.Angles(0, rng:NextNumber(0, 6.28), 0), { Height = row[2] * rng:NextNumber(0.8, 1.25), Ground = true })
 			end
 		end
 	end
 	-- leafy trees on the higher terraces
-	if Props.Has("Tree2") or Props.Has("Tree1") then
+	if Props.Has("RealTree2") or Props.Has("Tree2") or Props.Has("Tree1") then
 		for _, row in ipairs({ { 198, 20 }, { 240, 24 }, { -203, 20 }, { -248, 24 } }) do
 			for x = -540, 540, 26 do
-				local name = Props.Pick({ "Tree1", "Tree2" }, rng)
+				local name = Props.Pick({ "RealTree2" }, rng) or Props.Pick({ "Tree1", "Tree2" }, rng)
 				Props.Place(name, map, CFrame.new(x + rng:NextNumber(-9, 9), 0, row[1] + rng:NextNumber(-8, 8)) * CFrame.Angles(0, rng:NextNumber(0, 6.28), 0), { Height = row[2] * rng:NextNumber(0.8, 1.2), Ground = true })
 			end
 		end
@@ -471,7 +476,7 @@ local function buildPlot(index, parent)
 	-- grass strip, hedge and trees between plots
 	for _, side in ipairs(index == 1 and { -1, 1 } or { 1 }) do
 		local hx = side * 55
-		deco(m, "Hedge", Vector3.new(3, 3, 140), at(hx, 1.5, -12), Color3.fromRGB(78, 140, 62), Enum.Material.Grass)
+		deco(m, "Hedge", Vector3.new(3, 3, 140), at(hx, 1.5, -12), Color3.fromRGB(64, 98, 48), Enum.Material.LeafyGrass)
 		for z = -80, 64, 24 do
 			lowPolyTree(m, v(hx + side * 5, 0, z + rng:NextNumber(-4, 4)), rng:NextNumber(0.9, 1.15))
 		end
@@ -480,7 +485,7 @@ local function buildPlot(index, parent)
 	--=============== SHOWROOM (x -45..45, z -88..-8) ===============
 	local TOP = 28 -- building height
 	local CEIL = FLOOR_Y + 16 -- showroom ceiling
-	box(m, "ShowroomFloor", Vector3.new(90, FLOOR_Y, 80), at(0, FLOOR_Y / 2, -48), TILE)
+	box(m, "ShowroomFloor", Vector3.new(90, FLOOR_Y, 80), at(0, FLOOR_Y / 2, -48), TILE, Enum.Material.Marble, { Reflectance = 0.06 })
 	-- floor tiles: grout lines every 8 studs and a darker border row
 	for x = -40, 40, 8 do
 		deco(m, "Grout", Vector3.new(0.18, 0.04, 80), at(x, FLOOR_Y + 0.02, -48), GROUT)
@@ -489,7 +494,7 @@ local function buildPlot(index, parent)
 		deco(m, "Grout", Vector3.new(90, 0.04, 0.18), at(0, FLOOR_Y + 0.02, z), GROUT)
 	end
 	for _, z in ipairs({ -85, -11 }) do
-		deco(m, "BorderTiles", Vector3.new(88, 0.03, 4), at(0, FLOOR_Y + 0.015, z), Color3.fromRGB(120, 128, 142))
+		deco(m, "BorderTiles", Vector3.new(88, 0.03, 4), at(0, FLOOR_Y + 0.015, z), Color3.fromRGB(96, 96, 98), Enum.Material.Marble)
 	end
 
 	-- outer walls: side walls, back wall with a doorway

@@ -111,7 +111,13 @@ def main():
         [
             service("Workspace", props='<bool name="StreamingEnabled">false</bool>'),
             # Future lighting: real light from lamps and neon, shiny reflections
-            service("Lighting", props='<token name="Technology">4</token>'),
+            service(
+                "Lighting",
+                props='<token name="Technology">4</token><bool name="GlobalShadows">true</bool>'
+                '<bool name="Outlines">false</bool><token name="LightingStyle">0</token>',
+            ),
+            # the modern, realistic material set (the old one looks cartoony)
+            service("MaterialService", props='<bool name="Use2022MaterialsXml">true</bool>'),
             service("ReplicatedStorage", folder_of_scripts("Folder", "Shared", os.path.join(src, "shared")) + assets_folder()),
             service("ServerScriptService", folder_of_scripts("Folder", "Server", os.path.join(src, "server"))),
             service(

@@ -101,6 +101,14 @@ function Props.Place(name, parent, cf, opts)
 	local m = base:Clone()
 	m.Name = opts.Name or name
 	local _, size = worldBox(m)
+	-- turn the long side along Z when asked
+	if opts.LongZ and size.X > size.Z then
+		m:PivotTo(CFrame.Angles(0, math.rad(90), 0))
+		local c2, s2, min2 = worldBox(m)
+		m.WorldPivot = CFrame.new(c2.X, min2.Y, c2.Z)
+		m:PivotTo(CFrame.new())
+		size = s2
+	end
 	local scale
 	if opts.Width then
 		scale = opts.Width / math.max(size.X, size.Z, 0.05)

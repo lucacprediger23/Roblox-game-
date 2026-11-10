@@ -483,7 +483,7 @@ local function startWash(plot, carId)
 		p.CanCollide = false
 		p.CanTouch = false
 		p.CastShadow = false
-		p.Material = Enum.Material.Sand
+		p.Material = Enum.Material.Ground
 		p.Color = dirtColor:Lerp(Color3.new(0, 0, 0), rng:NextNumber(0, 0.2))
 		p.Parent = dirtFolder
 		table.insert(blobs, { Part = p, Health = health, StartSize = s })
